@@ -1,0 +1,17 @@
+#!/bin/bash
+
+SETRUN_ARGS="$@"
+
+
+export GRO_LOC="/home/nps5kd/gromacs_forceavg/install/bin"
+
+export SCRIPT_LOC="/home/nps5kd/crystals"
+echo "here"
+
+for direct in $(ls -l | egrep '^d' | awk '{print $9}'); do
+        echo "$direct"
+        cd $direct
+        rm volume.xvg
+        echo "20 0" | g_energy_d -f benzene_PROD.edr -o volume.xvg
+        cd ..
+done

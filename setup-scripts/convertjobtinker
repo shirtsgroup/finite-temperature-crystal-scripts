@@ -1,0 +1,1280 @@
+#!/bin/bash
+#BASH SCRIPT TO CONVERT THE JOB TRR FILE INTO TINKER XYZ FILES
+#param f - The name of the input TRR file
+#param p - The name of the potentials to examine
+#param o - The name of the output.xvg filei
+#param s - Which software did we simulate in? (gromacs/tinker)
+#param I - How many independent benzenes are in the gro files? (Gromacs only)
+
+SETRUN_ARGS="$@"
+inputfile="benzene_PROD"
+potentials="amoeba09"
+#potentials="amoeba09 amoeba09mononp amoeba09monop amoeba09multinp"
+paramfile_amoeba09="amoeba09.prm"
+paramfile_amoeba09monop="amoeba09_mono_p.prm"
+paramfile_amoeba09mononp="amoeba09_mono_np.prm"
+paramfile_amoeba09mononppt="amoeba09_mono_nppt.prm"
+paramfile_amoeba09mononpoop="amoeba09_mono_npoop.prm"
+paramfile_amoeba09mononpopls="amoeba09_mono_npopls.prm"
+paramfile_amoeba09multinp="amoeba09_multi_np.prm"
+paramfile_oplsaa="oplsaa.prm"
+paramfile_oplsaa_fake="oplsaafake.prm"
+outputfile="energy.xvg"
+simulation="gromacs"
+mode="full"
+
+export SCRIPT_LOC="/home/ecd4bd/scripts"
+export TINKER_LOC="/h3/n1/shirtsgroup/tinker-7"
+
+#=============================================================================================
+# READ IN USER INPUTS
+#=============================================================================================
+while getopts "f:u:o:s:I:m:" opt; do
+        case $opt in
+        f )
+                inputfile=$OPTARG
+                ;;
+	u)
+		potentials=$OPTARG
+		;;
+        o )
+                outputfile=$OPTARG
+                ;;
+	s )
+		simulation=$OPTARG
+		;;
+	I )
+		INDEPENDENT=$OPTARG
+		;;
+	m )
+		mode="energy"
+		;;
+		
+        esac
+done
+
+
+#=============================================================================================
+# ENSURE THE INPUTS ARE CORRECT
+#=============================================================================================
+if [ "$simulation" != "gromacs" ] && [ "$simulation" != "tinker" ]; then
+	echo "Invalid simulation type: $simulation"
+	exit 1
+fi
+
+if [ "${potentials/"amoeba09"}" == "$potentials" ] && [ "${potentials/"oplsaa"}" == "$potentials"  ] ; then
+	echo "Unsupported potentials: $potentials"
+	exit 1
+fi
+
+#If we simulated in gromacs, convert trajectory to tinker xyz files
+if [ "$simulation" == "gromacs" ]; then
+	#Determine the timestep between each output frame based on the mdp file
+	dt=$(less benzene_production.mdp | grep -m 1 'dt' | awk '{print $3}')
+	log=$(less benzene_production.mdp | grep -m 1 'nstxout' | awk '{print $3}')
+
+	if [ "$mode" == 'energy' ]; then
+		echo "Processing only the energy"
+		cd TinkerXYZ
+	else
+		#Make a directory for the individual frames if it does not aleady exist
+		mkdir TinkerXYZ
+		
+		#Convert the trr trajectory into a gro file using trjconv
+		echo "0 0" | trjconv_d -s benzene_restraint.gro -f ${inputfile}.trr -o benzene_Traj.gro -pbc nojump -ndec 8
+
+		##Map the trajectory if necessary
+		#${SCRIPT_LOC}/kabschmany3.py -A benzene_restraint.gro -B B_0K.gro -C benzene_Traj.gro
+		#mv benzene_Traj.gro benzene_Traj_orig.gro
+		#mv run.mapped.gro benzene_Traj.gro 
+		
+		#Convert the trajectory into a set of full precision gro files using trjconv
+		echo 0 | trjconv_d -s benzene_restraint.gro -f benzene_Traj.gro -o TinkerXYZ/frame.gro -sep -pbc nojump -ndec 8
+
+		cd TinkerXYZ
+
+		##Fix the periodic copies so that the molecules are in the correct periodic position
+                #for file in $(ls *.gro); do
+                #        echo "Fixing periodic copies in: $file"
+                #        python ${SCRIPT_LOC}/fixpbc.py -f $file -r ../benzene_restraint.gro
+                #done
+
+		##Reshape the GRO file to match the box vectors in AMOEBA
+                #for file in $(ls *.gro); do
+		#	echo "Reshaping: $file"
+                #        Volume=$(python ${SCRIPT_LOC}/calculate_volume.py -g $file)
+                #        X=$(echo "scale=8; 0.270*$Volume" | bc | sed -r 's/^(-?)\./\10./')
+                #        Y=$(echo "scale=8; 0.180*$Volume" | bc | sed -r 's/^(-?)\./\10./')
+                #        Z=$(echo "scale=8; 0.270*$Volume" | bc | sed -r 's/^(-?)\./\10./')
+		#	Boxvect="$X   $Y   $Z"
+                #        python ${SCRIPT_LOC}/resize_gro.py -f $file -v "$Boxvect"
+		#done
+
+		#Convert each gro file into a pdb file
+                for file in $(ls *.gro); do
+                        echo "Converting ${file} to pdb..."
+			filename=$(echo $file | cut -d '.' --complement -f2-)
+                        echo 0 | trjconv_d -f $file -s ../${inputfile}.tpr -o "${filename}.pdb" -pbc whole -ndec 8 > /dev/null
+                done
+
+		#Convert each pdb file into a tinker XYZ file
+		for file in $(ls *.pdb); do 
+			echo "Converting ${file} to xyz..." 
+			pdbxyz $file ${TINKER_LOC}/params/${paramfile_amoeba09} > /dev/null
+		done
+
+		#Updgrade each tinker XYZ file into full precision
+		for file in $(ls *.xyz); do
+			echo "Upgrading ${file} to full precision..."
+			filename=$(echo $file | cut -d '.' --complement -f2-)
+			upgradexyz -g "${filename}.gro" -x $file
+			python ${SCRIPT_LOC}/upgradexyz.py -x $file -n 10
+		done
+
+		#Create the key file for each xyz
+		for file in $(ls *.pdb); do
+		    keyfile=$(echo $file | cut -d '.' --complement -f2-)
+		    keyfile="${keyfile}_AMOEBA09.key"
+		    grofile=${file%.*}.gro
+		    echo "creating AMOEBA09 key file for ${file}..."
+		    if [ "$(less ../benzene_topology.top | grep -A 1 molecules | tail -1 | awk '{print $2}')" == "1" ]; then
+		    	    cp /home/ecd4bd/runfiles/benzene_gas.key $keyfile
+		    else
+			    cp /home/ecd4bd/runfiles/benzene.key $keyfile
+			    #Grab the box lengths from the pdb file
+			    X=$(sed -n '4p' $file | awk '{print $2}')
+			    #X=$(echo "scale=8;x=10*$X; if(x<1) print 0; x" | bc | sed -r 's/^(-?)\./\10./')
+			    sed -i "s/XXXX/$X/g" $keyfile
+			    Y=$(sed -n '4p' $file | awk '{print $3}')
+			    #Y=$(echo "scale=8;x=10*$Y; if(x<1) print 0; x" | bc | sed -r 's/^(-?)\./\10./')
+			    sed -i "s/YYYY/$Y/g" $keyfile
+			    Z=$(sed -n '4p' $file | awk '{print $4}')
+			    #Z=$(echo "scale=8;x=10*$Z; if(x<1) print 0; x" | bc | sed -r 's/^(-?)\./\10./')
+			    sed -i "s/ZZZZ/$Z/g" $keyfile
+			    #Grab the box angles from the pdb file
+			    alpha=$(sed -n '4p' $file | awk '{print $5}')
+			    sed -i "s/AAAA/$alpha/g" $keyfile
+			    beta=$(sed -n '4p' $file | awk '{print $6}')
+			    sed -i "s/BBBB/$beta/g" $keyfile
+			    gamma=$(sed -n '4p' $file | awk '{print $7}')
+			    sed -i "s/GGGG/$gamma/g" $keyfile
+		    fi
+		done
+
+
+		#Cut out all but the independent benzenes
+                for file in $(ls *.gro); do
+                        echo "Cutting extra benzenes from: $file"
+                        python ${SCRIPT_LOC}/cut_dependent.py -f $file -n ../benzene_index.ndx
+                done
+
+		#Add appropriate atom types to each xyz file if necessary
+                addatomtypes -p "amoeba09"
+
+	fi
+#If we simulated in tinker, format each output file and move it to the TinkerXYZ directory
+elif [ "$simulation" == "tinker" ]; then
+	#Determine the timestep between each output frame based on the job_specs file
+        dt=$(less job_specs.txt | grep OUTPUT | awk '{print $2}')
+	if [ "$mode" == 'energy' ]; then
+		echo "Processing only the energy"
+		cd TinkerXYZ
+	else
+		#Make a directory for the individual frames if it does not aleady exist
+                mkdir TinkerXYZ
+
+		for file in $(ls benzene.* | grep -v benzene.key | grep -v benzene.xyz | grep -v benzene.dyn); do
+			framenum=${file##*.}
+			#Remove any leading zeroes
+			framenum=$(expr $framenum + 0)
+			echo "Moving ${file}..."
+			cp $file TinkerXYZ/"frame${framenum}.xyz"
+		done
+
+		cd TinkerXYZ
+
+		#Create the key file for each xyz
+		for file in $(ls *.xyz); do
+			keyfile=$(echo $file | cut -d '.' --complement -f2-)
+            		keyfile="${keyfile}_AMOEBA09.key"
+			echo "creating AMOEBA09 key file for ${file}..."
+			cp ../benzene.key $keyfile
+		done
+
+		#Add appropriate atom types to each xyz file if necessary
+    		addatomtypes -p "amoeba09"
+	fi
+
+fi
+
+#=============================================================================================
+# CALCULATE AMOEBA ENERGY
+#=============================================================================================
+if [ "$simulation" == "gromacs" ]; then
+    extension="*.pdb"
+elif [ "$simulation" == "tinker" ]; then
+    extension="*.xyz"
+fi
+
+for potential in $potentials; do
+	#Setup the keyhinge and parameter file
+	keyhinge=$(echo $potential | tr [a-z] [A-Z])
+        paramfile=${potential}.prm
+
+	##Create the key file for each xyz file if necessary
+	#for file in $(ls $extension); do
+	#    keyfile=$(echo $file | cut -d '.' --complement -f2-)
+	#    keyfile="${keyfile}_${keyhinge}.key"
+	#    grofile=${file%.*}.gro
+	#    if [ ! -f $keyfile ]; then
+	#	echo "creating $keyhinge key file for ${file}..."	
+	#	if [ "$simulation" == "gromacs" ]; then
+	#	    if [ "$(less ../benzene_topology.top | grep -A 1 molecules | tail -1 | awk '{print $2}')" == "1" ]; then
+	#		cp /home/ecd4bd/runfiles/benzene_gas.key $keyfile 
+	#	    else
+	#		cp /home/ecd4bd/runfiles/benzene.key $keyfile
+	#		#Grab the box lengths from the gro file
+	#		X=$(tail -1  $grofile | awk '{print $1}')
+	#		X=$(echo "scale=8;x=10*$X; if(x<1) print 0; x" | bc | sed -r 's/^(-?)\./\10./')			
+	#		sed -i "s/XXXX/$X/g" $keyfile
+	#		Y=$(tail -1 $grofile | awk '{print $2}')
+	#		Y=$(echo "scale=8;x=10*$Y; if(x<1) print 0; x" | bc | sed -r 's/^(-?)\./\10./')
+	#		sed -i "s/YYYY/$Y/g" $keyfile
+	#		Z=$(tail -1 $grofile | awk '{print $3}')
+	#		Z=$(echo "scale=8;x=10*$Z; if(x<1) print 0; x" | bc | sed -r 's/^(-?)\./\10./')
+	#		sed -i "s/ZZZZ/$Z/g" $keyfile
+	#		#Grab the box angles from the pdb file
+	#		alpha=$(sed -n '4p' $file | awk '{print $5}')
+	#		sed -i "s/AAAA/$alpha/g" $keyfile
+	#		beta=$(sed -n '4p' $file | awk '{print $6}')
+	#		sed -i "s/BBBB/$beta/g" $keyfile
+	#		gamma=$(sed -n '4p' $file | awk '{print $7}')
+	#		sed -i "s/GGGG/$gamma/g" $keyfile
+	#	    fi
+	#	elif [ "$simulation" == "tinker" ]; then
+	#	    cp ../benzene.key $keyfile
+	#	    
+	#	    #sed -i "s/$paramfile_amoeba09monop/$paramfile_amoeba09/g" $keyfile
+	#	    #sed -i "s/$paramfile_amoeba09mononp/$paramfile_amoeba09/g" $keyfile
+	#	    #sed -i "s/$paramfile_amoeba09mononppt/$paramfile_amoeba09/g" $keyfile
+	#	    #sed -i "s/$paramfile_amoeba09mononpoop/$paramfile_amoeba09/g" $keyfile
+	#	    #sed -i "s/$paramfile_amoeba09multinp/$paramfile_amoeba09/g" $keyfile
+	#	fi
+	#	#sed -i "/PARAMETERS*/c\PARAMETERS        \/h3\/n1\/shirtsgroup\/tinker\/params\/${paramfile}" $keyfile
+	#    fi
+	#done
+
+	#Calculate the energy of each frame in the AMOEBA potential and store it in a file
+	energyfile=$(echo $paramfile | cut -d '.' --complement -f2-)
+	energyfile=${energyfile}_energy.xvg
+	echo "TIME(ps)    ENERGY          BOND          ANGLE          STRETCHBEND         OOP         TORSION         PIORBITAL         VDW         MULTIPOLE         POLARIZATION         CHARGECHARGE" > $energyfile
+	echo "=====================" >> $energyfile
+	echo "TIME(ps)    VOLUME" > volume.xvg
+	echo "=====================" >> volume.xvg
+	let "step=0"
+	if [ -f "frame0.xyz" ]; then
+	    frame=0
+	else
+	    frame=1
+	fi
+
+	fname="frame${frame}.xyz"
+	while [ -f $fname ]; do
+	    timestep=$(echo "x=$frame*$dt; if(x==0) print \"0.0\"; if(x<1 && x>0) print 0; x" | bc)
+	    echo "Calculating the energy of ${fname}..."
+	    if [ "$frame" == "1" ]; then
+		${TINKER_LOC}/bin/analyze $fname -k frame${frame}_${keyhinge}.key e
+	    fi
+	    echo "$(/h3/n1/shirtsgroup/tinker/bin/analyze $fname -k frame${frame}_${keyhinge}.key e)" > tempenergy.txt
+	    volume=$(/h3/n1/shirtsgroup/tinker/bin/analyze $fname -k frame${frame}_AMOEBA09.key G | grep "Volume" | awk '{print $3}')
+	    volume=$(echo "scale=8;${volume}*0.001;" | bc | sed -r 's/^(-?)\./\10./') #Convert to nm^3
+	    energy=$(less tempenergy.txt | grep "Potential Energy" | awk '{print $5}')
+	    bond=$(less tempenergy.txt | grep "Bond Stretching" | awk '{print $3}')
+	    angle=$(less tempenergy.txt | grep "Angle Bending" | awk '{print $3}')
+	    stretchbend=$(less tempenergy.txt | grep "Stretch-Bend" | awk '{print $2}')
+	    oop=$(less tempenergy.txt | grep "Out-of-Plane Bend" | awk '{print $3}')
+	    torsion=$(less tempenergy.txt | grep "Torsional Angle" | awk '{print $3}')
+	    pi=$(less tempenergy.txt | grep "Pi-Orbital Torsion" | awk '{print $3}')
+	    vdw=$(less tempenergy.txt | grep "Van der Waals" | awk '{print $4}')
+	    multipole=$(less tempenergy.txt | grep "Atomic Multipoles" | awk '{print $3}')
+	    polarization=$(less tempenergy.txt | grep "Polarization" | awk '{print $2}')
+	    cc=$(less tempenergy.txt | grep "Charge-Charge" | awk '{print $2}')
+	    #If any numbers are blank, fill them with zero
+	    if [ "$energy" == "" ]; then
+		energy="0.00000000"
+	    fi
+	    if [ "$bond" == "" ]; then
+                bond="0.00000000"
+            fi
+	    if [ "$angle" == "" ]; then
+                angle="0.00000000"
+            fi
+	    if [ "$stretchbend" == "" ]; then
+                stretchbend="0.00000000"
+            fi
+	    if [ "$oop" == "" ]; then
+                oop="0.00000000"
+            fi
+	    if [ "$torsion" == "" ]; then
+                torsion="0.00000000"
+            fi
+	    if [ "$pi" == "" ]; then
+                pi="0.00000000"
+            fi
+	    if [ "$vdw" == "" ]; then
+                vdw="0.00000000"
+            fi
+	    if [ "$multipole" == "" ]; then
+                multipole="0.00000000"
+            fi
+	    if [ "$polarization" == "" ]; then
+                polarization="0.00000000"
+            fi
+	    if [ "$cc" == "" ]; then
+                cc="0.00000000"
+            fi
+	    echo "$timestep     $energy     $bond     $angle     $stretchbend     $oop     $torsion     $pi     $vdw     $multipole     $polarization     $cc" >> $energyfile
+	    echo "$timestep	    $volume" >> volume.xvg
+	    
+	    let "frame=$frame+1"
+	    fname="frame${frame}.xyz"
+	done
+
+	mv $energyfile ../$energyfile
+	mv volume.xvg ../volume.xvg
+	echo "$keyhinge Done!"
+done
+exit 1
+
+#DEPRECATED
+#=============================================================================================
+
+#=============================================================================================
+# AMOEBA09 ENERGY
+#=============================================================================================
+
+if [ "${potentials/"amoeba09real"}" != "$potentials" ]; then
+
+##Remove any pre-existing atom types
+#removeatomtypes -p "amoeba09"
+#removeatomtypes -p "oplsaa"
+
+#Add appropriate atom types to each xyz file if necessary
+if [ $(less frame1.xyz | tail -1 | awk '{print $6}') == "0" ]; then
+    addatomtypes -p "amoeba09"
+fi
+
+if [ "$simulation" == "gromacs" ]; then
+    extension="*.pdb"
+elif [ "$simulation" == "tinker" ]; then
+    extension="*.xyz"
+fi
+
+#Create the key file for each xyz file if necessary
+for file in $(ls $extension); do
+    keyfile=$(echo $file | cut -d '.' --complement -f2-)
+    keyfile="${keyfile}_AMOEBA09.key"
+    if [ ! -f $keyfile ]; then
+	echo "creating AMOEBA key file for ${file}..."	
+	if [ "$simulation" == "gromacs" ]; then
+	    if [ "$(less ../benzene_topology.top | grep -A 1 molecules | tail -1 | awk '{print $2}')" == "1" ]; then
+		cp /home/ecd4bd/runfiles/benzene_gas.key $keyfile 
+	    else
+		cp /home/ecd4bd/runfiles/benzene.key $keyfile
+		X=$(sed -n '4p' $file | awk '{print $2}')
+		sed -i "s/XXXX/$X/g" $keyfile
+		Y=$(sed -n '4p' $file | awk '{print $3}')
+		sed -i "s/YYYY/$Y/g" $keyfile
+		Z=$(sed -n '4p' $file | awk '{print $4}')
+		sed -i "s/ZZZZ/$Z/g" $keyfile
+		alpha=$(sed -n '4p' $file | awk '{print $5}')
+		sed -i "s/AAAA/$alpha/g" $keyfile
+		beta=$(sed -n '4p' $file | awk '{print $6}')
+		sed -i "s/BBBB/$beta/g" $keyfile
+		gamma=$(sed -n '4p' $file | awk '{print $7}')
+		sed -i "s/GGGG/$gamma/g" $keyfile
+	    fi
+	elif [ "$simulation" == "tinker" ]; then
+	    cp ../benzene.key $keyfile
+	    
+	    sed -i "s/$paramfile_amoeba09monop/$paramfile_amoeba09/g" $keyfile
+	    sed -i "s/$paramfile_amoeba09mononp/$paramfile_amoeba09/g" $keyfile
+	    sed -i "s/$paramfile_amoeba09mononppt/$paramfile_amoeba09/g" $keyfile
+	    sed -i "s/$paramfile_amoeba09mononpoop/$paramfile_amoeba09/g" $keyfile
+	    sed -i "s/$paramfile_amoeba09multinp/$paramfile_amoeba09/g" $keyfile
+	fi
+    fi
+done
+
+#Calculate the energy of each frame in the AMOEBA potential and store it in a file
+energyfile=$(echo $paramfile_amoeba09 | cut -d '.' --complement -f2-)
+energyfile=${energyfile}_energy.xvg
+echo "TIME(ps)    ENERGY          BOND          ANGLE          STRETCHBEND         OOP         TORSION         PIORBITAL         VDW         MULTIPOLE         POLARIZATION         CHARGECHARGE" > $energyfile
+echo "=====================" >> $energyfile
+echo "TIME(ps)    VOLUME" > volume.xvg
+echo "=====================" >> volume.xvg
+let "step=0"
+if [ -f "frame0.xyz" ]; then
+    frame=0
+else
+    frame=1
+fi
+
+fname="frame${frame}.xyz"
+while [ -f $fname ]; do
+    timestep=$(echo "x=$frame*$dt*$log; if(x==0) print \"0.0\"; if(x<1 && x>0) print 0; x" | bc)
+    echo "Calculating the energy of ${fname}..."
+    if [ "$frame" == "1" ]; then
+	/h3/n1/shirtsgroup/tinker/bin/analyze $fname -k frame${frame}_AMOEBA09.key e
+    fi
+    echo "$(/h3/n1/shirtsgroup/tinker/bin/analyze $fname -k frame${frame}_AMOEBA09.key e)" > tempenergy.txt
+    energy=$(less tempenergy.txt | grep "Potential Energy" | awk '{print $5}')
+    bond=$(less tempenergy.txt | grep "Bond Stretching" | awk '{print $3}')
+    angle=$(less tempenergy.txt | grep "Angle Bending" | awk '{print $3}')
+    stretchbend=$(less tempenergy.txt | grep "Stretch-Bend" | awk '{print $2}')
+    oop=$(less tempenergy.txt | grep "Out-of-Plane Bend" | awk '{print $3}')
+    torsion=$(less tempenergy.txt | grep "Torsional Angle" | awk '{print $3}')
+    pi=$(less tempenergy.txt | grep "Pi-Orbital Torsion" | awk '{print $3}')
+    vdw=$(less tempenergy.txt | grep "Van der Waals" | awk '{print $4}')
+    multipole=$(less tempenergy.txt | grep "Atomic Multipoles" | awk '{print $3}')
+    polarization=$(less tempenergy.txt | grep "Polarization" | awk '{print $2}')
+    cc=$(less tempenergy.txt | grep "Charge-Charge" | awk '{print $2}')
+    #energy=$(/h3/n1/shirtsgroup/tinker/bin/analyze $fname -k frame${frame}_AMOEBA09.key e | grep "Potential Energy" | awk '{print $5}')
+    #volume=$(/h3/n1/shirtsgroup/tinker/bin/analyze $fname -k frame${frame}_AMOEBA09.key G | grep "Volume" | awk '{print $3}')
+    #volume=$(echo "scale=8;${volume}/1000;" | bc | sed -r 's/^(-?)\./\10./')
+    echo "$timestep     $energy     $bond     $angle     $stretchbend     $oop     $torsion     $pi     $vdw     $multipole     $polarization     $cc" >> $energyfile
+    #echo "$timestep	    $volume" >> volume.xvg
+    
+    let "frame=$frame+1"
+    fname="frame${frame}.xyz"
+done
+
+##Reset the atom types of each xyz file if necessary
+#if [ $(less frame1.xyz | tail -1 | awk '{print $6}') != "0" ]; then
+#    removeatomtypes -p "amoeba09"
+#fi
+
+mv $energyfile ../$energyfile
+mv volume.xvg ../volume.xvg
+echo "AMOEBA09 Done!"
+fi
+
+
+#=============================================================================================
+# AMOEBA09 MONOPOLE POLARIZABLE ENERGY
+#=============================================================================================
+
+if [ "${potentials/"amoeba09monop"}" != "$potentials" ]; then
+
+##Remove any pre-existing atom types
+#removeatomtypes -p "amoeba09"
+#removeatomtypes -p "oplsaa"
+
+#Add appropriate atom types to each xyz file if necessary
+if [ $(less frame1.xyz | tail -1 | awk '{print $6}') == "0" ]; then
+    addatomtypes -p "amoeba09"
+fi
+
+if [ "$simulation" == "gromacs" ]; then
+    extension="*.pdb"
+elif [ "$simulation" == "tinker" ]; then
+    extension="*.xyz"
+fi
+
+#Create the key file for each xyz file if necessary
+for file in $(ls $extension); do
+    keyfile=$(echo $file | cut -d '.' --complement -f2-)
+    keyfile="${keyfile}_AMOEBA09_MONO_P.key"
+    if [ ! -f $keyfile ]; then
+	echo "creating AMOEBA_MONO_P key file for ${file}..."	
+	if [ "$simulation" == "gromacs" ]; then
+	    if [ "$(less ../benzene_topology.top | grep -A 1 molecules | tail -1 | awk '{print $2}')" == "1" ]; then
+		cp /home/ecd4bd/runfiles/benzene_gas.key $keyfile 
+	    else
+		cp /home/ecd4bd/runfiles/benzene.key $keyfile
+		X=$(sed -n '4p' $file | awk '{print $2}')
+		sed -i "s/XXXX/$X/g" $keyfile
+		Y=$(sed -n '4p' $file | awk '{print $3}')
+		sed -i "s/YYYY/$Y/g" $keyfile
+		Z=$(sed -n '4p' $file | awk '{print $4}')
+		sed -i "s/ZZZZ/$Z/g" $keyfile
+		alpha=$(sed -n '4p' $file | awk '{print $5}')
+		sed -i "s/AAAA/$alpha/g" $keyfile
+		beta=$(sed -n '4p' $file | awk '{print $6}')
+		sed -i "s/BBBB/$beta/g" $keyfile
+		gamma=$(sed -n '4p' $file | awk '{print $7}')
+		sed -i "s/GGGG/$gamma/g" $keyfile
+		sed -i "s/$paramfile_amoeba09/$paramfile_amoeba09monop/g" $keyfile
+	    fi
+	elif [ "$simulation" == "tinker" ]; then
+	    cp ../benzene.key $keyfile
+	    sed -i "s/$paramfile_amoeba09/$paramfile_amoeba09monop/g" $keyfile
+	    sed -i "s/$paramfile_amoeba09mononp/$paramfile_amoeba09monop/g" $keyfile
+	    sed -i "s/$paramfile_amoeba09mononppt/$paramfile_amoeba09monop/g" $keyfile
+	    sed -i "s/$paramfile_amoeba09mononpoop/$paramfile_amoeba09monop/g" $keyfile
+	    sed -i "s/$paramfile_amoeba09multinp/$paramfile_amoeba09monop/g" $keyfile
+	fi
+    fi
+done
+
+#Calculate the energy of each frame in the AMOEBA MONOPOLE POLARIZABLE potential and store it in a file
+energyfile=$(echo $paramfile_amoeba09monop | cut -d '.' --complement -f2-)
+energyfile=${energyfile}_energy.xvg
+echo "TIME(ps)    ENERGY          BOND          ANGLE          STRETCHBEND         OOP         TORSION         PIORBITAL         VDW         MULTIPOLE         POLARIZATION" > $energyfile
+echo "=====================" >> $energyfile
+echo "TIME(ps)    VOLUME" > volume.xvg
+echo "=====================" >> volume.xvg
+let "step=0"
+if [ -f "frame0.xyz" ]; then
+    frame=0
+else
+    frame=1
+fi
+
+fname="frame${frame}.xyz"
+while [ -f $fname ]; do
+    timestep=$(echo "x=$frame*$dt*$log; if(x==0) print \"0.0\"; if(x<1 && x>0) print 0; x" | bc)
+    echo "Calculating the energy of ${fname}..."
+    if [ "$frame" == "1" ]; then
+	/h3/n1/shirtsgroup/tinker/bin/analyze $fname -k frame${frame}_AMOEBA09_MONO_P.key e
+    fi
+    echo "$(/h3/n1/shirtsgroup/tinker/bin/analyze $fname -k frame${frame}_AMOEBA09_MONO_P.key e)" > tempenergy.txt
+    energy=$(less tempenergy.txt | grep "Potential Energy" | awk '{print $5}')
+    bond=$(less tempenergy.txt | grep "Bond Stretching" | awk '{print $3}')
+    angle=$(less tempenergy.txt | grep "Angle Bending" | awk '{print $3}')
+    stretchbend=$(less tempenergy.txt | grep "Stretch-Bend" | awk '{print $2}')
+    oop=$(less tempenergy.txt | grep "Out-of-Plane Bend" | awk '{print $3}')
+    torsion=$(less tempenergy.txt | grep "Torsional Angle" | awk '{print $3}')
+    pi=$(less tempenergy.txt | grep "Pi-Orbital Torsion" | awk '{print $3}')
+    vdw=$(less tempenergy.txt | grep "Van der Waals" | awk '{print $4}')
+    multipole=$(less tempenergy.txt | grep "Atomic Multipoles" | awk '{print $3}')
+    polarization=$(less tempenergy.txt | grep "Polarization" | awk '{print $2}')
+    echo "$timestep     $energy     $bond     $angle     $stretchbend     $oop     $torsion     $pi     $vdw     $multipole     $polarization     $cc" >> $energyfile
+    #echo "$timestep        $volume" >> volume.xvg
+
+    let "frame=$frame+1"
+    fname="frame${frame}.xyz"
+done
+
+##Reset the atom types of each xyz file if necessary
+#if [ $(less frame1.xyz | tail -1 | awk '{print $6}') != "0" ]; then
+#    removeatomtypes -p "amoeba09"
+#fi
+
+mv $energyfile ../$energyfile
+mv volume.xvg ../volume.xvg
+echo "AMOEBA09 MONOPOLES POLARIZABLE Done!"
+fi
+
+
+#=============================================================================================
+# AMOEBA09 MONOPOLE NONPOLARIZABLE ENERGY
+#=============================================================================================
+
+if [ "${potentials/"amoeba09mononpreal"}" != "$potentials" ]; then
+
+##Remove any pre-existing atom types
+#removeatomtypes -p "amoeba09"
+#removeatomtypes -p "oplsaa"
+
+#Add appropriate atom types to each xyz file if necessary
+if [ $(less frame1.xyz | tail -1 | awk '{print $6}') == "0" ]; then
+    addatomtypes -p "amoeba09"
+fi
+
+if [ "$simulation" == "gromacs" ]; then
+    extension="*.pdb"
+elif [ "$simulation" == "tinker" ]; then
+    extension="*.xyz"
+fi
+
+#Create the key file for each xyz file if necessary
+for file in $(ls $extension); do
+    keyfile=$(echo $file | cut -d '.' --complement -f2-)
+    keyfile="${keyfile}_AMOEBA09_MONO_NP.key"
+    if [ ! -f $keyfile ]; then	
+	echo "creating AMOEBA_MONO_NP key file for ${file}..."
+	if [ "$simulation" == "gromacs" ]; then
+	    if [ "$(less ../benzene_topology.top | grep -A 1 molecules | tail -1 | awk '{print $2}')" == "1" ]; then
+		cp /home/ecd4bd/runfiles/benzene_gas.key $keyfile 
+	    else
+		cp /home/ecd4bd/runfiles/benzene.key $keyfile
+		X=$(sed -n '4p' $file | awk '{print $2}')
+		sed -i "s/XXXX/$X/g" $keyfile
+		Y=$(sed -n '4p' $file | awk '{print $3}')
+		sed -i "s/YYYY/$Y/g" $keyfile
+		Z=$(sed -n '4p' $file | awk '{print $4}')
+		sed -i "s/ZZZZ/$Z/g" $keyfile
+		alpha=$(sed -n '4p' $file | awk '{print $5}')
+		sed -i "s/AAAA/$alpha/g" $keyfile
+		beta=$(sed -n '4p' $file | awk '{print $6}')
+		sed -i "s/BBBB/$beta/g" $keyfile
+		gamma=$(sed -n '4p' $file | awk '{print $7}')
+		sed -i "s/GGGG/$gamma/g" $keyfile
+		sed -i "s/$paramfile_amoeba09/$paramfile_amoeba09mononp/g" $keyfile
+	    fi
+	elif [ "$simulation" == "tinker" ]; then
+	    cp ../benzene.key $keyfile
+	    sed -i "s/$paramfile_amoeba09/$paramfile_amoeba09mononp/g" $keyfile
+	    sed -i "s/$paramfile_amoeba09monop/$paramfile_amoeba09mononp/g" $keyfile
+	    sed -i "s/$paramfile_amoeba09monoppt/$paramfile_amoeba09mononp/g" $keyfile
+	    sed -i "s/$paramfile_amoeba09monopoop/$paramfile_amoeba09mononp/g" $keyfile
+	    sed -i "s/$paramfile_amoeba09multinp/$paramfile_amoeba09mononp/g" $keyfile
+	fi
+    fi
+done
+
+#Calculate the energy of each frame in the AMOEBA MONOPOLE NONPOLARIZABLE potential and store it in a file
+energyfile=$(echo $paramfile_amoeba09mononp | cut -d '.' --complement -f2-)
+energyfile=${energyfile}_energy.xvg
+echo "TIME(ps)    ENERGY          BOND          ANGLE          STRETCHBEND         OOP         TORSION         PIORBITAL         VDW         MULTIPOLE         POLARIZATION         CHARGECHARGE" > $energyfile
+echo "=====================" >> $energyfile
+echo "TIME(ps)    VOLUME" > volume.xvg
+echo "=====================" >> volume.xvg
+let "step=0"
+if [ -f "frame0.xyz" ]; then
+    frame=0
+else
+    frame=1
+fi
+
+fname="frame${frame}.xyz"
+while [ -f $fname ]; do
+    timestep=$(echo "x=$frame*$dt*$log; if(x==0) print \"0.0\"; if(x<1 && x>0) print 0; x" | bc)
+    echo "Calculating the energy of ${fname}..."
+    if [ "$frame" == "1" ]; then
+	/h3/n1/shirtsgroup/tinker/bin/analyze $fname -k frame${frame}_AMOEBA09_MONO_NP.key e
+    fi
+    echo "$(/h3/n1/shirtsgroup/tinker/bin/analyze $fname -k frame${frame}_AMOEBA09_MONO_NP.key e)" > tempenergy.txt
+    energy=$(less tempenergy.txt | grep "Potential Energy" | awk '{print $5}')
+    bond=$(less tempenergy.txt | grep "Bond Stretching" | awk '{print $3}')
+    angle=$(less tempenergy.txt | grep "Angle Bending" | awk '{print $3}')
+    stretchbend=$(less tempenergy.txt | grep "Stretch-Bend" | awk '{print $2}')
+    oop=$(less tempenergy.txt | grep "Out-of-Plane Bend" | awk '{print $3}')
+    torsion=$(less tempenergy.txt | grep "Torsional Angle" | awk '{print $3}')
+    pi=$(less tempenergy.txt | grep "Pi-Orbital Torsion" | awk '{print $3}')
+    vdw=$(less tempenergy.txt | grep "Van der Waals" | awk '{print $4}')
+    multipole=$(less tempenergy.txt | grep "Atomic Multipoles" | awk '{print $3}')
+    polarization=$(less tempenergy.txt | grep "Polarization" | awk '{print $2}')
+    cc=$(less tempenergy.txt | grep "Charge-Charge" | awk '{print $2}')
+    #energy=$(/h3/n1/shirtsgroup/tinker/bin/analyze $fname -k frame${frame}_AMOEBA09.key e | grep "Potential Energy" | awk '{print $5}')
+    #volume=$(/h3/n1/shirtsgroup/tinker/bin/analyze $fname -k frame${frame}_AMOEBA09_MONO_NP.key G | grep "Volume" | awk '{print $3}')
+    #volume=$(echo "scale=8;${volume}/1000;" | bc | sed -r 's/^(-?)\./\10./')
+    echo "$timestep     $energy     $bond     $angle     $stretchbend     $oop     $torsion     $pi     $vdw     $multipole     $polarization     $cc" >> $energyfile
+    #echo "$timestep        $volume" >> volume.xvg
+
+    let "frame=$frame+1"
+    fname="frame${frame}.xyz"
+done
+
+##Reset the atom types of each xyz file if necessary
+#if [ $(less frame1.xyz | tail -1 | awk '{print $6}') != "0" ]; then
+#    removeatomtypes -p "amoeba09"
+#fi
+
+mv $energyfile ../$energyfile
+mv volume.xvg ../volume.xvg
+echo "AMOEBA09 MONOPOLE NONPOLARIZABLE Done!"
+fi
+
+#=============================================================================================
+# AMOEBA09 MONOPOLE NONPOLARIZABLE NO PI-TORSION ENERGY
+#=============================================================================================
+
+if [ "${potentials/"amoeba09mononppt"}" != "$potentials" ]; then
+
+##Remove any pre-existing atom types
+#removeatomtypes -p "amoeba09"
+#removeatomtypes -p "oplsaa"
+
+#Add appropriate atom types to each xyz file if necessary
+if [ $(less frame1.xyz | tail -1 | awk '{print $6}') == "0" ]; then
+    addatomtypes -p "amoeba09"
+fi
+
+if [ "$simulation" == "gromacs" ]; then
+    extension="*.pdb"
+elif [ "$simulation" == "tinker" ]; then
+    extension="*.xyz"
+fi
+
+#Create the key file for each xyz file if necessary
+for file in $(ls $extension); do
+    keyfile=$(echo $file | cut -d '.' --complement -f2-)
+    keyfile="${keyfile}_AMOEBA09_MONO_NPPT.key"
+    if [ ! -f $keyfile ]; then	
+	echo "creating AMOEBA_MONO_NPPT key file for ${file}..."
+	if [ "$simulation" == "gromacs" ]; then
+	    if [ "$(less ../benzene_topology.top | grep -A 1 molecules | tail -1 | awk '{print $2}')" == "1" ]; then
+		cp /home/ecd4bd/runfiles/benzene_gas.key $keyfile 
+	    else
+		cp /home/ecd4bd/runfiles/benzene.key $keyfile
+		X=$(sed -n '4p' $file | awk '{print $2}')
+		sed -i "s/XXXX/$X/g" $keyfile
+		Y=$(sed -n '4p' $file | awk '{print $3}')
+		sed -i "s/YYYY/$Y/g" $keyfile
+		Z=$(sed -n '4p' $file | awk '{print $4}')
+		sed -i "s/ZZZZ/$Z/g" $keyfile
+		alpha=$(sed -n '4p' $file | awk '{print $5}')
+		sed -i "s/AAAA/$alpha/g" $keyfile
+		beta=$(sed -n '4p' $file | awk '{print $6}')
+		sed -i "s/BBBB/$beta/g" $keyfile
+		gamma=$(sed -n '4p' $file | awk '{print $7}')
+		sed -i "s/GGGG/$gamma/g" $keyfile
+		sed -i "s/$paramfile_amoeba09/$paramfile_amoeba09mononppt/g" $keyfile
+	    fi
+	elif [ "$simulation" == "tinker" ]; then
+	    cp ../benzene.key $keyfile
+	    sed -i "s/$paramfile_amoeba09/$paramfile_amoeba09mononppt/g" $keyfile
+	    sed -i "s/$paramfile_amoeba09monop/$paramfile_amoeba09mononppt/g" $keyfile
+	    sed -i "s/$paramfile_amoeba09monoppt/$paramfile_amoeba09mononppt/g" $keyfile
+	    sed -i "s/$paramfile_amoeba09monopoop/$paramfile_amoeba09mononppt/g" $keyfile
+	    sed -i "s/$paramfile_amoeba09multinp/$paramfile_amoeba09mononppt/g" $keyfile
+	fi
+    fi
+done
+
+#Calculate the energy of each frame in the AMOEBA MONOPOLE NONPOLARIZABLE NO PI-TORSION potential and store it in a file
+energyfile=$(echo $paramfile_amoeba09mononppt | cut -d '.' --complement -f2-)
+energyfile=${energyfile}_energy.xvg
+echo "TIME(ps)	  ENERGY" > $energyfile
+echo "=====================" >> $energyfile
+echo "TIME(ps)    VOLUME" > volume.xvg
+echo "=====================" >> volume.xvg
+let "step=0"
+if [ -f "frame0.xyz" ]; then
+    frame=0
+else
+    frame=1
+fi
+
+fname="frame${frame}.xyz"
+while [ -f $fname ]; do
+    timestep=$(echo "x=$frame*$dt*$log; if(x==0) print \"0.0\"; if(x<1 && x>0) print 0; x" | bc)
+    echo "Calculating the energy of ${fname}..."
+    if [ "$frame" == "1" ]; then
+	/h3/n1/shirtsgroup/tinker/bin/analyze $fname -k frame${frame}_AMOEBA09_MONO_NPPT.key e
+    fi
+    energy=$(/h3/n1/shirtsgroup/tinker/bin/analyze $fname -k frame${frame}_AMOEBA09_MONO_NPPT.key e | grep "Potential Energy" | awk '{print $5}')
+    #volume=$(/h3/n1/shirtsgroup/tinker/bin/analyze $fname -k frame${frame}_AMOEBA09_MONO_NPPT.key G | grep "Volume" | awk '{print $3}')
+    #volume=$(echo "scale=8;${volume}/1000;" | bc | sed -r 's/^(-?)\./\10./') 
+    echo "$timestep         $energy" >> $energyfile
+    #echo "$timestep	    $volume" >> volume.xvg
+    
+    let "frame=$frame+1"
+    fname="frame${frame}.xyz"
+done
+
+##Reset the atom types of each xyz file if necessary
+#if [ $(less frame1.xyz | tail -1 | awk '{print $6}') != "0" ]; then
+#    removeatomtypes -p "amoeba09"
+#fi
+
+mv $energyfile ../$energyfile
+mv volume.xvg ../volume.xvg
+echo "AMOEBA09 MONOPOLE NONPOLARIZABLE NO PI-TORSIONS Done!"
+fi
+
+
+#=============================================================================================
+# AMOEBA09 MONOPOLE NONPOLARIZABLE NO OOP-BEND ENERGY
+#=============================================================================================
+
+if [ "${potentials/"amoeba09mononpoop"}" != "$potentials" ]; then
+
+##Remove any pre-existing atom types
+#removeatomtypes -p "amoeba09"
+#removeatomtypes -p "oplsaa"
+
+#Add appropriate atom types to each xyz file if necessary
+if [ $(less frame1.xyz | tail -1 | awk '{print $6}') == "0" ]; then
+    addatomtypes -p "amoeba09"
+fi
+
+if [ "$simulation" == "gromacs" ]; then
+    extension="*.pdb"
+elif [ "$simulation" == "tinker" ]; then
+    extension="*.xyz"
+fi
+
+#Create the key file for each xyz file if necessary
+for file in $(ls $extension); do
+    keyfile=$(echo $file | cut -d '.' --complement -f2-)
+    keyfile="${keyfile}_AMOEBA09_MONO_NPOOP.key"
+    if [ ! -f $keyfile ]; then	
+	echo "creating AMOEBA_MONO_NPOOP key file for ${file}..."
+	if [ "$simulation" == "gromacs" ]; then
+	    if [ "$(less ../benzene_topology.top | grep -A 1 molecules | tail -1 | awk '{print $2}')" == "1" ]; then
+		cp /home/ecd4bd/runfiles/benzene_gas.key $keyfile 
+	    else
+		cp /home/ecd4bd/runfiles/benzene.key $keyfile
+		X=$(sed -n '4p' $file | awk '{print $2}')
+		sed -i "s/XXXX/$X/g" $keyfile
+		Y=$(sed -n '4p' $file | awk '{print $3}')
+		sed -i "s/YYYY/$Y/g" $keyfile
+		Z=$(sed -n '4p' $file | awk '{print $4}')
+		sed -i "s/ZZZZ/$Z/g" $keyfile
+		alpha=$(sed -n '4p' $file | awk '{print $5}')
+		sed -i "s/AAAA/$alpha/g" $keyfile
+		beta=$(sed -n '4p' $file | awk '{print $6}')
+		sed -i "s/BBBB/$beta/g" $keyfile
+		gamma=$(sed -n '4p' $file | awk '{print $7}')
+		sed -i "s/GGGG/$gamma/g" $keyfile
+		sed -i "s/$paramfile_amoeba09/$paramfile_amoeba09mononpoop/g" $keyfile
+	    fi
+	elif [ "$simulation" == "tinker" ]; then
+	    cp ../benzene.key $keyfile
+	    sed -i "s/$paramfile_amoeba09/$paramfile_amoeba09mononpoop/g" $keyfile
+	    sed -i "s/$paramfile_amoeba09monop/$paramfile_amoeba09mononpoop/g" $keyfile
+	    sed -i "s/$paramfile_amoeba09monoppt/$paramfile_amoeba09mononppt/g" $keyfile
+	    sed -i "s/$paramfile_amoeba09monopoop/$paramfile_amoeba09mononppt/g" $keyfile
+	    sed -i "s/$paramfile_amoeba09multinp/$paramfile_amoeba09mononpoop/g" $keyfile
+	fi
+    fi
+done
+
+#Calculate the energy of each frame in the AMOEBA MONOPOLE NONPOLARIZABLE NO C-C OOP potential and store it in a file
+energyfile=$(echo $paramfile_amoeba09mononpoop | cut -d '.' --complement -f2-)
+energyfile=${energyfile}_energy.xvg
+echo "TIME(ps)    ENERGY          BOND          ANGLE          STRETCHBEND         OOP         TORSION         PIORBITAL         VDW         MULTIPOLE         POLARIZATION" > $energyfile
+echo "=====================" >> $energyfile
+echo "TIME(ps)    VOLUME" > volume.xvg
+echo "=====================" >> volume.xvg
+let "step=0"
+if [ -f "frame0.xyz" ]; then
+    frame=0
+else
+    frame=1
+fi
+
+fname="frame${frame}.xyz"
+while [ -f $fname ]; do
+    timestep=$(echo "x=$frame*$dt*$log; if(x==0) print \"0.0\"; if(x<1 && x>0) print 0; x" | bc)
+    echo "Calculating the energy of ${fname}..."
+    if [ "$frame" == "1" ]; then
+	/h3/n1/shirtsgroup/tinker/bin/analyze $fname -k frame${frame}_AMOEBA09_MONO_NPOOP.key e
+    fi
+    energy=$(/h3/n1/shirtsgroup/tinker/bin/analyze $fname -k frame${frame}_AMOEBA09_MONO_NPOOP.key e | grep "Potential Energy" | awk '{print $5}')
+    #volume=$(/h3/n1/shirtsgroup/tinker/bin/analyze $fname -k frame${frame}_AMOEBA09_MONO_NPOOP.key G | grep "Volume" | awk '{print $3}')
+    #volume=$(echo "scale=8;${volume}/1000;" | bc | sed -r 's/^(-?)\./\10./') 
+    echo "$timestep         $energy" >> $energyfile
+    #echo "$timestep	    $volume" >> volume.xvg
+    
+    let "frame=$frame+1"
+    fname="frame${frame}.xyz"
+done
+
+##Reset the atom types of each xyz file if necessary
+#if [ $(less frame1.xyz | tail -1 | awk '{print $6}') != "0" ]; then
+#    removeatomtypes -p "amoeba09"
+#fi
+
+mv $energyfile ../$energyfile
+mv volume.xvg ../volume.xvg
+echo "AMOEBA09 MONOPOLE NONPOLARIZABLE NO C-C OOP DONE!"
+fi
+
+
+
+#=============================================================================================
+# AMOEBA09 MULTIPOLE NONPOLARIZABLE ENERGY
+#=============================================================================================
+
+if [ "${potentials/"amoeba09multinp"}" != "$potentials" ]; then
+
+##Remove any pre-existing atom types
+#removeatomtypes -p "amoeba09"
+#removeatomtypes -p "oplsaa"
+
+#Add appropriate atom types to each xyz file if necessary
+if [ $(less frame1.xyz | tail -1 | awk '{print $6}') == "0" ]; then
+    addatomtypes -p "amoeba09"
+fi
+
+if [ "$simulation" == "gromacs" ]; then
+    extension="*.pdb"
+elif [ "$simulation" == "tinker" ]; then
+    extension="*.xyz"
+fi
+
+#Create the key file for each xyz file if necessary
+for file in $(ls $extension); do
+    keyfile=$(echo $file | cut -d '.' --complement -f2-)
+    keyfile="${keyfile}_AMOEBA09_MULTI_NP.key"
+    if [ ! -f $keyfile ]; then	
+	echo "creating AMOEBA_MULTI_NP key file for ${file}..."
+	if [ "$simulation" == "gromacs" ]; then
+	    if [ "$(less ../benzene_topology.top | grep -A 1 molecules | tail -1 | awk '{print $2}')" == "1" ]; then
+		cp /home/ecd4bd/runfiles/benzene_gas.key $keyfile 
+	    else
+		cp /home/ecd4bd/runfiles/benzene.key $keyfile
+		X=$(sed -n '4p' $file | awk '{print $2}')
+		sed -i "s/XXXX/$X/g" $keyfile
+		Y=$(sed -n '4p' $file | awk '{print $3}')
+		sed -i "s/YYYY/$Y/g" $keyfile
+		Z=$(sed -n '4p' $file | awk '{print $4}')
+		sed -i "s/ZZZZ/$Z/g" $keyfile
+		alpha=$(sed -n '4p' $file | awk '{print $5}')
+		sed -i "s/AAAA/$alpha/g" $keyfile
+		beta=$(sed -n '4p' $file | awk '{print $6}')
+		sed -i "s/BBBB/$beta/g" $keyfile
+		gamma=$(sed -n '4p' $file | awk '{print $7}')
+		sed -i "s/GGGG/$gamma/g" $keyfile
+		sed -i "s/$paramfile_amoeba09/$paramfile_amoeba09multinp/g" $keyfile
+	    fi
+	elif [ "$simulation" == "tinker" ]; then
+	    cp ../benzene.key $keyfile
+	    sed -i "s/$paramfile_amoeba09/$paramfile_amoeba09multinp/g" $keyfile
+	    sed -i "s/$paramfile_amoeba09monop/$paramfile_amoeba09multinp/g" $keyfile
+	    sed -i "s/$paramfile_amoeba09mononp/$paramfile_amoeba09multinp/g" $keyfile
+	    sed -i "s/$paramfile_amoeba09mononppt/$paramfile_amoeba09multinp/g" $keyfile
+	    sed -i "s/$paramfile_amoeba09mononpoop/$paramfile_amoeba09multinp/g" $keyfile
+	fi
+    fi
+done
+
+#Calculate the energy of each frame in the AMOEBA MULTIPOLE NONPOLARIZABLE potential and store it in a file
+energyfile=$(echo $paramfile_amoeba09multinp | cut -d '.' --complement -f2-)
+energyfile=${energyfile}_energy.xvg
+echo "TIME(ps)    ENERGY          BOND          ANGLE          STRETCHBEND         OOP         TORSION         PIORBITAL         VDW         MULTIPOLE         POLARIZATION" > $energyfile
+echo "=====================" >> $energyfile
+echo "TIME(ps)    VOLUME" > volume.xvg
+echo "=====================" >> volume.xvg
+let "step=0"
+if [ -f "frame0.xyz" ]; then
+    frame=0
+else
+    frame=1
+fi
+
+fname="frame${frame}.xyz"
+while [ -f $fname ]; do
+    timestep=$(echo "x=$frame*$dt*$log; if(x==0) print \"0.0\"; if(x<1 && x>0) print 0; x" | bc)
+    echo "Calculating the energy of ${fname}..."
+    if [ "$frame" == "0" ] || [ "$frame" == "1" ]; then
+	/h3/n1/shirtsgroup/tinker/bin/analyze $fname -k frame${frame}_AMOEBA09_MULTI_NP.key e
+    fi
+    echo "$(/h3/n1/shirtsgroup/tinker/bin/analyze $fname -k frame${frame}_AMOEBA09_MULTI_NP.key e)" > tempenergy.txt
+    energy=$(less tempenergy.txt | grep "Potential Energy" | awk '{print $5}')
+    bond=$(less tempenergy.txt | grep "Bond Stretching" | awk '{print $3}')
+    angle=$(less tempenergy.txt | grep "Angle Bending" | awk '{print $3}')
+    stretchbend=$(less tempenergy.txt | grep "Stretch-Bend" | awk '{print $2}')
+    oop=$(less tempenergy.txt | grep "Out-of-Plane Bend" | awk '{print $3}')
+    torsion=$(less tempenergy.txt | grep "Torsional Angle" | awk '{print $3}')
+    pi=$(less tempenergy.txt | grep "Pi-Orbital Torsion" | awk '{print $3}')
+    vdw=$(less tempenergy.txt | grep "Van der Waals" | awk '{print $4}')
+    multipole=$(less tempenergy.txt | grep "Atomic Multipoles" | awk '{print $3}')
+    polarization=$(less tempenergy.txt | grep "Polarization" | awk '{print $2}')
+    #energy=$(/h3/n1/shirtsgroup/tinker/bin/analyze $fname -k frame${frame}_AMOEBA09.key e | grep "Potential Energy" | awk '{print $5}')
+    #volume=$(/h3/n1/shirtsgroup/tinker/bin/analyze $fname -k frame${frame}_AMOEBA09_MONO_NP.key G | grep "Volume" | awk '{print $3}')
+    #volume=$(echo "scale=8;${volume}/1000;" | bc | sed -r 's/^(-?)\./\10./')
+    echo "$timestep     $energy     $bond     $angle     $stretchbend     $oop     $torsion     $pi     $vdw     $multipole     $polarization     $cc" >> $energyfile
+    #echo "$timestep        $volume" >> volume.xvg
+
+    let "frame=$frame+1"
+    fname="frame${frame}.xyz"
+done
+
+##Reset the atom types of each xyz file if necessary
+#if [ $(less frame1.xyz | tail -1 | awk '{print $6}') != "0" ]; then
+#    removeatomtypes -p "amoeba09"
+#fi
+
+mv $energyfile ../$energyfile
+mv volume.xvg ../volume.xvg
+echo "AMOEBA09 MULTIPOLE NONPOLARIZABLE Done!"
+fi
+
+
+#=============================================================================================
+# AMOEBA09 MONOPOLE NONPOLARIZABLE OPLS ENERGY
+#=============================================================================================
+
+if [ "${potentials/"amoeba09mononpopls"}" != "$potentials" ]; then
+
+##Remove any pre-existing atom types
+#removeatomtypes -p "amoeba09"
+#removeatomtypes -p "oplsaa"
+
+#Add appropriate atom types to each xyz file if necessary
+if [ $(less frame1.xyz | tail -1 | awk '{print $6}') == "0" ]; then
+    addatomtypes -p "amoeba09"
+fi
+
+if [ "$simulation" == "gromacs" ]; then
+    extension="*.pdb"
+elif [ "$simulation" == "tinker" ]; then
+    extension="*.xyz"
+fi
+
+#Create the key file for each xyz file if necessary
+for file in $(ls $extension); do
+    keyfile=$(echo $file | cut -d '.' --complement -f2-)
+    keyfile="${keyfile}_AMOEBA09_MONO_NPOPLS.key"
+    if [ ! -f $keyfile ]; then	
+	echo "creating AMOEBA_MONO_NPOPLS key file for ${file}..."
+	if [ "$simulation" == "gromacs" ]; then
+	    if [ "$(less ../benzene_topology.top | grep -A 1 molecules | tail -1 | awk '{print $2}')" == "1" ]; then
+		cp /home/ecd4bd/runfiles/benzene_gas.key $keyfile 
+	    else
+		cp /home/ecd4bd/runfiles/benzene.key $keyfile
+		X=$(sed -n '4p' $file | awk '{print $2}')
+		sed -i "s/XXXX/$X/g" $keyfile
+		Y=$(sed -n '4p' $file | awk '{print $3}')
+		sed -i "s/YYYY/$Y/g" $keyfile
+		Z=$(sed -n '4p' $file | awk '{print $4}')
+		sed -i "s/ZZZZ/$Z/g" $keyfile
+		alpha=$(sed -n '4p' $file | awk '{print $5}')
+		sed -i "s/AAAA/$alpha/g" $keyfile
+		beta=$(sed -n '4p' $file | awk '{print $6}')
+		sed -i "s/BBBB/$beta/g" $keyfile
+		gamma=$(sed -n '4p' $file | awk '{print $7}')
+		sed -i "s/GGGG/$gamma/g" $keyfile
+		sed -i "s/$paramfile_amoeba09/$paramfile_amoeba09mononpopls/g" $keyfile
+	    fi
+	elif [ "$simulation" == "tinker" ]; then
+	    cp ../benzene.key $keyfile
+	    sed -i "s/$paramfile_amoeba09/$paramfile_amoeba09mononpopls/g" $keyfile
+	    sed -i "s/$paramfile_amoeba09monop/$paramfile_amoeba09mononpopls/g" $keyfile
+	    sed -i "s/$paramfile_amoeba09mononp/$paramfile_amoeba09mononpopls/g" $keyfile
+	    sed -i "s/$paramfile_amoeba09mononppt/$paramfile_amoeba09mononpopls/g" $keyfile
+	    sed -i "s/$paramfile_amoeba09mononpoop/$paramfile_amoeba09mononpopls/g" $keyfile
+	fi
+    fi
+done
+
+#Calculate the energy of each frame in the AMOEBA MONOPOLE NONPOLARIZABLE OPLS NON-Bonded potential and store it in a file
+energyfile=$(echo $paramfile_amoeba09mononpopls | cut -d '.' --complement -f2-)
+energyfile=${energyfile}_energy.xvg
+echo "TIME(ps)    ENERGY          BOND          ANGLE          STRETCHBEND         OOP         TORSION         PIORBITAL         VDW         MULTIPOLE         POLARIZATION         CHARGECHARGE" > $energyfile
+echo "=====================" >> $energyfile
+echo "TIME(ps)    VOLUME" > volume.xvg
+echo "=====================" >> volume.xvg
+let "step=0"
+if [ -f "frame0.xyz" ]; then
+    frame=0
+else
+    frame=1
+fi
+
+fname="frame${frame}.xyz"
+while [ -f $fname ]; do
+    timestep=$(echo "x=$frame*$dt*$log; if(x==0) print \"0.0\"; if(x<1 && x>0) print 0; x" | bc)
+    echo "Calculating the energy of ${fname}..."
+    if [ "$frame" == "0" ] || [ "$frame" == "1" ]; then
+	/h3/n1/shirtsgroup/tinker/bin/analyze $fname -k frame${frame}_AMOEBA09_MONO_NPOPLS.key e
+    fi
+    echo "$(/h3/n1/shirtsgroup/tinker/bin/analyze $fname -k frame${frame}_AMOEBA09_MONO_NPOPLS.key e)" > tempenergy.txt
+    energy=$(less tempenergy.txt | grep "Potential Energy" | awk '{print $5}')
+    bond=$(less tempenergy.txt | grep "Bond Stretching" | awk '{print $3}')
+    angle=$(less tempenergy.txt | grep "Angle Bending" | awk '{print $3}')
+    stretchbend=$(less tempenergy.txt | grep "Stretch-Bend" | awk '{print $2}')
+    oop=$(less tempenergy.txt | grep "Out-of-Plane Bend" | awk '{print $3}')
+    torsion=$(less tempenergy.txt | grep "Torsional Angle" | awk '{print $3}')
+    pi=$(less tempenergy.txt | grep "Pi-Orbital Torsion" | awk '{print $3}')
+    vdw=$(less tempenergy.txt | grep "Van der Waals" | awk '{print $4}')
+    cc=$(less tempenergy.txt | grep "Charge-Charge" | awk '{print $2}')
+    #volume=$(/h3/n1/shirtsgroup/tinker/bin/analyze $fname -k frame${frame}_AMOEBA09_MONO_NPOPLS.key G | grep "Volume" | awk '{print $3}')
+    #volume=$(echo "scale=8;${volume}/1000;" | bc | sed -r 's/^(-?)\./\10./')
+    echo "$timestep     $energy     $bond     $angle     $stretchbend     $oop     $torsion     $pi     $vdw     $cc" >> $energyfile
+    #echo "$timestep        $volume" >> volume.xvg
+
+    let "frame=$frame+1"
+    fname="frame${frame}.xyz"
+done
+
+##Reset the atom types of each xyz file if necessary
+#if [ $(less frame1.xyz | tail -1 | awk '{print $6}') != "0" ]; then
+#    removeatomtypes -p "amoeba09"
+#fi
+
+mv $energyfile ../$energyfile
+mv volume.xvg ../volume.xvg
+echo "AMOEBA09 MONOPOLE NONPOLARIZABLE OPLS NONBONDED Done!"
+fi
+
+
+
+
+#=============================================================================================
+# OPLS ENERGY
+#=============================================================================================
+
+if [ "${potentials/"oplsaareal"}" != "$potentials" ]; then
+
+#Remove any pre-existing atom types
+#removeatomtypes -p "amoeba09"
+#removeatomtypes -p "oplsaa"
+#Add appropriate atom types to each xyz file
+#if [ $(less frame1.xyz | tail -1 | awk '{print $6}') == "0" ]; then
+#    addatomtypes -p "oplsaa"
+#fi
+if [ "$simulation" == "gromacs" ]; then
+    extension="*.pdb"
+elif [ "$simulation" == "tinker" ]; then
+    extension="*.xyz"
+fi
+
+#if [ "$1" != 'energy' ]; then
+    #Create the key file for each xyz file
+    for file in $(ls $extension); do
+	keyfile=$(echo $file | cut -d '.' --complement -f2-)
+        keyfile="${keyfile}_AMOEBA09_MONO_NPOPLS.key"
+        if [ ! -f $keyfile ]; then
+		echo "creating OPLS key file for ${file}..."
+		keyfile=$(echo $file | cut -d '.' --complement -f2-)
+		keyfile="${keyfile}_OPLS.key"
+		cp /home/ecd4bd/runfiles/benzene_oplsaa.key $keyfile
+		if [ "$simulation" == "gromacs" ]; then
+		    if [ "$(less ../benzene_topology.top | grep -A 1 molecules | tail -1 | awk '{print $2}')" == "1" ]; then
+			cp /home/ecd4bd/runfiles/benzene_oplsaa_gas.key $keyfile
+		    else
+			cp /home/ecd4bd/runfiles/benzene_oplsaa.key $keyfile
+			X=$(sed -n '4p' $file | awk '{print $2}')
+			sed -i "s/XXXX/$X/g" $keyfile
+			Y=$(sed -n '4p' $file | awk '{print $3}')
+			sed -i "s/YYYY/$Y/g" $keyfile
+			Z=$(sed -n '4p' $file | awk '{print $4}')
+			sed -i "s/ZZZZ/$Z/g" $keyfile
+			alpha=$(sed -n '4p' $file | awk '{print $5}')
+			sed -i "s/AAAA/$alpha/g" $keyfile
+			beta=$(sed -n '4p' $file | awk '{print $6}')
+			sed -i "s/BBBB/$beta/g" $keyfile
+			gamma=$(sed -n '4p' $file | awk '{print $7}')
+			sed -i "s/GGGG/$gamma/g" $keyfile
+		    fi	
+		elif [ "$simulation" == "tinker" ]; then
+		    cp ../benzene.key $keyfile
+		    #Change the top of the key file to reflect that we are operating with OPLS
+		    sed -i "s/$paramfile_amoeba09/$paramfile_oplsaa/g" $keyfile
+		    sed -i "s/$paramfile_oplsaa_fake/$paramfile_oplsaa/g" $keyfile
+		fi
+	fi
+    done
+#fi
+
+#Calculate the energy of each frame in the tinker potential and store it in a file
+energyfile=$(echo $paramfile_oplsaa | cut -d '.' --complement -f2-)
+energyfile=${energyfile}energy.txt
+echo "TIME(ps)    ENERGY          BOND          ANGLE          IMPROPER         TORSION               VDW         CHARGECHARGE" > $energyfile
+echo "=====================" >> $energyfile
+let "step=0"
+if [ -f "frame0.xyz" ]; then
+    frame=0
+else
+    frame=1
+fi
+fname="frame${frame}.xyz"
+while [ -f $fname ]; do
+    timestep=$(echo "x=$frame*$dt*$log; if(x==0) print \"0.0\"; if(x<1 && x>0) print 0; x" | bc)
+    echo "Calculating the energy of ${fname}..."
+    if [ "$frame" == "0" ] || [ "$frame" == "1" ]; then
+        /h3/n1/shirtsgroup/tinker/bin/analyze $fname -k frame${frame}_OPLS.key e
+    fi
+    echo "$(/h3/n1/shirtsgroup/tinker/bin/analyze $fname -k frame${frame}_OPLS.key e)" > tempenergy.txt
+    energy=$(less tempenergy.txt | grep "Potential Energy" | awk '{print $5}')
+    bond=$(less tempenergy.txt | grep "Bond Stretching" | awk '{print $3}')
+    angle=$(less tempenergy.txt | grep "Angle Bending" | awk '{print $3}')
+    improper=$(less tempenergy.txt | grep "Improper Torsion" | awk '{print $3}')
+    torsion=$(less tempenergy.txt | grep "Torsional Angle" | awk '{print $3}')
+    vdw=$(less tempenergy.txt | grep "Van der Waals" | awk '{print $4}')
+    cc=$(less tempenergy.txt | grep "Charge-Charge" | awk '{print $2}')
+    #volume=$(/h3/n1/shirtsgroup/tinker/bin/analyze $fname -k frame${frame}_OPLS.key G | grep "Volume" | awk '{print $3}')
+    #volume=$(echo "scale=8;${volume}/1000;" | bc | sed -r 's/^(-?)\./\10./')
+    echo "$timestep     $energy     $bond     $angle     $improper     $torsion     $vdw     $cc" >> $energyfile
+    #echo "$timestep        $volume" >> volume.xvg
+    let "frame=$frame+1"
+    fname="frame${frame}.xyz"
+done
+
+#Reset the atom types of each xyz file
+removeatomtypes -p "oplsaa"
+
+mv $energyfile ../$energyfile
+echo "OPLS Done!"
+fi
+
+#=============================================================================================
+# OPLS-FAKE ENERGY
+#=============================================================================================
+
+if [ "${potentials/"oplsaafake"}" != "$potentials" ]; then
+
+#Remove any pre-existing atom types
+removeatomtypes -p "amoeba09"
+removeatomtypes -p "oplsaa"
+#Add appropriate atom types to each xyz file
+if [ $(less frame1.xyz | tail -1 | awk '{print $6}') == "0" ]; then
+    addatomtypes -p "oplsaa"
+fi
+if [ "$simulation" == "gromacs" ]; then
+    extension="*.pdb"
+elif [ "$simulation" == "tinker" ]; then
+    extension="*.xyz"
+fi
+
+#if [ "$1" != 'energy' ]; then
+    #Create the key file for each xyz file
+    for file in $(ls $extension); do
+        echo "creating OPLS key file for ${file}..."
+        keyfile=$(echo $file | cut -d '.' --complement -f2-)
+        keyfile="${keyfile}_OPLS.key"
+        cp /home/ecd4bd/runfiles/benzene_oplsaafake.key $keyfile
+	if [ "$simulation" == "gromacs" ]; then
+	    if [ "$(less ../benzene_topology.top | grep -A 1 molecules | tail -1 | awk '{print $2}')" == "1" ]; then
+                cp /home/ecd4bd/runfiles/benzene_oplsaafake_gas.key $keyfile
+            else
+                cp /home/ecd4bd/runfiles/benzene_oplsaafake.key $keyfile
+                X=$(sed -n '4p' $file | awk '{print $2}')
+                sed -i "s/XXXX/$X/g" $keyfile
+                Y=$(sed -n '4p' $file | awk '{print $3}')
+                sed -i "s/YYYY/$Y/g" $keyfile
+                Z=$(sed -n '4p' $file | awk '{print $4}')
+                sed -i "s/ZZZZ/$Z/g" $keyfile
+                alpha=$(sed -n '4p' $file | awk '{print $5}')
+                sed -i "s/AAAA/$alpha/g" $keyfile
+                beta=$(sed -n '4p' $file | awk '{print $6}')
+                sed -i "s/BBBB/$beta/g" $keyfile
+                gamma=$(sed -n '4p' $file | awk '{print $7}')
+                sed -i "s/GGGG/$gamma/g" $keyfile
+            fi
+	elif [ "$simulation" == "tinker" ]; then
+	    cp ../benzene.key $keyfile
+	    #Change the top of the key file to reflect that we are operating with OPLS
+	    sed -i "s/$paramfile_amoeba09/$paramfile_oplsaa_fake/g" $keyfile
+	    sed -i "s/$paramfile_oplsaa/$paramfile_oplsaa_fake/g" $keyfile
+	fi
+    done
+#fi
+
+#Calculate the energy of each frame in the tinker potential and store it in a file
+energyfile=$(echo $paramfile_oplsaa_fake | cut -d '.' --complement -f2-)
+energyfile=${energyfile}energy.txt
+echo "TIME(ps)              ENERGY" > $energyfile
+echo "=====================" >> $energyfile
+let "step=0"
+if [ -f "frame0.xyz" ]; then
+    frame=0
+else
+    frame=1
+fi
+fname="frame${frame}.xyz"
+while [ -f $fname ]; do
+    timestep=$(echo "x=$frame*$dt*$log; if(x==0) print \"0.0\"; if(x<1 && x>0) print 0; x" | bc)
+    echo "Calculating the energy of ${fname}..."
+    if [ "$frame" == "1" ]; then
+        /h3/n1/shirtsgroup/tinker/bin/analyze $fname -k frame${frame}_OPLS.key e
+    fi
+    energy=$(/h3/n1/shirtsgroup/tinker/bin/analyze $fname -k frame${frame}_OPLS.key e | grep "Potential Energy" | awk '{print $5}')
+    echo "$timestep         $energy" >> $energyfile
+    let "frame=$frame+1"
+    fname="frame${frame}.xyz"
+done
+
+#Reset the atom types of each xyz file
+removeatomtypes -p "oplsaa"
+
+mv $energyfile ../$energyfile
+echo "OPLS Fake Done!"
+fi
+cd ..

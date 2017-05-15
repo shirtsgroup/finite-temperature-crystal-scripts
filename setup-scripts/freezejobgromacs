@@ -1,0 +1,291 @@
+#!/bin/bash
+#BASH SCRIPT TO XTALMIN ALL FRAMES USING THE TINKER XTALMIN SUBROUTINE
+#param f - The name of the input TRR file
+#param p - The name of the potentials to examine
+#param o - The name of the output.xvg file
+#param d - The number of intermediate interpolation states in the potential(s)
+#param s - Which software did we simulate in? (gromacs/tinker)
+#param I - How many independent benzenes are in the gro files? (Gromacs only)
+
+SETRUN_ARGS="$@"
+inputfile="PROD"
+potential="oplsaa"
+#potentials="amoeba09 amoeba09mononp amoeba09monop amoeba09multinp"
+paramfile_amoeba09="amoeba09.prm"
+paramfile_amoeba09monop="amoeba09_mono_p.prm"
+paramfile_amoeba09mononp="amoeba09_mono_np.prm"
+paramfile_amoeba09mononppt="amoeba09_mono_nppt.prm"
+paramfile_amoeba09mononpoop="amoeba09_mono_npoop.prm"
+paramfile_amoeba09mononpopls="amoeba09_mono_npopls.prm"
+paramfile_amoeba09multinp="amoeba09_multi_np.prm"
+paramfile_oplsaa="oplsaa.prm"
+paramfile_oplsaa_fake="oplsaafake.prm"
+outputfile="energy.xvg"
+simulation="gromacs"
+DSPACING="0"
+mode="full"
+
+export SCRIPT_LOC="/home/ecd4bd/scripts"
+export GRO_LOC="/h3/n1/shirtsgroup/gromacs_forceavg3/install/bin"
+export TINKER_LOC="/h3/n1/shirtsgroup/tinker-7"
+export RUNFILES_LOC="/home/ecd4bd/runfiles"
+
+#=============================================================================================
+# READ IN USER INPUTS
+#=============================================================================================
+while getopts "f:u:o:d:s:I:m:" opt; do
+        case $opt in
+        f )
+                inputfile=$OPTARG
+                ;;
+	u)
+		potentials=$OPTARG
+		;;
+        o )
+                outputfile=$OPTARG
+                ;;
+	d )
+                DSPACING=$OPTARG
+                ;;
+	s )
+		simulation=$OPTARG
+		;;
+	I )
+		INDEPENDENT=$OPTARG
+		;;
+	m )
+		mode="energy"
+		;;
+		
+        esac
+done
+
+
+#=============================================================================================
+# ENSURE THE INPUTS ARE CORRECT
+#=============================================================================================
+if [ "$simulation" != "gromacs" ] && [ "$simulation" != "tinker" ]; then
+	echo "Invalid simulation type: $simulation"
+	exit 1
+fi
+
+#if [ "${potentials/"amoeba09"}" == "$potentials" ] && [ "${potentials/"oplsaa"}" == "$potentials"  ] ; then
+#	echo "Unsupported potentials: $potentials"
+#	exit 1
+#fi
+
+#=============================================================================================
+# DETERMINE THE MOLECULE FROM THE INPUT FILES
+#=============================================================================================
+if [ "$simulation" == "tinker" ]; then
+   #Get the molecule from the key file
+   molecule=$(less keyfile.key | grep "Molecule: " | awk '{print $3}')
+else
+   #Get the molecule from the topology file
+   molecule=$(less topology.top | grep "solid" | awk '{print $1}')
+fi
+
+if [ "$molecule" == "benzene" ]; then
+    apermol=12
+elif [ "$molecule" == "glycin" ]; then
+    apermol=10
+elif [ "$molecule" == "acetac" ]; then
+    apermol=8
+elif [ "$molecule" == "hxacan" ]; then
+    apermol=20
+elif [ "$molecule" == "formam" ]; then
+    apermol=6
+elif [ "$molecule" == "imazol" ]; then
+    apermol=9
+elif [ "$molecule" == "cafine" ]; then
+    apermol=24
+elif [ "$molecule" == "zzzvye" ]; then
+    apermol=15
+elif [ "$molecule" == "dohfem" ]; then
+    apermol=14
+elif [ "$molecule" == "bismev" ]; then
+    apermol=20
+elif [ "$molecule" == "cbmzpn" ]; then
+    apermol=30
+elif [ "$molecule" == "pyrzin" ]; then
+    apermol=14
+elif [ "$molecule" == "kobfud" ]; then
+    apermol=15
+elif [ "$molecule" == "melfit" ]; then
+    apermol=57
+elif [ "$molecule" == "ralmog" ]; then
+    apermol=47
+elif [ "$molecule" == "qopbed" ]; then
+    apermol=10
+elif [ "$molecule" == "resora" ]; then
+    apermol=14
+elif [ "$molecule" == "zzzpus" ]; then
+    apermol=36
+elif [ "$molecule" == "zzzpro" ]; then
+    apermol=12
+elif [ "$molecule" == "bedmig" ]; then
+    apermol=30
+else
+    echo "Unrecognized molecule: $molecule"
+    exit 1
+fi
+
+#=============================================================================================
+# FORMAT THE INPUTS
+#=============================================================================================
+
+#Interpolations
+delta=0
+deltas=""
+DeltaHinges=""
+if [ "$DSPACING" -gt "0" ]; then
+    for i in $(seq 0 $DSPACING); do
+        delta=$(echo "scale=8;${i}/${DSPACING}" | bc | sed -r 's/^(-?)\./\10./')
+        DeltaHinge=$(echo "scale=0;$i*100/${DSPACING}" | bc | sed -r 's/^(-?)\./\10./')
+        if [ "$DeltaHinge" -lt 10 ]; then
+                        DeltaHinge="00${DeltaHinge}D"
+                elif [ "$DeltaHinge" -lt 100 ]; then
+                        DeltaHinge="0${DeltaHinge}D"
+                else
+                        DeltaHinge="100D"
+        fi
+        deltas="$deltas $delta"
+        DeltaHinges="$DeltaHinges $DeltaHinge"
+    done
+else
+    deltas="0"
+    DeltaHinges="None"
+fi
+
+echo $deltas
+echo $DeltaHinges
+
+
+#=============================================================================================
+# CREATE THE NECESSARY SAMPLE FRAMES THAT WILL BE MINIMIZED
+#=============================================================================================
+#If we simulated in gromacs, convert trajectory to tinker xyz files
+if [ "$simulation" == "gromacs" ]; then
+	#Determine the timestep between each output frame based on the mdp file
+	dt=$(less production.mdp | grep -m 1 'dt' | awk '{print $3}')
+	log=$(less production.mdp | grep -m 1 'nstxout' | awk '{print $3}')
+
+	if [ "$mode" == 'energy' ]; then
+		echo "Processing only the energy"
+		cd GromacsXTALMIN
+	else
+		#Make a directory for the individual frames if it does not aleady exist
+		mkdir GromacsXTALMIN
+		
+		#Convert the trr trajectory into a gro file using trjconv
+		echo "0 0" | trjconv_d -s pre_EQ.gro -f ${inputfile}.trr -o Traj.gro -pbc nojump -ndec 8
+
+		#Convert the trajectory into a set of full precision gro files using trjconv
+		echo 0 | trjconv_d -s pre_EQ.gro -f Traj.gro -o GromacsXTALMIN/frame.gro -sep -pbc nojump -ndec 8
+
+		cd GromacsXTALMIN
+	fi
+
+#If we simulated in tinker, format each output file and move it to the TinkerXTALMIN directory
+elif [ "$simulation" == "tinker" ]; then
+	#Determine the timestep between each output frame based on the job_specs file
+        dt=$(less job_specs.txt | grep OUTPUT | awk '{print $2}')
+	if [ "$mode" == 'energy' ]; then
+		echo "Processing only the energy"
+		cd GromacsXTALMIN
+	else
+		#Make a directory for the individual frames if it does not aleady exist
+                mkdir GromacsXTALMIN
+
+		for file in $(ls molecule.* | grep -v molecule.xyz | grep -v molecule.dyn); do
+			framenum=${file##*.}
+			#Remove any leading zeroes
+			framenum=$(expr $framenum + 0)
+			echo "Moving ${file}..."
+			cp $file GromacsXTALMIN/"frame${framenum}.xyz"
+		done
+
+		cd GromacsXTALMIN
+
+		#Create the master key file
+		cp ../keyfile.key keyfile.key
+
+		#Add appropriate atom types to each xyz file if necessary
+                if [ "$potentials" == "oplsaa" ]; then
+                        addatomtypes -p "oplsaa"
+                else
+                        addatomtypes -p "amoeba09"
+                fi
+	fi
+
+fi
+
+#=============================================================================================
+# MINIMIZED THE CONFIGURATION FILES AND CALCULATE THE ENERGIES
+#=============================================================================================
+
+	#Copy over the necessary files
+	
+	less ../minimization.mdp | grep -v "ave-group" | grep -v "ave-ngroup" | grep -v "symmetry-averaging" > minimization.mdp
+	cp ../submit_minimization.sh submit_minimization.sh
+	sed -i 's/-n index.ndx//g' submit_minimization.sh
+	cp ../topology.top topology.top
+	cp ../molecule.itp molecule.itp
+	less ../production.mdp | grep -v "ave-group" | grep -v "ave-ngroup" | grep -v "symmetry-averaging" > production_reweighting.mdp
+	cp ../posre.itp posre.itp
+	echo "" > index.ndx
+	cp ../anneal.mdp anneal.mdp
+
+        if [ -f "frame0.gro" ]; then
+            frame=0
+        else
+            frame=1
+        fi
+        fname="frame${frame}.gro"
+
+	rm TrajFreeze.gro
+	while [ -f $fname ]; do
+
+		#Freeze the configuration using the python xtalmin routine
+		#${GRO_LOC}/grompp_d -f production.mdp -c EQ.gro -r restraint.gro -p topology.top -o PROD.tpr -n index.ndx -maxwarn 10
+		#${GRO_LOC}/mdrun_d ${THREADINFO} -v -deffnm PROD -dhdl dhdl_PROD
+		cp "frame${frame}.gro" Initial.gro
+		time=$(less Initial.gro | head -1 | awk '{print $NF}')
+
+		#Run a short annealling step on the configuration
+		${GRO_LOC}/grompp_d -f ../anneal.mdp -c Initial.gro -p topology.top -o ANNEAL.tpr -maxwarn 10
+		${GRO_LOC}/mdrun_d -v -deffnm ANNEAL
+
+		#Energy minimize the resulting configuration
+		mv ANNEAL.gro MIN.gro
+		./submit_minimization.sh
+
+		#Crystal minimize the resulting configuration
+		/share/apps/anaconda/2.4.0/bin/python ~/scripts/runxtalmin.py
+                sed -i "s/T=.*/t=   $time/g" MIN.gro
+                sed -i "s/t=.*/t=   $time/g" MIN.gro		
+		less MIN.gro >> TrajFreeze.gro
+		cp MIN.gro "frame${frame}_frozen.gro"
+
+                echo "Calculating ${fname} energy..."
+		${GRO_LOC}/grompp_d -f production_reweighting.mdp -c TrajFreeze.gro -p topology.top -o reweighting.tpr -maxwarn 10
+                ${GRO_LOC}/mdrun_d  -v -rerun TrajFreeze.gro -s reweighting.tpr -deffnm $potential -e ${potential}energy.edr
+
+                rm ${potential}.trr
+                rm reweighting.tpr
+
+                #Output the potential energy and volume to a file
+                echo -e "Potential\n1 2 3 4 5 7 8 6 9 10 0" | ${GRO_LOC}/g_energy_d -f ${potential}energy.edr -o "${potential}_freeze_energy.xvg"
+		echo Volume | ${GRO_LOC}/g_energy_d -f ${potential}energy.edr -o "volume_freeze.xvg"
+
+                let "frame=$frame+1"
+		fname="frame${frame}.gro"
+        done
+
+	#Copy the final files outside the directory
+	cp "${potential}_freeze_energy.xvg" ../"${potential}_freeze_energy.xvg"
+	cp volume_freeze.xvg ../volume_freeze.xvg
+
+
+
+

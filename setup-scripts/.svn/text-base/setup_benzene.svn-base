@@ -1,0 +1,651 @@
+#!/bin/bash
+
+#BASH SCRIPT TO AUTOMATICALLY SET UP A BENZENE MD SIMULATION BASED ON USER SPECIFICATIONS
+#By: Eric Dybeck 09/12/2014
+#param n - polymorph number in the form 'p1'
+#param T - Temperature in K
+#param P - Pressure in bar
+#param N - Number of benzene molecules
+#param I - Number of independent benzene molecules (the remainder will be averaged)
+#param e - Number of steps in the equilibration step
+#param p - Number of steps in the production step
+#param i - Integrator
+#param t - Thermostat
+#param b - Barostat
+#param c - number of cores (threads) to run on
+#param k - maximum harmonic restraint constant
+#param L - lambda state for the harmonic restraint
+#param W - weakest lambda value (%)
+#param S - strongest lambda value (%)
+#param s - spacing between the lambdas
+#param f - functional form (exponent) of the spacing between the lambdas
+#param G - Gamma state for the interaction dissapearance
+#param g - spacing between the gammas
+#param V - desired box volume (in cubic nm)
+#param r - vdw/coulomb cutoff distance (in angstroms)
+#param u - potential to be used in the simulation
+#param z - specify which simulation package we will use (gromacs or tinker)
+#param h - optional string hinge to add to the job
+#param E - specify the Thermodynamic Ensemble that will be used
+#param o - number of production outputs
+
+#Give these parameters, the script creates a directory in the jobs folder and copies
+#over the relevant .mdp, .gro and topology files to carry out the job. In addition
+#the .mdp files are manipulated away from the defaults based on the user specified
+#parameters. Finally, local and cluster submission scripts are copied over to allow
+#the job to be run.
+
+#=============================================================================================
+# SETUP DEFAULT VALUES AND READ IN PARAMETERS FROM USER
+#=============================================================================================
+
+SETRUN_ARGS="$@"
+#Default Values
+polymorph_num="p1"
+TEMP=-1
+PRESSURE=1
+MOLECULES=72
+INDEPENDENT=72
+equil_steps=100000
+prod_steps=1000000
+integrator="md-vv"
+thermostat="v-rescale"
+barostat=-1
+cores=1
+k_max=1000
+Lambda=0
+MINLAMBDA=0
+MAXLAMBDA=0
+LSPACING=100
+MAXGAMMA=100
+MINGAMMA=100
+GAMMA=100
+GSPACING=100
+EXPONENT=1
+VOLUME=-1
+CUTOFF="6"
+EMOUTPUTS="100"
+EMTRROUTPUTS="1"
+PRODOUTPUTS="20000"
+PRODTRROUTPUTS="100"
+PHASE="DefaultPhase"
+SIMULATION="gromacs"
+POTENTIAL="oplsaa"
+ENSEMBLE="NVT"
+hinge="DefaultHinge"
+
+
+#options passed in from the users
+while getopts "n:T:P:N:I:e:p:o:i:t:b:c:k:L:U:R:s:f:A:B:G:g:V:r:u:z:h:E:" opt; do
+        case $opt in
+        n )
+                polymorph_num=$OPTARG
+                ;;
+        T )
+                TEMP=$OPTARG
+                ;;
+	P )
+		PRESSURE=$OPTARG
+		;;
+	N )
+		MOLECULES=$OPTARG
+		;;
+	I )
+		INDEPENDENT=$OPTARG
+		;;
+	e )
+		equil_steps=$OPTARG
+		;;
+	p )
+		prod_steps=$OPTARG
+		;;
+	o )
+		PRODOUTPUTS=$OPTARG
+		PRODTRROUTPUTS=$OPTARG
+		;;
+	i )
+		integrator=$OPTARG
+		;;
+	t )
+		thermostat=$OPTARG
+		;;
+	b )
+		barostat=$OPTARG
+		;;
+	c )
+		cores=$OPTARG
+		;;
+	k )
+		k_max=$OPTARG
+		;;
+	L )
+		Lambda=$OPTARG
+		;;
+	U )
+                MINLAMBDA=$OPTARG
+                ;;
+        R )
+                MAXLAMBDA=$OPTARG
+                ;;
+        s )
+                LSPACING=$OPTARG
+                ;;
+	f )
+		EXPONENT=$OPTARG
+		;;
+	A )
+		MAXGAMMA=$OPTARG
+		;;
+	B )
+		MINGAMMA=$OPTARG
+		;;
+	G )
+		GAMMA=$OPTARG
+		;;
+	g )
+		GSPACING=$OPTARG
+		;;
+	V )
+		VOLUME=$OPTARG
+		;;
+	r )
+		CUTOFF=$OPTARG
+		;;
+	u )
+		POTENTIAL=$OPTARG
+		;;
+	z )
+		SIMULATION=$OPTARG
+		;;
+	E )
+		ENSEMBLE=$OPTARG
+		;;
+	h )
+		hinge=$OPTARG
+		;;
+        esac
+done
+
+#=============================================================================================
+# ENSURE THAT INPUTS HAVE BEEN PROPERLY ENTERED
+#=============================================================================================
+
+#TEMPERATURE
+if [ $TEMP == "-1" ]; then
+        echo "Invalid Temperature: $TEMP"
+        exit 1
+fi
+
+#POLYMORPH NUMBER
+if [ $polymorph_num != "p1" ] && [ $polymorph_num != "p2" ] && [ $polymorph_num != "p3" ] && [ $polymorph_num != "gas" ]; then
+	echo "Unrecognized polymorph Number: $polymorph_num"
+	exit 1
+elif [ "$polymorph_num" == "gas" ]; then
+	integrator="sd"
+	PRODOUTPUTS="1000"
+        PRODTRROUTPUTS="1000"
+	CUTOFF="20"	
+fi
+
+#NUMBER OF MOLECULES (currently only 4, 8, 16, 32, 72, 108, 256 is accepted)
+if [ $MOLECULES != 256 ] && [ $MOLECULES != 108 ] && [ $MOLECULES != 72 ] && [ $MOLECULES != 32 ] && [ $MOLECULES != 16 ] && [ $MOLECULES != 8 ]&& [ $MOLECULES != 4 ]; then
+	echo "Unsupported number of molecules: $MOLECULES"
+	exit 1
+fi
+
+#NUMBER OF INDEPENDENT MOLECULES (currently only 4, 8, 16, 32, 72, 108, 256 is accepted)
+if [ $INDEPENDENT != 256 ] && [ $INDEPENDENT != 108 ] && [ $INDEPENDENT != 72 ] && [ $INDEPENDENT != 32 ] && [ $INDEPENDENT != 16 ] && [ $INDEPENDENT != 8 ] && [ $INDEPENDENT != 4 ] && [ $INDEPENDENT != 2 ]; then
+        echo "Unsupported number of independent molecules: $INDEPENDENT"
+        exit 1
+elif [ "$MOLECULES" -lt "$INDEPENDENT" ]; then
+	echo "Number of total molecules is less than the number of independent molecules!"
+	echo "Total Molecules: $MOLECULES"
+	echo "Independent Molecules: $INDEPENDENT"
+	exit 1
+fi
+
+
+#INTEGRATOR
+if [ "$integrator" != "md" ] && [ "$integrator" != "md-vv" ] && [ "$integrator" != "sd" ]; then
+	echo "Unrecognized integrator: $integrator"
+	exit 1
+elif [ "$polymorph_num" = "gas" ]; then
+	integrator="sd"
+fi
+
+#SPRING CONSTANT
+if [ "$k_max" -lt "0" ]; then
+	echo "Invalid spring constant: $k_max"
+	exit 1
+fi
+
+#LAMBDA POINT
+if [ "$Lambda" -lt "0" ] || [ "$Lambda" -gt "100" ]; then
+	echo "Invalid Lambda point: $Lambda"
+	exit 1
+fi
+
+if [ "$MINLAMBDA" -lt "0" ] || [ "$MAXLAMBDA" -gt "100" ] || [ "$MINLAMBDA" -gt "$MAXLAMBDA" ]; then
+        echo "Minimum Lambda: $MINLAMBDA"
+        echo "Maximum Lambda: $MAXLAMBDA"
+        echo "Is not a valid lambda range!"
+        exit 1
+fi
+
+if [ "$LSPACING" -le "0" ]; then
+        echo "Invalid Lambda Spacing: $LSPACING"
+        exit 1
+fi
+
+if [ "$EXPONENT" -lt "1" ] || [ "$EXPONENT" -gt "4" ]; then
+        echo "Invalid Exponent: $EXPONENT"
+        exit 1
+fi
+
+#GAMMA POINT
+if [ "$GSPACING" -le "0" ]; then
+        echo "Invalid Gambda Spacing: $LSPACING"
+        exit 1
+fi
+
+#CUTOFF RADIUS
+if [ "$CUTOFF" -lt "0" ]; then
+	echo "Invalid Cutoff Radius: $CUTOFF"
+	exit 1
+fi
+
+#POTENTIAL
+if [ "$POTENTIAL" != "oplsaa" ] && [ "$POTENTIAL" != "oplsaafake" ] && [ "$POTENTIAL" != "amoeba09" ] && [ "$POTENTIAL" != "gromos" ]; then
+	echo "Invalid Potential: $POTENTIAL"
+	echo "Supported Potentials: oplsaa oplsaafake amoeba09 gromos"
+	exit 1
+fi
+
+#SIMULATION PACKAGE
+if [ "$SIMULATION" != "gromacs" ] && [ "$SIMULATION" != "tinker" ]; then
+        echo "Invalid Simulation Package: $SIMULATION"
+        echo "Supported Simulations: gromacs tinker"
+        exit 1
+elif [ "$SIMULATION" == "tinker" ]; then
+	PRODOUTPUTS="1000"
+        PRODTRROUTPUTS="1000"
+fi
+
+#ENSEMBLE
+if [ "$ENSEMBLE" != "NVE" ] && [ "$ENSEMBLE" != "NVT" ] && [ "$ENSEMBLE" != "NPT" ]; then
+	echo "Invalid Thermodynamic Ensemble: $ENSEMBLE"
+	echo "Supported Ensembles: NVE, NVT, NPT"
+	exit 1	
+fi
+
+#=============================================================================================
+# FORMAT INPUTS
+#=============================================================================================
+#Format the temperature name
+if [ "$TEMP" -lt "10" ]; then
+        export TEMPNAME="00$TEMP"
+elif [ "$TEMP" -lt "100" ]; then
+        export TEMPNAME="0$TEMP"
+else
+        export TEMPNAME=$TEMP
+fi
+
+#Format the number of molecules
+if [ "$MOLECULES" == "$INDEPENDENT" ]; then
+	export MOLNAME="$MOLECULES"
+else
+	export MOLNAME="${MOLECULES}_${INDEPENDENT}ind"
+fi
+
+#Format the lambda point name
+if [ "$SIMULATION" == "tinker" ]; then
+        export LNAME=""
+elif [ "$Lambda" -lt "10" ]; then
+        export LNAME="_00${Lambda}L"
+elif [ "$Lambda" -lt "100" ]; then
+        export LNAME="_0${Lambda}L"
+else
+        export LNAME="_100L"
+fi
+
+#Format the gamma point name
+if [ "$SIMULATION" == "tinker" ]; then
+        export GaNAME=""
+elif [ "$GAMMA" -lt "10" ]; then
+        export GaNAME="_00${GAMMA}G"
+elif [ "$GAMMA" -lt "100" ]; then
+        export GaNAME="_0${GAMMA}G"
+else
+        export GaNAME="_100G"
+fi
+
+#echo "GaNAME: $GaNAME"
+#exit 1
+
+
+#Format the volume if specified
+if [ $VOLUME == "-1" ]; then
+	VNAME=""
+elif [ "$VOLUME" -lt "10" ]; then
+	VNAME=$(echo "$VOLUME*100/1" | bc)
+	VNAME="_0${VNAME}V"
+elif [ "$VOLUME" -lt "100" ]; then
+	VNAME=$(echo "$VOLUME*100/1" | bc)
+        VNAME="_${VNAME}V"
+else
+	VNAME="_${VOLUME}V"
+fi
+
+#Format the pressure if specified
+if [ $PRESSURE == "-1" ]; then
+        PNAME=""
+elif [ "$PRESSURE" == "initial" ]; then
+	PNAME=""
+elif [ "$PRESSURE" -lt "10" ]; then
+        PNAME="_00${PRESSURE}P"
+elif [ "$PRESSURE" -lt "100" ]; then
+        PNAME=$(echo "$PRESSURE*100/1" | bc)
+        PNAME="_0${PRESSURE}P"
+else
+        PNAME="_${PRESSURE}P"
+fi
+
+#Format the potential
+if [ "$POTENTIAL" == "oplsaa" ]; then
+	PotNAME="OPLS";
+elif [ "$POTENTIAL" == "oplsaafake" ]; then
+	PotNAME="FAKE";
+elif [ "$POTENTIAL" == "amoeba09" ]; then
+	PotNAME="AMO";
+elif [ "$POTENTIAL" == "gromos" ]; then
+	PotNAME="GROM";
+fi
+
+#Format the simulation
+if [ "$SIMULATION" == "gromacs" ]; then
+	SimNAME="GRO";
+elif [ "$SIMULATION" == "tinker" ]; then
+	SimNAME="TIN";
+fi
+
+
+#Format the phase if specified
+if [ $PHASE != "DefaultPhase" ]; then
+	phase="_${PHASE}"
+else
+	phase=""
+fi
+
+
+#Format the hinge if specified
+if [ $hinge != "DefaultHinge" ]; then
+	hinge="_$hinge"
+else
+	hinge=""
+fi
+
+export NAME="benzene"
+export JOBNAME="${NAME}_${SimNAME}_${PotNAME}_${polymorph_num}_${MOLNAME}_${TEMPNAME}K${LNAME}${GaNAME}${PNAME}${VNAME}${phase}${hinge}"
+export JOBPATH="../jobs/${JOBNAME}"
+export TEMPLATEPATH="../runfiles"
+export GNAME="benzene_pre_EM"
+export TNAME="benzene_topology"
+export PYTHONSCRIPTPATH="../scripts"
+
+#make the directory if it does not already exist
+echo "Making Directory: ${JOBPATH} ..."
+mkdir ${JOBPATH}
+
+#OUTPUT FREQUENCY
+equil_output_frequency=$(echo "${equil_steps}/${EMOUTPUTS}" | bc)
+equil_trr_output_frequency=$(echo "${equil_steps}/${EMTRROUTPUTS}" | bc)
+prod_output_frequency=$(echo "${prod_steps}/${PRODOUTPUTS}" | bc)
+prod_trr_output_frequency=$(echo "${prod_steps}/${PRODTRROUTPUTS}" | bc)
+
+if [ "$SIMULATION" == "gromacs" ]; then
+	#Copy the default equilibration and production mdp file in to the new directory
+	echo "Copying .mdp files..."
+	if [ ${polymorph_num}  == "gas" ]; then
+	    cp ${TEMPLATEPATH}/benzene_equilibration_gas.mdp ${JOBPATH}/benzene_equilibration.mdp
+	    cp ${TEMPLATEPATH}/benzene_production_gas.mdp ${JOBPATH}/benzene_production.mdp
+	else
+	    cp ${TEMPLATEPATH}/benzene_equilibration.mdp ${JOBPATH}/benzene_equilibration.mdp
+	    cp ${TEMPLATEPATH}/benzene_production.mdp ${JOBPATH}/benzene_production.mdp
+	fi
+	echo "Editing .mdp files..."
+	#make any necessary adjustments to the mdp file
+
+	#TEMPERATURE COUPLING
+	if [ "$ENSEMBLE" == "NVT" ] || [ "$ENSEMBLE" == "NPT" ]; then
+	    sed -i "s/ref_t.*/ref_t                    = ${TEMP}/g" ${JOBPATH}/benzene_equilibration.mdp
+	    sed -i "s/ref_t.*/ref_t                    = ${TEMP}/g" ${JOBPATH}/benzene_production.mdp
+	    sed -i "s/gen_temp.*/gen_temp                 = ${TEMP}/g" ${JOBPATH}/benzene_equilibration.mdp
+	    sed -i "s/gen_temp.*/gen_temp                 = ${TEMP}/g" ${JOBPATH}/benzene_production.mdp
+
+	fi
+
+
+	#PRESSURE COUPLING
+	if [ "$ENSEMBLE" == "NPT" ]; then
+	    sed -i "s/pcoupl                   = no/pcoupl                   = berendsen/g" ${JOBPATH}/benzene_equilibration.mdp
+	    sed -i "s/pcoupl                   = no/pcoupl                   = berendsen/g" ${JOBPATH}/benzene_production.mdp
+	    sed -i "s/ref_p.*/ref_p                    = ${PRESSURE} ${PRESSURE} ${PRESSURE} 0.0 0.0 0.0/g" ${JOBPATH}/benzene_equilibration.mdp
+	    sed -i "s/ref_p.*/ref_p                    = ${PRESSURE} ${PRESSURE} ${PRESSURE} 0.0 0.0 0.0/g" ${JOBPATH}/benzene_production.mdp
+	    #If this is polymorph 3, change the compressibility to allow Beta to change
+	    if [ "$polymorph_num" == "p3" ]; then
+	        sed -i "s/4.5e-5 4.5e-5 4.5e-5 0 0 0/4.5e-5 4.5e-5 4.5e-5 4.5e-5 4.5e-5 4.5e-5/g" ${JOBPATH}/benzene_equilibration.mdp
+	        sed -i "s/4.5e-5 4.5e-5 4.5e-5 0 0 0/4.5e-5 4.5e-5 4.5e-5 4.5e-5 4.5e-5 4.5e-5/g" ${JOBPATH}/benzene_production.mdp
+	    fi    
+	fi
+
+	#CUTOFF RADIUS
+	if [ "$CUTOFF" != "9" ]; then
+	    coulombswitch=$(echo "$CUTOFF*0.1 - 0.02" | bc)
+	    rcoulomb=$(echo "$CUTOFF*0.1" | bc)
+	    vdwswitch=$(echo "$CUTOFF*0.1 - 0.05" | bc)
+	    rvdw=$(echo "$CUTOFF*0.1" | bc)
+	    sed -i "s/rcoulomb-switch          =.*/rcoulomb-switch          = $coulombswitch/g" ${JOBPATH}/benzene_equilibration.mdp
+	    sed -i "s/rcoulomb-switch          =.*/rcoulomb-switch          = $coulombswitch/g" ${JOBPATH}/benzene_production.mdp
+	    sed -i "s/rcoulomb                 =.*/rcoulomb                 = $rcoulomb/g" ${JOBPATH}/benzene_equilibration.mdp
+	    sed -i "s/rcoulomb                 =.*/rcoulomb                 = $rcoulomb/g" ${JOBPATH}/benzene_production.mdp
+	    sed -i "s/rvdw-switch              =.*/rvdw-switch              = $vdwswitch/g" ${JOBPATH}/benzene_equilibration.mdp
+	    sed -i "s/rvdw-switch              =.*/rvdw-switch              = $vdwswitch/g" ${JOBPATH}/benzene_production.mdp
+	    sed -i "s/rvdw                     =.*/rvdw                     = $rvdw/g" ${JOBPATH}/benzene_equilibration.mdp
+	    sed -i "s/rvdw                     =.*/rvdw                     = $rvdw/g" ${JOBPATH}/benzene_production.mdp
+
+	fi
+
+	#EQUILIBRATION/PRODUCTION TIMESTEPS
+	sed -i "s/nsteps.*/nsteps                   = ${equil_steps}/g" ${JOBPATH}/benzene_equilibration.mdp
+	sed -i "s/nsteps.*/nsteps                   = ${prod_steps}/g" ${JOBPATH}/benzene_production.mdp
+
+	#OUTPUT FREQUENCY
+	sed -i "s/nstlog                   =.*/nstlog                   = ${equil_output_frequency}/g" ${JOBPATH}/benzene_equilibration.mdp
+	sed -i "s/nstenergy                =.*/nstenergy                = ${equil_output_frequency}/g" ${JOBPATH}/benzene_equilibration.mdp
+	sed -i "s/nstxout               .*/nstxout                  = ${equil_trr_output_frequency}/g" ${JOBPATH}/benzene_equilibration.mdp
+	sed -i "s/nstxout-compressed       =.*/nstxout-compressed       = ${equil_trr_output_frequency}/g" ${JOBPATH}/benzene_equilibration.mdp
+	sed -i "s/nstlog                   =.*/nstlog                   = ${prod_output_frequency}/g" ${JOBPATH}/benzene_production.mdp
+	sed -i "s/nstenergy                =.*/nstenergy                = ${prod_output_frequency}/g" ${JOBPATH}/benzene_production.mdp
+	sed -i "s/nstxout               .*/nstxout                  = ${prod_trr_output_frequency}/g" ${JOBPATH}/benzene_production.mdp
+	sed -i "s/nstxout-compressed       =.*/nstxout-compressed       = ${prod_trr_output_frequency}/g" ${JOBPATH}/benzene_production.mdp
+
+	#INTEGRATOR
+	sed -i "s/integrator.*/integrator               = ${integrator}/g" ${JOBPATH}/benzene_equilibration.mdp
+	sed -i "s/integrator.*/integrator               = ${integrator}/g" ${JOBPATH}/benzene_production.mdp
+
+	#FREE ENERGY PARAMETERS
+	setup_mdpLambdas -L $Lambda -W $MINLAMBDA -S $MAXLAMBDA -s $LSPACING -A $MAXGAMMA -B $MINGAMMA -G $GAMMA -g $GSPACING -f $EXPONENT -d $JOBPATH
+
+	#Copy over the polymorph gro file
+	echo "Copying .gro file..."
+	if [ ${polymorph_num}  == "gas" ]; then
+		cp ${TEMPLATEPATH}/benzene_p1_72_1bar_gas.gro ${JOBPATH}/${GNAME}.gro
+	else
+		if [ -f "${TEMPLATEPATH}/benzene_${polymorph_num}_${MOLNAME}_${PRESSURE}bar_${PotNAME}.gro" ]; then
+			cp ${TEMPLATEPATH}/benzene_${polymorph_num}_${MOLNAME}_${PRESSURE}bar_${PotNAME}.gro ${JOBPATH}/${GNAME}.gro
+		else
+			cp ${TEMPLATEPATH}/benzene_${polymorph_num}_${MOLNAME}.gro ${JOBPATH}/${GNAME}.gro
+		fi
+		#scale the box vectors if necessary
+		#Determine the current volume of the unit cell 
+		if [ "$VOLUME" != "-1" ]; then
+			vol=$(echo "$VOLUME*0.01" | bc)
+			echo "Resizing to $vol..."
+			if [ "$polymorph_num" == "p3" ]; then
+				python ${PYTHONSCRIPTPATH}/resize_gro.py -G ${JOBPATH}/${GNAME}.gro -V $vol -M BNZ -n 12 -u 2
+			else
+				python ${PYTHONSCRIPTPATH}/resize_gro.py -G ${JOBPATH}/${GNAME}.gro -V $vol -M BNZ -n 12 -u 4
+			fi
+		fi
+	fi
+
+	#Copy over the benzene itp file
+	echo "Copying itp file..."
+	cp ${TEMPLATEPATH}/benzene_${POTENTIAL}.itp ${JOBPATH}/benzene.itp
+	#cp ${TEMPLATEPATH}/benzene.itp ${JOBPATH}/benzene.itp
+
+	#Create the position restraint itp file
+	echo "0 0" | genrestr_d -f ${JOBPATH}/${GNAME}.gro -o ${JOBPATH}/posre.itp -fc $k_max $k_max $k_max | grep "SuppressOutput" 
+	#Now lop off all but the first 16 lines
+	head -16 ${JOBPATH}/posre.itp > ${JOBPATH}/restr.itp
+	#Now exit the position restraint file to indicate a transformation over lambda space (handle all possible spacing cases)
+
+	#Copy over the index file
+	if [ "$MOLECULES" == "$INDEPENDENT" ]; then
+        	cp $TEMPLATEPATH/benzene_index.ndx ${JOBPATH}/benzene_index.ndx
+		
+	else
+		cp $TEMPLATEPATH/benzene_${polymorph_num}_${MOLNAME}.ndx ${JOBPATH}/benzene_index.ndx
+		sed -i "s/symmetry-averaging       =.*/symmetry-averaging       = yes/g" ${JOBPATH}/benzene_equilibration.mdp
+		sed -i "s/symmetry-averaging       =.*/symmetry-averaging       = yes/g" ${JOBPATH}/benzene_production.mdp
+		less "${TEMPLATEPATH}/${INDEPENDENT}ind_symmetry_groups.txt" >> ${JOBPATH}/benzene_equilibration.mdp
+		less "${TEMPLATEPATH}/${INDEPENDENT}ind_symmetry_groups.txt" >> ${JOBPATH}/benzene_production.mdp
+
+	fi
+
+
+
+	sed -i "s/$k_max      $k_max      $k_max/0 0 0 $k_max $k_max $k_max/g" ${JOBPATH}/restr.itp
+	sed -i "s/$k_max       $k_max       $k_max/0 0 0 $k_max $k_max $k_max/g" ${JOBPATH}/restr.itp
+	sed -i "s/$k_max        $k_max        $k_max/0 0 0 $k_max $k_max $k_max/g" ${JOBPATH}/restr.itp
+	sed -i "s/$k_max         $k_max         $k_max/0 0 0 $k_max $k_max $k_max/g" ${JOBPATH}/restr.itp
+	sed -i "s/$k_max          $k_max          $k_max/0 0 0 $k_max $k_max $k_max/g" ${JOBPATH}/restr.itp
+
+	rm ${JOBPATH}/posre.itp
+	mv ${JOBPATH}/restr.itp ${JOBPATH}/posre.itp
+
+	#Copy over the benzene topology file
+	echo "Copying topology file..."
+	if [ "${polymorph_num}" == "gas" ]; then
+		cp ${TEMPLATEPATH}/benzene_gas.top ${JOBPATH}/${TNAME}.top
+	else
+		cp ${TEMPLATEPATH}/benzene_${MOLECULES}.top ${JOBPATH}/${TNAME}.top
+	fi
+
+	#Edit the topology file based on the potential being used
+	if [ "$POTENTIAL" == "oplsaafake" ]; then
+		sed -i 's/oplsaa.ff/oplsaafake.ff/g' ${JOBPATH}/${TNAME}.top
+	elif [ "$POTENTIAL" == "gromos" ]; then
+		sed -i 's/oplsaa.ff/gromos54a7.ff/g' ${JOBPATH}/${TNAME}.top
+	fi
+
+
+	#Copy over local and cluster submission scripts
+	echo "Copying local and cluster submission scripts..."
+	cp ${TEMPLATEPATH}/submit_local.sh ${JOBPATH}/submit_local.sh
+	cp ${TEMPLATEPATH}/submit_localitc.sh ${JOBPATH}/submit_localitc.sh
+	cp ${TEMPLATEPATH}/submit_cluster.slurm ${JOBPATH}/submit_cluster.slurm
+	sed -i "s/DIRDIRDIRDIR/${JOBNAME}/g" ${JOBPATH}/submit_cluster.slurm
+	cp ${TEMPLATEPATH}/submit_cluster_pbs.sh ${JOBPATH}/submit_cluster.sh
+	cp ${TEMPLATEPATH}/submit_cluster_standard_pbs.sh ${JOBPATH}/submit_cluster_standard.sh
+
+	#Set the number of threads
+	sed -i "s/-nt 1/-nt ${cores}/g" ${JOBPATH}/submit_local.sh
+	sed -i "s/-nt 1/-nt ${cores}/g" ${JOBPATH}/submit_localitc.sh
+	sed -i "s/-nt 1/-nt ${cores}/g" ${JOBPATH}/submit_cluster.slurm
+
+elif [ "$SIMULATION" == "tinker" ]; then	
+
+	#Copy over the key and xyz file
+	if [ "${polymorph_num}" == "gas" ]; then
+		cp ${TEMPLATEPATH}/benzene_gas.key ${JOBPATH}/benzene.key
+		cp ${TEMPLATEPATH}/benzene_gas.xyz ${JOBPATH}/benzene.xyz
+	else
+		cp ${TEMPLATEPATH}/benzene_${polymorph_num}_${MOLECULES}_${PRESSURE}bar.key ${JOBPATH}/benzene.key
+		cp ${TEMPLATEPATH}/benzene_${polymorph_num}_${MOLECULES}_${PRESSURE}bar.xyz ${JOBPATH}/benzene.xyz
+	fi
+	
+	#Modify the key and file
+	if [ "$POTENTIAL" == "oplsaa" ]; then
+		sed -i "s/amoeba09.prm/oplsaa.prm/g" ${JOBPATH}/benzene.key
+		addatomtypes -p oplsaa -f ${JOBPATH}/benzene.xyz
+	elif [ "$POTENTIAL" == "oplsaafake" ]; then
+		sed -i "s/amoeba09.prm/oplsaafake.prm/g" ${JOBPATH}/benzene.key
+		addatomtypes -p oplsaa -f ${JOBPATH}/benzene.xyz
+	elif [ "$POTENTIAL" == "amoeba09" ]; then
+		addatomtypes -p amoeba09 -f ${JOBPATH}/benzene.xyz
+	fi
+	
+	#X=$(sed -n '4p' benzene.xyz | awk '{print $2}')
+	#sed -i "s/XXXX/$X/g" ${JOBPATH}/benzene.key
+	#Y=$(sed -n '4p' benzene.xyz | awk '{print $3}')
+	#sed -i "s/YYYY/$Y/g" ${JOBPATH}/benzene.key
+	#Z=$(sed -n '4p' benzene.xyz | awk '{print $4}')
+	#sed -i "s/ZZZZ/$Z/g" ${JOBPATH}/benzene.key
+	#alpha=$(sed -n '4p' benzene.xyz | awk '{print $5}')
+	#sed -i "s/AAAA/$alpha/g" ${JOBPATH}/benzene.key
+	#beta=$(sed -n '4p' benzene.xyz | awk '{print $6}')
+	#sed -i "s/BBBB/$beta/g" ${JOBPATH}/benzene.key
+	#gamma=$(sed -n '4p' benzene.xyz | awk '{print $7}')
+	#sed -i "s/GGGG/$gamma/g" ${JOBPATH}/benzene.key
+	
+
+	#Copy over the job specs file
+	cp ${TEMPLATEPATH}/job_specs.txt ${JOBPATH}/job_specs.txt
+	sed -i "s/SSSS/$prod_steps/g" ${JOBPATH}/job_specs.txt
+	sed -i "s/dtdt/0.5/g" ${JOBPATH}/job_specs.txt
+	output_frac=$(echo "scale=8;x=1/${prod_output_frequency}; if(x<1) print 0; x" | bc)
+	output_dt=$(echo "scale=4;x=${prod_output_frequency}*0.5*0.001; if(x<1) print 0; x" | bc)
+	sed -i "s/XXXX/${output_dt}/g" ${JOBPATH}/job_specs.txt
+	sed -i "s/EEEE/2   /g" ${JOBPATH}/job_specs.txt
+	sed -i "s/TTTT/$TEMP/g" ${JOBPATH}/job_specs.txt
+
+	#Copy over local and cluster submission scripts
+	echo "Copying local and cluster submission scripts..."
+        cp ${TEMPLATEPATH}/submit_localitc_tinker.sh ${JOBPATH}/submit_localitc.sh
+        cp ${TEMPLATEPATH}/submit_cluster_tinker.slurm ${JOBPATH}/submit_cluster.slurm
+	cp ${TEMPLATEPATH}/submit_cluster_tinker.sh ${JOBPATH}/submit_cluster.sh
+
+	#Modify the local and cluster submission scripts
+	sed -i "s/DIRDIRDIRDIR/${JOBNAME}/g" ${JOBPATH}/submit_cluster.slurm
+	sed -i "s/SSSS/$prod_steps/g" ${JOBPATH}/submit_cluster.slurm
+	sed -i "s/SSSS/$prod_steps/g" ${JOBPATH}/submit_cluster.sh
+	sed -i "s/SSSS/$prod_steps/g" ${JOBPATH}/submit_localitc.sh
+        sed -i "s/dtdt/0.5/g" ${JOBPATH}/submit_cluster.slurm
+	sed -i "s/dtdt/0.5/g" ${JOBPATH}/submit_cluster.sh
+	sed -i "s/dtdt/0.5/g" ${JOBPATH}/submit_localitc.sh
+        output_dt=$(echo "scale=4;x=${prod_output_frequency}*0.5*0.001; if(x<1) print 0; x" | bc)
+        sed -i "s/XXXX/${output_dt}/g" ${JOBPATH}/submit_cluster.slurm
+	sed -i "s/XXXX/${output_dt}/g" ${JOBPATH}/submit_cluster.sh
+	sed -i "s/XXXX/${output_dt}/g" ${JOBPATH}/submit_localitc.sh
+        sed -i "s/EEEE/2   /g" ${JOBPATH}/submit_cluster.slurm
+	sed -i "s/EEEE/2   /g" ${JOBPATH}/submit_cluster.sh
+	sed -i "s/EEEE/2   /g" ${JOBPATH}/submit_localitc.sh
+        sed -i "s/TTTT/$TEMP/g" ${JOBPATH}/submit_cluster.slurm
+	sed -i "s/TTTT/$TEMP/g" ${JOBPATH}/submit_cluster.sh
+	sed -i "s/TTTT/$TEMP/g" ${JOBPATH}/submit_localitc.sh
+
+
+fi
+
+echo "Create the job status file"
+echo "UNSUBMITTED" > ${JOBPATH}/jobstatus.txt
+
+echo "Creating .initial directory"
+mkdir ${JOBPATH}/.initial
+for file in $(ls ${JOBPATH}); do
+    cp ${JOBPATH}/$file ${JOBPATH}/.initial/$file
+done
+
+echo "Done!"
+

@@ -1,0 +1,24 @@
+#!/bin/bash
+
+SETRUN_ARGS="$@"
+
+
+export GRO_LOC="/home/nps5kd/gromacs_forceavg/install/bin"
+
+export SCRIPT_LOC="/home/nps5kd/crystals"
+echo "here"
+
+for direct in $(ls -l | egrep '^d' | awk '{print $9}'); do
+	echo "$direct"
+	cd $direct
+	direct2=$( echo ${direct} | sed "s/p2/p1/" )
+	rm mappingresultstwostate.txt
+	rm state1only.txt
+	rm state2only.txt
+	python ~/crystals/mappingmbar.py -A originalenergy.xvg -B mappedenergy.xvg -C /home/nps5kd/crystals/NMA/MappingTrajectories/PSCP200Frames2/P1P2July9/${direct2}/mappedenergy.xvg -D /home/nps5kd/crystals/NMA/MappingTrajectories/PSCP200Frames2/P1P2July9/${direct2}/originalenergy.xvg -F /home/nps5kd/crystals/NMA/MappingTrajectories/PSCP200Frames2/P1P2July9/${direct2}/run.log.txt -G run.log.txt
+
+	python ~/crystals/mappingmbar.py -A originalenergy.xvg -B mappedenergy.xvg -C /home/nps5kd/crystals/NMA/MappingTrajectories/PSCP200Frames2/P1P2July9/${direct2}/mappedenergy.xvg -D /home/nps5kd/crystals/NMA/MappingTrajectories/PSCP200Frames2/P1P2July9/${direct2}/originalenergy.xvg -F /home/nps5kd/crystals/NMA/MappingTrajectories/PSCP200Frames2/P1P2July9/${direct2}/run.log.txt -G run.log.txt -S 1
+
+	python ~/crystals/mappingmbar.py -A originalenergy.xvg -B mappedenergy.xvg -C /home/nps5kd/crystals/NMA/MappingTrajectories/PSCP200Frames2/P1P2July9/${direct2}/mappedenergy.xvg -D /home/nps5kd/crystals/NMA/MappingTrajectories/PSCP200Frames2/P1P2July9/${direct2}/originalenergy.xvg -F /home/nps5kd/crystals/NMA/MappingTrajectories/PSCP200Frames2/P1P2July9/${direct2}/run.log.txt -G run.log.txt -S 2
+	cd ..
+done

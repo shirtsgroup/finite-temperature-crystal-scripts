@@ -1,0 +1,34 @@
+#!/bin/bash
+#BASH SCRIPT TO ADD RESTRAINTS TO A KEY FILE
+#param f - The name of the input xyz file to use as restraints
+#param k - The name of the input key file to add the restraints to
+
+#=============================================================================================
+while getopts "f:k:" opt; do
+        case $opt in
+        f )
+                file=$OPTARG
+                ;;
+	k )
+		keyfile=$OPTARG
+		;;
+	esac
+done
+
+numatoms=$(sed -n '1p' $file | awk '{print $1}')
+
+let "lineend=$numatoms+2"
+
+#Added the restraint header to the key file
+echo "" >> $keyfile
+echo '# Position restraints' >> $keyfile
+
+for i in $(seq 3 $lineend); do
+
+line=$(sed -n "${i}p" $file | awk '{print $1,$3,$4,$5}')
+line="RESTRAIN-POSITION $line INTERPOLATE 1 0.0 10.0"
+#line="RESTRAIN-POSITION $line INTERPOLATE 1 0.0 2.39"
+echo $line >> $keyfile
+
+done
+

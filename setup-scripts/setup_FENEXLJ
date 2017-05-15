@@ -1,0 +1,106 @@
+#!/bin/bash
+
+
+#BASH SCRIPT TO AUTOMATICALLY SET UP BENZENE MD SIMULATIONS OVER A T AND P RANGE
+#By: Natalie Schieber 5/13/15
+#param n - polymorph number (all 3 will be used if none is given)
+#param C - Minimum temperature in K
+#param H - Maximum temperature in K
+#param S - Temperature spacing in K
+#param P - Minimum pressure in bar
+#param Y - Maximum pressure in bar
+#param s - Pressure spacing in barp
+#param p - Number of steps in the production step
+#param x - number of molecules in the x direction
+#param y - number of molecules in the y direction
+#param z - number of molecules in the z direction
+#param h - optional string hinge to add to the job
+
+#=============================================================================================
+# SETUP DEFAULT VALUES AND READ IN PARAMETERS FROM USER
+#=============================================================================================
+
+SETRUN_ARGS="$@"
+polymorph_num="fcc"
+TMIN=30
+PMIN=1
+prod_steps=8000000
+hinge="DefaultHinge"
+ensemble="NPT"
+xnum=2
+ynum=2
+znum=2
+density=1.5
+
+#options passed in from the users
+while getopts "n:C:P :e:p:i:t:b:h:E:x:y:z:" opt; do
+        case $opt in
+        n )
+                polymorph_num=$OPTARG
+                ;;
+	C )
+		TMIN=$OPTARG
+		;;
+        P )
+                PMIN=$OPTARG
+                ;;
+        p )
+                prod_steps=$OPTARG
+                ;;
+        h )
+                hinge=$OPTARG
+                ;;
+	E )
+		ensemble=$OPTARG
+		;;
+        x )
+                xnum=$OPTARG
+                ;;
+        y )
+                ynum=$OPTARG
+                ;;
+	z )
+		znum=$OPTARG
+		;;
+        esac
+done
+
+
+
+
+
+#==============================================================================================
+# ENSURE THAT INPUTS HAVE BEEN PROPERLY ENTERED
+#=============================================================================================
+
+#TEMPERATURE
+if [ $TMIN == -1 ]; then
+	echo "Invalid Minimum Temperature: $TMIN"
+	exit 1
+fi
+
+#PRESSURE
+if [ $PMIN == -1 ]; then
+	echo "Invalid Minimum Pressure: $PMIN"
+	exit 1
+fi
+
+#POLYMORPH NUMBER
+#if [ $polymorph_num != "fcc" ] && [ $polymorph_num != "bcc" ] && [ $polymorph_num != "hcp" ] && [ $polymorph_num != "fcc bcc" ] && [ $polymorph_num != "fcc hcp" ] && [ $polymorph_num != "bcc hcp" ] && [ $polymorph_num != "fcc bcc hcp" ]; then
+#        echo "Unrecognized polymorph Number: $polymorph_num"
+#        exit 1
+#fi
+
+
+#PRESSURE SPACING
+if [ "$PSPACE" -le "0" ]; then
+	echo "Invalid Pressure Spacing: $PSPACE"
+	exit 1
+fi
+
+
+
+for poly in $polymorph_num; do
+	setup_LJlammps -n $poly -T $temp -P $pressure -p $prod_steps -h $hinge -E $ensemble -x $xnum -y $ynum -z $znum -d $density
+done
+	

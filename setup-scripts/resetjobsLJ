@@ -1,0 +1,15 @@
+#!/bin/bash
+
+for direct in $(ls -l | egrep '^d' | awk '{print $9}'); do
+
+	cd ${direct}
+	rm BoverA.txt
+	rm dumpnew.melt
+	rm lognew.lammps
+	rm results.txt
+	mv logold.lammmps log.lammps
+	cd ..
+
+done
+
+

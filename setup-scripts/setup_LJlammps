@@ -1,0 +1,156 @@
+#!/bin/bash
+
+#Bash script to utomatically set up a Lennard-Jonesium MD simulation
+#Natalie Schieber 08/27/2015
+
+#param n - phase "fcc" "bcc" "hcp"
+#param T - Tempereature in K
+#param P - Pressure in bar
+#param x - molecules in the x direction
+#param y - molecules in the y direction
+#param z - molecules in the z direction
+#param p - number of production steps
+#param h - optional hinge
+#param E - thermodynamic ensemble
+
+SETRUN_ARGS="$@"
+#Default Values
+polymorph="fcc"
+temp=-1
+pressure=1
+xmol=4
+ymol=4
+zmol=4
+prod_steps=40000000
+integrator="md"
+thermostat="v-rescale"
+barostat="Parrinello-Rahman"
+ensemble="NPT"
+hinge="DefaultHinge"
+
+
+#user defined options
+while getopts "n:T:P:x:y:z:p:h:E:d:" opt; do
+	case $opt in 
+	n )
+		polymorph=$OPTARG
+		;;
+	T )
+		temp=$OPTARG
+		;;
+	P )
+		pressure=$OPTARG
+		;;
+	x )
+		xmol=$OPTARG
+		;;
+	y )
+		ymol=$OPTARG
+		;;
+	z )
+		zmol=$OPTARG
+		;;
+	p )
+		prod_steps=$OPTARG
+		;;
+	h )
+		hinge=$OPTARG
+		;;
+	E )
+		ensemble=$OPTARG
+		;;
+	d )
+		density=$OPTARG
+		;;
+	esac
+done
+
+#Make sure inputs are allowed and formatted correctly
+
+if [ $polymorph != "fcc" ] && [ $polymorph != "bcc" ] && [ $polymorph != "hcp" ]; then
+	echo "Unrecognized polymorph: $polymorph"
+	exit 1
+fi 
+
+if [ "$temp" == "-1" ]; then
+	echo "Invalid Temperature: $temp"
+	exit 1
+fi
+
+
+if [ "$pressure" -lt "0" ]; then
+	echo "Invalid pressure: $pressure"
+	exit 1
+fi
+
+
+if [ "$ensemble" != "NVE" ] && [ "$ensemble" != "NVT" ] && [ "$ensemble" != "NPT" ]; then
+	echo "Invalid Thermodynamic Ensemble: $ensemble"
+	echo "Supported Ensembles: NVE, NVT, NPT"
+	exit 1	
+fi
+
+#Create job name
+
+molnum=`expr $xmol \\* $ymol \\* $zmol`
+export MOLNUM="_${molnum}"
+
+if [ "$polymorph" == "fcc" ]; then
+	export PHASENAME="LJ_FCC"
+elif [ "$polymorph" == "bcc" ]; then
+	export PHASENAME="LJ_BCC"
+elif [ "$polymorph" == "hcp" ]; then
+	export PHASENAME="LJ_HCP"
+fi
+
+
+if [ $pressure == "-1" ]; then
+        PNAME=""
+elif [ "$pressure" -lt "10" ]; then
+        PNAME="_00${pressure}P"
+elif [ "$pressure" -lt "100" ]; then
+        PNAME=$(echo "$pressure*100/1" | bc)
+        PNAME="_0${pressure}P"
+else
+        PNAME="_${pressure}P"
+fi
+
+
+export TNAME="_00${temp}K"
+
+
+export ENNAME="_${ensemble}_"
+
+if [ "$hinge" == "DefaultHinge" ]; then
+	export HNAME=""
+else
+	export HNAME="$hinge"
+fi
+
+#Make job directory and copy over relevant files
+
+export JOBNAME="${PHASENAME}${MOLNUM}${TNAME}${PNAME}${ENNAME}${HNAME}"
+mkdir $JOBNAME
+
+scp ../LJlammps/in.LJ ${JOBNAME}/in.LJ
+scp ../LJlammps/submit_cluster.slurm ${JOBNAME}/submit_cluster.slurm 
+
+#alter in.LJ to reflect user inputs
+
+sed -i "s/pnum/${polymorph}/g" ${JOBNAME}/in.LJ
+sed -i "s/xsss/${xmol}/g" ${JOBNAME}/in.LJ
+sed -i "s/ysss/${ymol}/g" ${JOBNAME}/in.LJ
+sed -i "s/zsss/${zmol}/g" ${JOBNAME}/in.LJ
+sed -i "s/tXXX/0.${temp}/g" ${JOBNAME}/in.LJ
+sed -i "s/nsteps/${prod_steps}/g" ${JOBNAME}/in.LJ
+sed -i "s/RRRR/${density}/g" ${JOBNAME}/in.LJ
+
+
+if [ $ensemble == "NPT" ]; then
+	sed -i "s/fixT/fix id1 all npt aniso ${pressure} ${pressure} 5.0 temp 0.${temp} 0.${temp} 5.0/g" ${JOBNAME}/in.LJ
+
+	
+fi
+if [ $ensemble == "NVT" ]; then
+	sed -i "s/fixT/fix 1 all nvt temp ${temp} ${temp} 100.0/g" ${JOBNAME}/in.LJ
+fi

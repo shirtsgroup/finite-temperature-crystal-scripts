@@ -1,0 +1,244 @@
+#!/bin/bash
+
+#BASH SCRIPT TO AUTOMATICALLY SET UP BENZENE MD SIMULATIONS FROM THE CRYSTAL PHASE TO THE MELTED LIQUID PHASE
+#By: Eric Dybeck 09/12/2014
+#param n - polymorph number in the form 'p1'
+#param C - coldest temperature in K
+#param H - hottest temperature in K
+#param T - incremental temperature change in K
+#param P - Pressure in bar
+#param U - unrestrained lambda value (%)
+#param R - restrained lambda value (%)
+#param L - incremental lambda change
+#param k - maximum harmonic restraint constant
+#param f - functional form (exponent) of the spacing between the lambdas
+#param V - desired box volume (in cubic nm)
+#param S - smallest box vector scaling parameter
+#param B - biggest box vector scaling parameter
+#param s - spacing between the scaling parameters
+#param N - Number of benzene molecules
+#param e - Number of steps in the equilibration step
+#param p - Number of steps in the production step
+#param i - Integrator
+#param t - Thermostat
+#param b - Barostat
+#param r - vdw/coulomb cutoff distance (in angstroms)
+#param h - optional string hinge to add to the job
+
+#Give these parameters, the script calls the subscripts to set up each leg of the thermodynamic path
+
+#=============================================================================================
+# SETUP DEFAULT VALUES AND READ IN PARAMETERS FROM USER
+#=============================================================================================
+
+SETRUN_ARGS="$@"
+polymorph_num="p1"
+MINTEMP=200
+MAXTEMP=400
+TSPACING=20
+MINLAMBDA=0
+MAXLAMBDA=100
+k_max=1000
+LSPACING=10
+EXPONENT=2
+GAMMA=100
+VOLUME=-1
+MINVOLUME=850
+MAXVOLUME=900
+VSPACING=5
+MOLECULES=72
+equil_steps=100000
+prod_steps=1000000
+integrator="md"
+thermostat="v-rescale"
+barostat=-1
+CUTOFF="6"
+hinge="DefaultHinge"
+
+#options passed in from the users
+while getopts "n:C:H:T:P:N:e:p:i:t:b:k:U:R:L:f:G:S:B:s:r:h:" opt; do
+        case $opt in
+        n )
+                polymorph_num=$OPTARG
+                ;;
+	C )
+                MINTEMP=$OPTARG
+                ;;
+        H )
+                MAXTEMP=$OPTARG
+                ;;
+	T )
+		TSPACING=$OPTARG
+		;;
+	P )
+		PRESSURE=$OPTARG
+		;;
+	N )
+		MOLECULES=$OPTARG
+		;;
+	e )
+		equil_steps=$OPTARG
+		;;
+	p )
+		prod_steps=$OPTARG
+		;;
+	i )
+		integrator=$OPTARG
+		;;
+	t )
+		thermostat=$OPTARG
+		;;
+	b )
+		barostat=$OPTARG
+		;;
+	k )
+		k_max=$OPTARG
+		;;
+	U )
+                MINLAMBDA=$OPTARG
+                ;;
+        R )
+                MAXLAMBDA=$OPTARG
+                ;;
+        L )
+                LSPACING=$OPTARG
+                ;;
+	f )
+		EXPONENT=$OPTARG
+		;;
+	G )
+		GAMMA=$OPTARG
+		;;
+	S )
+                MINVOLUME=$OPTARG
+                ;;
+        B )
+                MAXVOLUME=$OPTARG
+                ;;
+        s )
+                VSPACING=$OPTARG
+                ;;
+	r )
+		CUTOFF=$OPTARG
+		;;
+	h )
+		hinge=$OPTARG
+		;;
+        esac
+done
+
+#=============================================================================================
+# ENSURE THAT INPUTS HAVE BEEN PROPERLY ENTERED
+#=============================================================================================
+
+#TEMPERATURE
+if [ $MINTEMP == -1 ] || [ $MAXTEMP == -1 ] || [ "$MINTEMP" -gt "$MAXTEMP" ]; then
+        echo "Minimum Temperature: $MINTEMP"
+        echo "Maximum Temperature: $MAXTEMP"
+        echo "Is not a valid temperature range!"
+        exit 1
+fi
+if [ $TSPACING == -1 ]; then
+        echo "Invalid Temperature Spacing: $TSPACING"
+        exit 1
+fi
+
+#LAMBDA
+if [ "$MINLAMBDA" -lt "0" ] || [ "$MAXLAMBDA" -gt "100" ] || [ "$MINLAMBDA" -gt "$MAXLAMBDA" ]; then
+        echo "Minimum Lambda: $MINLAMBDA"
+        echo "Maximum Lambda: $MAXLAMBDA"
+        echo "Is not a valid lambda range!"
+        exit 1
+fi
+
+if [ "$LSPACING" -le "0" ]; then
+        echo "Invalid Lambda Spacing: $LSPACING"
+        exit 1
+fi
+
+if [ "$EXPONENT" -lt "1" ] || [ "$EXPONENT" -gt "3" ]; then
+        echo "Invalid Exponent: $EXPONENT"
+        exit 1
+fi
+
+#GAMMA
+if [ "$GAMMA" - lt "0" ]; then
+	echo "Invalid Gamma: $GAMMA"
+	exit 1
+fi
+
+#VOLUME
+if [ $MINVOLUME == -1 ] || [ $MAXVOLUME == -1 ] || [ "$MINVOLUME" -gt "$MAXVOLUME" ]; then
+        echo "Minimum Volume: $MINVOLUME"
+        echo "Maximum Volume: $MAXVOLUME"
+        echo "Is not a valid volume range!"
+        exit 1
+fi
+if [ $VSPACING == -1 ]; then
+        echo "Invalid Volume Spacing: $VSPACING"
+        exit 1
+fi
+
+#POLYMORPH NUMBER
+if [ $polymorph_num != "p1" ] && [ $polymorph_num != "p2" ] && [ $polymorph_num != "p3" ]; then
+	echo "Unrecognized polymorph Number: $polymorph_num"
+	exit 1
+fi
+
+#NUMBER OF MOLECULES (currently only 72, 108, 256 is accepted)
+if [ $MOLECULES != 256 ] && [ $MOLECULES != 108 ] && [ $MOLECULES != 72 ]; then
+	echo "Unsupported number of molecules: $MOLECULES"
+	exit 1
+fi
+
+#NUMBER OF EQUILIBRATION TIMESTEPS
+#if [  != 256 ]
+#        echo "Unsupported number of molecules: $MOLECULES"
+#        exit 1
+#fi
+
+#NUMBER OF PRODUCTION TIMESTEPS
+#if [ MOLECULES != 256 ]
+#        echo "Unsupported number of molecules: $MOLECULES"
+#        exit 1
+#fi
+
+#INTEGRATOR
+if [ $integrator != "md" ] && [ $integrator != "md-vv" ]; then
+	echo "Unrecognized integrator: $integrator"
+	exit 1
+fi
+
+#SPRING CONSTANT
+if [ "$k_max" -lt "0" ]; then
+	echo "Invalid spring constant: $k_max"
+	exit 1
+fi
+
+#CUTOFF RADIUS
+if [ "$CUTOFF" -lt "0" ]; then
+	echo "Invalid Cutoff Radius: $CUTOFF"
+	exit 1
+fi
+
+#=============================================================================================
+# SETUP THERMODYNAMIC PATH
+#=============================================================================================
+
+echo "Setting up Leg 1: Restrain the crystal at ${MINTEMP}K"
+setup_Lambda -n $polymorph_num -U $MINLAMBDA -R $MAXLAMBDA -L $LSPACING -f $EXPONENT -G $GAMMA -T $MINTEMP -N $MOLECULES -e $equil_steps -p $prod_steps -r $CUTOFF -h $hinge
+echo "Done"
+
+echo "Setting up Leg 2: Heat the crystal from ${MINTEMP}K to ${MAXTEMP}K"
+Temp_TMin=$(echo "$MINTEMP+$TSPACING" | bc)
+Temp_TMax=$(echo "$MAXTEMP-$TSPACING" | bc)
+setup_Temp -n $polymorph_num -C $Temp_TMin -H $Temp_TMax -T $TSPACING -N $MOLECULES -e $equil_steps -p $prod_steps -L $MAXLAMBDA -G $GAMMA -r $CUTOFF -h $hinge
+echo "Done"
+
+echo "Setting up Leg 3: Unrestrain the crystal at ${MAXTEMP}K"
+setup_Lambda -n $polymorph_num -U $MINLAMBDA -R $MAXLAMBDA -L $LSPACING -f $EXPONENT -G $GAMMA -T $MAXTEMP -N $MOLECULES -e $equil_steps -p $prod_steps -r $CUTOFF -h $hinge
+echo "Done"
+
+echo "Setting up Leg 4: Expand the unit cell from ${MINVOLUME} to ${MAXVOLUME} cubic nanometersx0.1"
+setup_Volume -n $polymorph_num -S $MINVOLUME -B $MAXVOLUME -s $VSPACING -T $MAXTEMP -G $GAMMA -N $MOLECULES -e $equil_steps -p $prod_steps -r $CUTOFF -h $hinge
+echo "Done"

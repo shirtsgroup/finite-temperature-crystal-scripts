@@ -1,0 +1,63 @@
+#!/bin/bash
+
+#Bbash script to move pertinent files from jobs and pull file names
+#param h - put jobs containing this string into list
+#param i - ignore jobs that contain this string
+
+SETRUN_ARGS="$@"
+hinge="DefaultHinge"
+ignore_string="DefaultIgnore"
+
+#options passed in from the users
+while getopts "h:i:" opt; do
+        case $opt in
+        h )
+                hinge=$OPTARG
+                ;;
+        i )
+                ignore_string=$OPTARG
+                ;;
+	esac
+done
+
+
+
+
+#Move all jobs
+if [ "$hinge" == "DefaultHinge" ] && [ $ignore_string == "DefaultIgnore" ]; then
+	for direct in $(ls -l | egrep '^d' | awk '{print $9}'); do
+			
+	
+		if [ "$(echo $direct | grep "FCC")" == $direct ]; then
+			b="FCC"
+		
+
+		elif [ "$(echo $direct | grep "HCP")" == $direct ]; then
+			b="HCP"
+		
+
+		else 
+			b="BCC"
+		fi
+
+		vol=$( less $direct/log.lammps | grep "8000000" | awk '{print $3}' )
+		temp=$( less $direct/in.LJ | grep "fix" | awk '{print $10}' ) 
+		pres=$( less $direct/in.LJ | grep "fix" | awk '{print $6}' )
+
+		echo "$temp $pres $vol"
+		
+		if [ $b == "FCC" ]; then
+			echo -e "$pres \t $temp $vol" >> "./FCCdensity.txt"
+	
+		
+		elif [ $b == "HCP" ]; then
+			echo -e "$pres \t $temp \t $vol" >> "./HCPdensity.txt"
+
+		else
+			echo -e "$pres \t $temp \t $vol" >> "./BCCdensity.txt"
+		fi
+
+		
+	done
+fi
+		

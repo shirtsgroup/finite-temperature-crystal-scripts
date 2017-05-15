@@ -1,0 +1,150 @@
+#!/bin/bash
+
+#BASH SCRIPT TO KILL JOBS ON THE FIR.ITC CLUSTER ON THE SHIRTS QUEUE
+#param h - move jobs that contain this string
+#param i - ignore jobs that contain this string
+#param d - destination directory for the finished job
+
+SETRUN_ARGS="$@"
+hinge="DefaultHinge"
+ignore_string="DefaultIgnore"
+jobid=""
+
+#options passed in from the users
+while getopts "h:i:" opt; do
+        case $opt in
+        h )
+                hinge=$OPTARG
+                ;;
+        i )
+                ignore_string=$OPTARG
+                ;;
+	esac
+done
+
+#Check the status of jobs that contain the hinge but not the ignore string
+
+#Check all jobs
+if [ $hinge == "DefaultHinge" ] && [ $ignore_string == "DefaultIgnore" ]; then
+	for direct in $(ls -l | egrep '^d' | awk '{print $9}'); do
+		cd $direct
+		jobid=$(less jobid.txt | awk '{print $4}' )
+		status=$(squeue -j $jobid | tail -1 | awk '{print $5}')
+		if [ ! -f jobid.txt ]; then
+		    echo "${direct}: UNSUBMITTED"
+		elif [ "$status" == "R" ]; then
+		    time=$(squeue -j $jobid | tail -1 | awk '{print $6}')
+		    if [ -f benzene_PROD.log ]; then
+		        step=$(less benzene_PROD.log | tail -20 | grep -A 1 Step | tail -1 | awk '{print $1}')
+		        echo "${direct}: RUNNING   Jobid: $jobid   Step: $step   Time: $time"
+		    else
+			echo "${direct}: RUNNING   Jobid: $jobid" 
+		    fi
+		elif [ "$status" == "Q" ]; then
+		    echo "${direct}: QUEUED"
+		else
+		    if [ "$(cat jobstatus.txt)" == "UNSUBMITTED" ]; then
+                        echo "${direct} : UNSUBMITTED"
+		    elif grep -q "TERM" benzene_PROD.log; then
+			echo "${direct} : KILLED"
+                    elif [ -f benzene_PROD.log ] && [ "$(tail -1 benzene_PROD.log | awk '{print $1}')" == "Finished" ]; then
+                        echo "${direct} : FINISHED"
+                    else
+                        echo "${direct} : FAILED"
+                    fi
+		fi
+		cd ..
+	done
+#Check all jobs containing the hinge
+elif [ $ignore_string == "DefaultIgnore" ]; then
+	for direct in $(ls -l | egrep '^d' | awk '{print $9}' | grep "$(echo $hinge | awk '{print $1}')" | grep "$(echo $hinge | awk '{print $2}')" | grep "$(echo $hinge | awk '{print $3}')"); do
+                cd $direct
+                jobid=$(less jobid.txt | awk '{print $4}' )
+                status=$(squeue -j $jobid | tail -1 | awk '{print $5}')
+		if [ ! -f jobid.txt ]; then
+                    echo "${direct}: UNSUBMITTED"
+                elif [ "$status" == "R" ]; then
+		    time=$(squeue -j $jobid | tail -1 | awk '{print $6}')
+		    if [ -f benzene_PROD.log ]; then
+                        step=$(less benzene_PROD.log | tail -20 | grep -A 1 Step | tail -1 | awk '{print $1}')
+                        echo "${direct}: RUNNING  Jobid: $jobid   Step: $step   Time: $time"
+                    else
+                        echo "${direct}: RUNNING  Jobid: $jobid"
+                    fi
+                elif [ "$status" == "Q" ]; then
+                    echo "${direct}: QUEUED"
+                else
+		    if [ "$(cat jobstatus.txt)" == "UNSUBMITTED" ]; then
+                        echo "${direct} : UNSUBMITTED"
+		    elif grep -q "TERM" benzene_PROD.log; then
+                        echo "${direct} : KILLED"
+                    elif [ -f benzene_PROD.log ] && [ "$(tail -1 benzene_PROD.log | awk '{print $1}')" == "Finished" ]; then
+                        echo "${direct} : FINISHED"
+                    else
+                        echo "${direct} : FAILED"
+                    fi
+		fi
+		cd ..
+	done
+#Check all jobs except those containing the ignore string
+elif [ $hinge == "DefaultHinge" ]; then
+	for direct in $(ls -l | egrep '^d' | awk '{print $9}' | grep -v $ignore_string); do
+                cd $direct
+		jobid=$(less jobid.txt | awk '{print $4}' )
+                status=$(squeue -j $jobid | tail -1 | awk '{print $5}')
+		if [ ! -f jobid.txt ]; then
+                    echo "${direct}: UNSUBMITTED"
+                elif [ "$status" == "R" ]; then
+		    time=$(squeue -j $jobid | tail -1 | awk '{print $6}')
+		    if [ -f benzene_PROD.log ]; then
+                        step=$(less benzene_PROD.log | tail -20 | grep -A 1 Step | tail -1 | awk '{print $1}')
+                        echo "${direct}: RUNNING   Jobid: $jobid   Step: $step   Time: $time"
+                    else
+                        echo "${direct}: RUNNING   Jobid: $jobid"
+                    fi
+                elif [ "$status" == "Q" ]; then
+                    echo "${direct}: QUEUED"
+                else
+                    if [ "$(cat jobstatus.txt)" == "UNSUBMITTED" ]; then
+                        echo "${direct} : UNSUBMITTED"
+		    elif grep -q "TERM" benzene_PROD.log; then
+                        echo "${direct} : KILLED"
+		    elif [ -f benzene_PROD.log ] && [ "$(tail -1 benzene_PROD.log | awk '{print $1}')" == "Finished" ]; then
+			echo "${direct} : FINISHED"
+		    else
+			echo "${direct} : FAILED"
+                    fi
+		fi                
+                cd ..
+	done
+else
+	for direct in $(ls -l | egrep '^d' | awk '{print $9}' | grep "$(echo $hinge | awk '{print $1}')" | grep "$(echo $hinge | awk '{print $2}')" | grep "$(echo $hinge | awk '{print $3}')" | grep -v $ignore_string); do
+                cd $direct
+		jobid=$(less jobid.txt | awk '{print $4}' )
+                status=$(squeue -j $jobid | tail -1 | awk '{print $5}')
+		if [ ! -f jobid.txt ]; then
+                    echo "${direct}: UNSUBMITTED"
+                elif [ "$status" == "R" ]; then
+		    time=$(squeue -j $jobid | tail -1 | awk '{print $6}')
+		    if [ -f benzene_PROD.log ]; then
+                        step=$(less benzene_PROD.log | tail -20 | grep -A 1 Step | tail -1 | awk '{print $1}')
+                        echo "${direct}: RUNNING   Jobid: $jobid   Step: $step   Time: $time"
+                    else
+                        echo "${direct}: RUNNING   Jobid: $jobid"
+                    fi
+                elif [ "$status" == "Q" ]; then
+                    echo "${direct}: QUEUED"
+                else
+		    if [ "$(cat jobstatus.txt)" == "UNSUBMITTED" ]; then
+                        echo "${direct} : UNSUBMITTED"
+		    elif grep -q "TERM" benzene_PROD.log; then
+                        echo "${direct} : KILLED"
+                    elif [ -f benzene_PROD.log ] && [ "$(tail -1 benzene_PROD.log | awk '{print $1}')" == "Finished" ]; then
+                        echo "${direct} : FINISHED"
+                    else
+                        echo "${direct} : FAILED"
+                    fi
+		fi
+                cd ..
+	done
+fi

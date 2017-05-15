@@ -1,0 +1,167 @@
+#!/bin/bash
+
+#BASH SCRIPT TO AUTOMATICALLY SET UP BENZENE MD SIMULATIONS OVER A GIVEN TEMPERATURE RANGE
+#By: Eric Dybeck 09/12/2014
+#param n - polymorph number (all 3 will be used if none is given)
+#param C - lowest pressure
+#param H - highest pressure
+#param T - temperature
+#param P - Pressure spacing
+#param N - Number of benzene molecules
+#param e - Number of steps in the equilibration step
+#param p - Number of steps in the production step
+#param i - Integrator
+#param t - Thermostat
+#param b - Barostat
+#param k - maximum harmonic restraint constant
+#param L - lambda value for the harmonic restraint (%)
+#param G - gamma value for the intermolecular interactions (%) 
+#param r - vdw/coulomb cutoff distance (in angstroms)
+#param h - optional string hinge to add to the job
+#NOTE: By definition, the simulations will be temperature coupled
+
+#=============================================================================================
+# SETUP DEFAULT VALUES AND READ IN PARAMETERS FROM USER
+#=============================================================================================
+
+SETRUN_ARGS="$@"
+polymorph_num="all"
+MINTEMP=100
+MAXTEMP=600
+TSPACING=100
+PRES=1
+MOLECULES=72
+equil_steps=1000000
+prod_steps=10000000
+integrator="md"
+thermostat="nose-hoover"
+barostat="Parrinello-Rahman"
+CUTOFF="7"
+hinge="DefaultHinge"
+output="1000"
+potential="gromos"
+
+#options passed in from the users
+while getopts "n:C:H:T:P:N:e:p:i:t:b:r:h:u:" opt; do
+        case $opt in
+        n )
+                polymorph_num=$OPTARG
+                ;;
+        C )
+                MINTEMP=$OPTARG
+                ;;
+	H )
+		MAXTEMP=$OPTARG
+		;;
+	P )
+		PRES=$OPTARG
+		;;
+        T )
+                TSPACING=$OPTARG
+                ;;
+        N )
+                MOLECULES=$OPTARG
+                ;;
+        e )
+                equil_steps=$OPTARG
+                ;;
+        p )
+                prod_steps=$OPTARG
+                ;;
+        i )
+                integrator=$OPTARG
+                ;;
+        t )
+                thermostat=$OPTARG
+                ;;
+        b )
+                barostat=$OPTARG
+                ;;
+	r )
+                CUTOFF=$OPTARG
+                ;;
+        h )
+                hinge=$OPTARG
+                ;;
+	u )
+                potential=$OPTARG
+                ;;
+        esac
+done
+
+#=============================================================================================
+# ENSURE THAT INPUTS HAVE BEEN PROPERLY ENTERED
+#=============================================================================================
+
+#POLYMORPH NUMBER
+if [ $polymorph_num != "p1" ] && [ $polymorph_num != "p2" ] && [ $polymorph_num != "p3" ] && [ $polymorph_num != "all" ]; then
+        echo "Unrecognized polymorph Number: $polymorph_num"
+        exit 1
+fi
+
+#TEMPERATURE
+if [ $MINTEMP == -1 ] || [ $MAXTEMP == -1 ] || [ "$MINTEMP" -gt "$MAXTEMP" ]; then
+	echo "Minimum Temperature: $MINTEMP"
+	echo "Maximum Temperature: $MAXTEMP"
+	echo "Is not a valid temperature range!"	
+	exit 1
+fi 
+if [ $TSPACING == -1 ]; then
+	echo "Invalid Temperature Spacing: $TSPACING"
+	exit 1
+fi
+
+#NUMBER OF MOLECULES (currently only 72, 108, 256 is accepted)
+if [ $MOLECULES != 256 ] && [ $MOLECULES != 108 ] && [ $MOLECULES != 72 ]; then
+        echo "Unsupported number of molecules: $MOLECULES"
+        exit 1
+fi
+
+
+
+#INTEGRATOR
+if [ $integrator != "md" ] && [ $integrator != "md-vv" ]; then
+        echo "Unrecognized integrator: $integrator"
+        exit 1
+fi
+
+
+#CUTOFF RADIUS
+if [ "$CUTOFF" -lt "0" ]; then
+        echo "Invalid Cutoff Radius: $CUTOFF"
+        exit 1
+fi
+
+#=============================================================================================
+# SETUP TEMPERATURE CHANGE PATH
+#=============================================================================================
+
+TEMP=$MINTEMP
+while [ "$TEMP" -lt "$MAXTEMP" ]; do
+	if [ $polymorph_num == "p1" ]; then
+		setup_benzene -n p1 -P $PRES -N $MOLECULES -e $equil_steps -p $prod_steps -r $CUTOFF -h $hinge -T $TEMP -i $integrator -I 4 -o $output -E NPT -b $barostat -t $thermostat -u $potential
+	elif [ $polymorph_num == "p2" ]; then
+		setup_benzene -n p2 -P $PRES -N $MOLECULES -e $equil_steps -p $prod_steps -r $CUTOFF -h $hinge -T $TEMP -i $integrator -I 4 -o $output -E NPT -b $barostat -t $thermostat -u $potential
+	elif [ $polymorph_num == "p3" ]; then
+		setup_benzene -n p3 -P $PRES -N $MOLECULES -e $equil_steps -p $prod_steps -r $CUTOFF -h $hinge -T $TEMP -i $integrator -I 4 -o $output -E NPT -b $barostat -t $thermostat -u $potential
+	else
+		setup_benzene -n p1 -P $PRES -N $MOLECULES -e $equil_steps -p $prod_steps -r $CUTOFF -h $hinge -T $TEMP -i $integrator -I 4 -o $output -E NPT -b $barostat -t $thermostat -u $potential
+		setup_benzene -n p2 -P $PRES -N $MOLECULES -e $equil_steps -p $prod_steps -r $CUTOFF -h $hinge -T $TEMP -i $integrator -I 4 -o $output -E NPT -b $barostat -t $thermostat -u $potential
+		setup_benzene -n p3 -P $PRES -N $MOLECULES -e $equil_steps -p $prod_steps -r $CUTOFF -h $hinge -T $TEMP -i $integrator -I 4 -o $output -E NPT -b $barostat -t $thermostat -u $potential
+	fi
+	let "TEMP=$TEMP+$TSPACING"
+done
+
+#Catch the final temperature off-by-one exception
+if [ $polymorph_num == "p1" ]; then
+	setup_benzene -n p1 -P $PRES -N $MOLECULES -e $equil_steps -p $prod_steps -r $CUTOFF -h $hinge -T $MAXTEMP -i $integrator -I 4 -o $output -E NPT -b $barostat -t $thermostat -u $potential
+elif [ $polymorph_num == "p2" ]; then
+        setup_benzene -n p2 -P $PRES -N $MOLECULES -e $equil_steps -p $prod_steps -r $CUTOFF -h $hinge -T $MAXTEMP -i $integrator -I 4 -o $output -E NPT -b $barostat -t $thermostat -u $potential
+elif [ $polymorph_num == "p3" ]; then
+        setup_benzene -n p3 -P $PRES -N $MOLECULES -e $equil_steps -p $prod_steps -r $CUTOFF -h $hinge -T $MAXTEMP -i $integrator -I 4 -o $output -E NPT -b $barostat -t $thermostat -u $potential
+else
+	setup_benzene -n p1 -P $PRES -N $MOLECULES -e $equil_steps -p $prod_steps -r $CUTOFF -h $hinge -T $MAXTEMP -i $integrator -I 4 -o $output -E NPT -b $barostat -t $thermostat -u $potential
+	setup_benzene -n p2 -P $PRES -N $MOLECULES -e $equil_steps -p $prod_steps -r $CUTOFF -h $hinge -T $MAXTEMP -i $integrator -I 4 -o $output -E NPT -b $barostat -t $thermostat -u $potential
+	setup_benzene -n p3 -P $PRES -N $MOLECULES -e $equil_steps -p $prod_steps -r $CUTOFF -h $hinge -T $MAXTEMP -i $integrator -I 4 -o $output -E NPT -b $barostat -t $thermostat -u $potential
+fi
+

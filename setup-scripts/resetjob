@@ -1,0 +1,19 @@
+#!/bin/bash
+#BASH SCRIPT TO RESET THE JOB TO ITS INITIAL PRE-SUBMITTED STATE
+
+#Determine the name of the current directory
+direct=$(pwd)
+direct=$(basename "$direct")
+
+#Exit if the command is being run from the wrong location
+if [ $direct == "MDjobs" ] || [ $direct == "ecd4bd" ]; then
+    exit 1
+fi
+
+#Delete all files and folders inside the current directory (except hidden files)
+rm -rf ./*
+
+#Move all files in the initial folder into the current directory
+for file in $(ls .initial); do
+    cp .initial/$file $file
+done

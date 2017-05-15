@@ -1,0 +1,53 @@
+#!/bin/bash
+
+#BASH SCRIPT TO ADD FULL PRECISION TO A TINKER XYZ FILE GIVEN A GRO FILE
+#param g - The name of the .gro file
+#param x - The name of the .xyz file
+
+SETRUN_ARGS="$@"
+grofile="frame.gro"
+xyzfile="frame.xyz"
+
+#=============================================================================================
+# READ IN USER INPUTS
+#=============================================================================================
+while getopts "g:x:" opt; do
+        case $opt in
+        g )
+                grofile=$OPTARG
+                ;;
+        x )
+                xyzfile=$OPTARG
+                ;;
+        esac
+done
+
+#=============================================================================================
+# DETERMINE THE NUMBER OF ATOMS IN THE FILE
+#=============================================================================================
+numatoms=$(sed '2q;d' frame0.gro)
+echo "Numatoms: $numatoms"
+
+#=============================================================================================
+# FIND THE LINES AND REPLACE THE NUMBERS WITH HIGHER PRECISION
+#=============================================================================================
+
+#Store the first line of the xyz file
+firstline=$(head -1 $xyzfile)
+
+#Paste the atom names in a temporary file
+tail -n +2 $xyzfile | awk '{print $1, $2}' > tempatoms.txt
+
+#Paste the new xyz coordinates in a temporary file
+tail -n +3 $grofile | head -n -1 | awk '{print $4, $5, $6}' > tempcoords.txt
+#tail -n +3 $grofile | head -n -1 | gawk -v CONVFMT=%.11g '{gsub($4, $4*10)}; {gsub($5, $5*10)}; {gsub($6, $6*10)}; {print $4, $5, $6}' > tempcoords.txt
+
+#Paste the atom type and connectivity in a temporary file
+tail -n +2 $xyzfile | awk '{print $6, $7, $8, $9}' > tempconnectivity.txt
+
+#Combine the three files together into a new xyz file
+paste tempatoms.txt tempcoords.txt tempconnectivity.txt > $xyzfile
+
+#Now add the first line to the top of the file
+sed -i "1s/^/${firstline}\n/" $xyzfile
+

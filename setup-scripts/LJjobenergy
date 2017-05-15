@@ -1,0 +1,15 @@
+#!/bin/bash
+#BASH SCRIPT TO CONVERT THE JOB EDR FILE INTO XVG
+
+
+
+inputfile="LJ_PROD"
+
+
+for direct in $(ls -l | egrep '^d' | awk '{print $9}'); do
+	echo "$direct"
+	cd $direct
+	echo Potential | g_energy_d -f $inputfile -o "energy.xvg"
+	echo Volume | g_energy_d -f $inputfile -o "volume.xvg"
+	cd ..
+done

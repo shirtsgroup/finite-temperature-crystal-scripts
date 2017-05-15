@@ -1,0 +1,72 @@
+#!/bin/bash
+#BASH SCRIPT TO CONVERT A SINGLE XYZ FILE INTO A SINGLE GRO FILE
+#param x - The name of the input .xyz file
+#param o - The name of the output .gro file
+
+SETRUN_ARGS="$@"
+#SET THE DEFAULT INPUT PARAMETER VALUES
+inputfile="benzene_PROD"
+potentials="oplsaa oplsaafakeg oplsaafakea oplsaafaked drude gromos"
+DSPACING="0"
+paramfile_oplsaa="oplsaa.ff"
+paramfile_oplsaa_fake="oplsaafake.ff"
+paramfile_gromos="gromos54a7.ff"
+paramfile_amoeba="amoeba09.prm"
+outputfile="energy.xvg"
+simulation="gromacs"
+mode="full"
+export GRO_LOC="/h3/n1/shirtsgroup/gromacs_forceavg3/install/bin"
+#export GRO_LOC="/h3/n1/shirtsgroup/gromacs_drude2/install_SSE2/bin"
+export DRUDE_LOC="/h3/n1/shirtsgroup/gromacs_drude/install/bin"
+export Tinker_LOC="/home/common/tinker-7"
+export SCRIPT_LOC="/home/ecd4bd/crystals/NMA/scripts"
+export RUNFILES_LOC="/home/ecd4bd/crystals/NMA/runfiles"
+outputfile="Default"
+
+#=============================================================================================
+# READ IN USER INPUTS
+#=============================================================================================
+while getopts "x:o:" opt; do
+        case $opt in
+        x )
+                xyzfile=$OPTARG
+                ;;
+        o )
+                outputfile=$OPTARG
+                ;;
+		
+        esac
+done
+
+#=============================================================================================
+# CONVERT THE XYZ FILE INTO A GRO FILE
+#=============================================================================================
+#Convert the tinker xyz file into a pdb file
+${Tinker_LOC}/bin/xyzpdb $xyzfile ${Tinker_LOC}/params/${paramfile_amoeba} > /dev/null
+
+filename=$(echo $xyzfile | cut -d '.' --complement -f2-)
+if [ "$outputfile" == "Default" ]; then
+    outputfile="${filename}.gro"
+fi
+
+#Remove the connection information from the pdb file
+#sed -i '/CONECT/d' ${filename}.pdb
+
+#Change the 4th column to BNZ
+#sed -i 's/*/BNZ/4' ${filename}.pdb
+#awk ' { $4="BNZ"; print }' ${filename}.pdb > tmp && mv tmp ${filename}.pdb
+
+echo 0 | trjconv_d -f ${filename}.pdb -s ${filename}.pdb -o $outputfile -pbc whole -ndec 8 > /dev/null
+
+#Add the box vector to the bottom of the .gro file
+python ${SCRIPT_LOC}/addboxvectors.py -g $outputfile -x $xyzfile -s 0.1
+#Change the extraneous time stamp of the gro file to an arbitrary positive number
+sed -i "s/benzene solid t=  -1.00000/benzene solid t=  1.00000/g" $outputfile
+
+#Upgrade each gromacs GRO file into full precision
+upgradegro -x $xyzfile -g $outputfile
+python ${SCRIPT_LOC}/upgradegro.py -g $outputfile -n 0.1
+
+#Fix format of the gro file
+fixgro -g ${filename}.gro -p ${filename}.pdb
+

@@ -1,0 +1,71 @@
+#!/bin/bash
+
+#BASH SCRIPT TO CONVERT ALL DIRECTORY EDR FILES INTO ENERGY.XVG FILES
+#param h - move jobs that contain this string
+#param i - ignore jobs that contain this string
+#param f - The name of the input edr file
+#param o - The name of the output.xvg file
+#param n - The number to pipe in to g_energy
+
+SETRUN_ARGS="$@"
+hinge="DefaultHinge"
+ignore_string="DefaultIgnore"
+inputfile="PROD.edr"
+outputfile="energy.xvg"
+num=13
+
+#options passed in from the users
+while getopts "h:i:f:o:n" opt; do
+        case $opt in
+        h )
+                hinge=$OPTARG
+                ;;
+        i )
+                ignore_string=$OPTARG
+                ;;
+	f )
+                inputfile=$OPTARG
+                ;;
+        o )
+                outputfile=$OPTARG
+                ;;
+        n )
+                num=$OPTARG
+                ;;
+	esac
+done
+
+#Move jobs that contain the hinge but not the ignore string
+
+#Move all jobs
+if [ "$hinge" == "DefaultHinge" ] && [ $ignore_string == "DefaultIgnore" ]; then
+	for direct in $(ls -l | egrep '^d' | awk '{print $9}'); do
+		echo "Computing energy for job: $direct"
+		cd $direct
+		crunchjobenergy -f $inputfile -o $outputfile -n $num
+		cd ..
+	done
+#Move all jobs containing the hinge
+elif [ $ignore_string == "DefaultIgnore" ]; then
+	for direct in $(ls -l | egrep '^d' | awk '{print $9}' | grep "$(echo $hinge | awk '{print $1}')" | grep "$(echo $hinge | awk '{print $2}')" | grep "$(echo $hinge | awk '{print $3}')"); do
+		echo "Computing energy for job: $direct"
+		cd $direct
+                crunchjobenergy -f $inputfile -o $outputfile -n $num
+                cd ..
+	done
+#Move all jobs except those containing the ignore string
+elif [ "$hinge" == "DefaultHinge" ]; then
+	for direct in $(ls -l | egrep '^d' | awk '{print $9}' | grep -v $ignore_string); do
+        	echo "Computing energy for job: $direct"
+        	cd $direct
+                crunchjobenergy -f $inputfile -o $outputfile -n $num
+                cd ..
+	done
+else
+	for direct in $(ls -l | egrep '^d' | awk '{print $9}' | grep "$(echo $hinge | awk '{print $1}')" | grep "$(echo $hinge | awk '{print $2}')" | grep "$(echo $hinge | awk '{print $3}')" | grep -v $ignore_string); do
+        	echo "Computing energy for job: $direct"
+        	cd $direct
+                crunchjobenergy -f $inputfile -o $outputfile -n $num
+                cd ..
+	done
+fi

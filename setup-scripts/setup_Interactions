@@ -1,0 +1,195 @@
+#!/bin/bash
+
+#BASH SCRIPT TO AUTOMATICALLY SET UP BENZENE MD SIMULATIONS TO TURN OFF INTERACTIONS
+#By: Eric Dybeck 09/12/2014
+#param n - polymorph number (all 3 will be used if none is given)
+#param M - Molecule name
+#param G - Gamma state for the harmonic restraint
+#param g - spacing between the Gammas
+#param A - Maximum gamma value (%)
+#param B - Minimum gamma value (%)
+#param T - Temperature in K
+#param P - Pressure in bar
+#param N - Number of benzene molecules
+#param I - Number of independent benzene molecules (the remainder will be averaged)
+#param e - Number of steps in the equilibration step
+#param p - Number of steps in the production step
+#param i - Integrator
+#param t - Thermostat
+#param b - Barostat
+#param a - number of cores (threads) to run on
+#param k - maximum harmonic restraint constant
+#param r - vdw/coulomb cutoff distance (in angstroms)
+#param u - potential to be used in the simulation
+#param h - optional string hinge to add to the job
+
+#=============================================================================================
+# SETUP DEFAULT VALUES AND READ IN PARAMETERS FROM USER
+#=============================================================================================
+
+SETRUN_ARGS="$@"
+polymorph_num="p1 p2 p3"
+MINGAMMA=0
+MAXGAMMA=100
+GSPACING=10
+LAMBDA=100
+TEMP=200
+PRESSURE=1
+MOLECULE="benzene"
+MOLECULES=72
+INDEPENDENT=4
+equil_steps=100000
+prod_steps=1000000
+integrator="sd"
+thermostat="nose-hoover"
+barostat=-1
+cores=7
+k_max=1000
+Gamma=0
+EXPONENT=2
+CUTOFF="8"
+POTENTIAL="oplsaa"
+hinge="DefaultHinge"
+
+#options passed in from the users
+while getopts "n:M:A:B:g:f:L:T:P:N:I:e:p:i:t:b:a:K:r:u:h:" opt; do
+        case $opt in
+        n )
+                polymorph_num=$OPTARG
+                ;;
+	M )
+                MOLECULE=$OPTARG
+                ;;	
+	A )
+                MAXGAMMA=$OPTARG
+                ;;
+        B )
+                MINGAMMA=$OPTARG
+                ;;
+	g )
+		GSPACING=$OPTARG
+		;;
+	f )
+                EXPONENT=$OPTARG
+                ;;
+	L )
+		LAMBDA=$OPTARG
+		;;
+	T )
+		TEMP=$OPTARG
+		;;
+        P )
+                PRESSURE=$OPTARG
+                ;;
+        N )
+                MOLECULES=$OPTARG
+                ;;
+	I )
+                INDEPENDENT=$OPTARG
+                ;;
+        e )
+                equil_steps=$OPTARG
+                ;;
+        p )
+                prod_steps=$OPTARG
+                ;;
+        i )
+                integrator=$OPTARG
+                ;;
+        t )
+                thermostat=$OPTARG
+                ;;
+        b )
+                barostat=$OPTARG
+                ;;
+	a )
+                cores=$OPTARG
+                ;;
+	K )
+                k_max=$OPTARG
+                ;;
+	r )
+                CUTOFF=$OPTARG
+                ;;
+	u )
+                POTENTIAL=$OPTARG
+                ;;
+        h )
+                hinge=$OPTARG
+                ;;
+        esac
+done
+
+#=============================================================================================
+# ENSURE THAT INPUTS HAVE BEEN PROPERLY ENTERED
+#=============================================================================================
+
+#TEMPERATURE
+if [ $TEMP == -1 ]; then
+	echo "Invalid Temperature: $Temp"
+	exit 1
+fi
+
+#GAMMA
+if [ "$GSPACING" -le "0" ]; then
+	echo "Invalid Gamma Spacing: $GSPACING"
+	exit 1
+fi
+
+#INTEGRATOR
+if [ "$integrator" != "md" ] && [ "$integrator" != "md-vv" ] && [ "$integrator" != "sd" ]; then
+        echo "Unrecognized integrator: $integrator"
+        exit 1
+fi
+
+#SPRING CONSTANT
+if [ $k_max -lt 0 ]; then
+        echo "Invalid spring constant: $k_max"
+        exit 1
+fi
+
+#CUTOFF RADIUS
+if [ "$CUTOFF" -lt "0" ]; then
+        echo "Invalid Cutoff Radius: $CUTOFF"
+        exit 1
+fi
+
+#POTENTIAL
+potentiallist=("oplsaa gromos designedg oplsaatodesignedg designeda oplsaatodesigneda amoeba09 drude")
+valid="false"
+for pot in $potentiallist; do
+    if [ "$POTENTIAL" == "$pot" ]; then
+        valid="true"
+    fi
+done
+if [ "$valid" == "false" ]; then
+        echo "Unsupported potential: $POTENTIAL"
+        echo "Supported potentials: $potentiallist"
+        exit 1
+fi
+
+#HINGE
+if [ "$hinge" == "DefaultHinge" ]; then
+    hinge="G"
+else
+    hinge="G_$hinge"
+fi
+
+#=============================================================================================
+# SETUP INTERACTION DISSAPEARANCE PATH
+#=============================================================================================
+
+Gamma=$MINGAMMA
+while [ "$Gamma" -lt "$MAXGAMMA" ]; do
+	for poly in $polymorph_num; do
+	#Gamma=$(echo "($RawGamma^$EXPONENT) / ($MAXGAMMA^($EXPONENT-1))" | bc)
+		setup_molecule -n $poly -T $TEMP -P $PRESSURE -M $MOLECULE -N $MOLECULES -I $INDEPENDENT -e $equil_steps -p $prod_steps -i $integrator -t $thermostat -U $LAMBDA -R $LAMBDA -L $LAMBDA -f $EXPONENT -a $cores -E NVT -K $k_max -A $MAXGAMMA -B $MINGAMMA -g $GSPACING -G $Gamma -r $CUTOFF -u $POTENTIAL -h $hinge
+	#let "RawGamma=$RawGamma+$GSPACING"
+	done
+	let "Gamma=$Gamma+$GSPACING"
+done
+
+#Catch the final gamma off-by-one exception
+for poly in $polymorph_num; do
+	setup_molecule -n $poly -T $TEMP -P $PRESSURE -M $MOLECULE -N $MOLECULES -I $INDEPENDENT -e $equil_steps -p $prod_steps -i $integrator -t $thermostat -U $LAMBDA -R $LAMBDA -L $LAMBDA -f $EXPONENT -a $cores -E NVT -K $k_max -A $MAXGAMMA -B $MINGAMMA -g $GSPACING -G $MAXGAMMA -r $CUTOFF -u $POTENTIAL -h $hinge
+done

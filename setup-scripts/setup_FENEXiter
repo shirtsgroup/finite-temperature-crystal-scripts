@@ -1,0 +1,163 @@
+#!/bin/bash
+
+
+#BASH SCRIPT TO AUTOMATICALLY SET UP BENZENE MD SIMULATIONS OVER A T AND P RANGE
+#By: Natalie Schieber 7/20/15
+#param n - polymorph number (all 3 will be used if none is given)
+#param C - Minimum temperature in K
+#param H - Maximum temperature in K
+#param S - Temperature spacing in K
+#param P - Minimum pressure in bar
+#param Y - Maximum pressure in bar
+#param s - Pressure spacing in bar
+#param N - Number of benzene molecules
+#param I - Number of independent benzene molecules (the remainder will be averaged)
+#param e - Number of steps in the equilibration step
+#param p - Number of steps in the production step
+#param i - Integrator
+#param t - Thermostat
+#param b - Barostat
+#param r - vdw/coulomb cutoff distance (in angstroms)
+#param u - potential to be used in the simulation
+#param h - optional string hinge to add to the job
+
+#=============================================================================================
+# SETUP DEFAULT VALUES AND READ IN PARAMETERS FROM USER
+#=============================================================================================
+
+SETRUN_ARGS="$@"
+polymorph_num="p2 p3"
+MOLECULES=72
+INDEPENDENT=4
+equil_steps=1000000
+prod_steps=8000000
+integrator="sd"
+thermostat="nose-hoover"
+barostat="Parrinello-Rahman"
+CUTOFF="7"
+POTENTIAL="oplsaa"
+hinge="DefaultHinge"
+ensemble="NPT"
+tempfile="/home/nasc5274/crystals/FENEX/temp.txt"
+presfile="/home/nasc5274/crystals/FENEX/pres.txt"
+hinge="FENEX"
+
+
+#options passed in from the users
+while getopts "n:N:I:e:p:i:t:b:r:u:h:E:PF:TF:" opt; do
+        case $opt in
+        n )
+                polymorph_num=$OPTARG
+                ;;
+        N )
+                MOLECULES=$OPTARG
+                ;;
+	I )
+                INDEPENDENT=$OPTARG
+                ;;
+        e )
+                equil_steps=$OPTARG
+                ;;
+        p )
+                prod_steps=$OPTARG
+                ;;
+        i )
+                integrator=$OPTARG
+                ;;
+        t )
+                thermostat=$OPTARG
+                ;;
+        b )
+                barostat=$OPTARG
+                ;;
+	r )
+                CUTOFF=$OPTARG
+                ;;
+	u )
+                POTENTIAL=$OPTARG
+                ;;
+        h )
+                hinge=$OPTARG
+                ;;
+	E )
+		ensemble=$OPTARG
+		;;
+	PF )
+		presfile=$optarg
+		;;
+	TF )
+		tempfile=$optarg
+		;;
+        esac
+done
+
+
+
+
+
+#==============================================================================================
+# ENSURE THAT INPUTS HAVE BEEN PROPERLY ENTERED
+#=============================================================================================
+
+
+
+
+
+#NUMBER OF MOLECULES (currently only 72, 108, 256 is accepted)
+if [ $MOLECULES != 256 ] && [ $MOLECULES != 108 ] && [ $MOLECULES != 72 ]; then
+        echo "Unsupported number of molecules: $MOLECULES"
+        exit 1
+fi
+
+#NUMBER OF INDEPENDENT MOLECULES (currently only 4, 8, 16, 32, 72, 108, 256 is accepted)
+if [ $INDEPENDENT != 256 ] && [ $INDEPENDENT != 108 ] && [ $INDEPENDENT != 72 ] && [ $INDEPENDENT != 32 ] && [ $INDEPENDENT != 16 ] && [ $INDEPENDENT != 8 ] && [ $INDEPENDENT != 4 ] && [ $INDEPENDENT != 2 ]; then
+        echo "Unsupported number of independent molecules: $INDEPENDENT"
+        exit 1
+elif [ "$MOLECULES" -lt "$INDEPENDENT" ]; then
+        echo "Number of total molecules is less than the number of independent molecules!"
+        echo "Total Molecules: $MOLECULES"
+        echo "Independent Molecules: $INDEPENDENT"
+        exit 1
+fi
+
+#INTEGRATOR
+if [ $integrator != "md" ] && [ $integrator != "md-vv" ] && [ $integrator != "sd" ]; then
+        echo "Unrecognized integrator: $integrator"
+        exit 1
+fi
+
+#CUTOFF RADIUS
+if [ "$CUTOFF" -lt "0" ]; then
+        echo "Invalid Cutoff Radius: $CUTOFF"
+        exit 1
+fi
+
+#POTENTIAL
+if [ "$POTENTIAL" != "oplsaa" ] && [ "$POTENTIAL" != "oplsaafakeg" ] && [ "$POTENTIAL" != "oplsaafakea" ] && [ "$POTENTIAL" != "amoeba09" ] && [ "$POTENTIAL" != "gromos" ]; then
+        echo "Invalid Potential: $POTENTIAL"
+        echo "Supported Potentials: oplsaa oplsaafakeg oplsaafakea amoeba09 gromos"
+        exit 1
+fi
+
+
+#=============================================================================================
+# SETUP Jobs at T,P
+#=============================================================================================
+
+linenum=$(wc -l < $presfile)
+echo "$linenum"
+
+
+
+
+temp=$(sed -n "$linenum"p $tempfile)
+pressure=$(sed -n "$linenum"p $presfile)
+temp=$( printf "%.0f" $temp )
+pressure=$( printf "%.0f" $pressure )
+echo "$temp"
+echo "$pressure"
+
+for poly in $polymorph_num; do
+setup_benzene -n $poly -T $temp -P $pressure -N $MOLECULES -I 4 -e $equil_steps -p $prod_steps -r $CUTOFF -u $POTENTIAL -h $hinge -E $ensemble -i $integrator -t $thermostat -b $barostat -h $hinge
+	
+done

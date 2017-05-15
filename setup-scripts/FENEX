@@ -1,0 +1,42 @@
+#!/bin/bash
+
+SETRUN_ARGS="$@"
+basedirpython=/home/nasc5274/crystals/FENEX
+basedirdata=/home/nasc5274/NMA/phasediagram/datasets
+basedircluster=/lustre/janus_scratch/nasc5274
+jobdir=/home/nasc5274/crystals/NMA/jobs
+usercluster=nasc5274@login.rc.colorado.edu
+userlocal=nasc5274@mtharvard.int.colorado.edu
+runname=FENEXoplsrun
+tempfile="${basedirpython}/temp.txt"
+presfile="${basedirpython}/pres.txt"
+tmin=50
+
+temp=$(sed -n "$linenum"p $tempfile)
+temp=$( printf "%.0f" $temp )
+
+
+while [ "$temp" -lt "$tmin" ]; do
+
+
+	cd jobdir
+	setup_FENEXiter
+	scp -r ./* "${usercluster}:${basedircluster}/${runname}_${temp}"
+	ssh $usercluster
+	cd "${basedircluster}/${runname}_${temp}"
+	submitjobs
+
+	sleep 18h
+
+	createlist
+	scp -r outfiles "${userlocal}:${basedirdata}/${runname}_${temp}"
+	ssh $userlocal
+
+	cd $basedirpython
+	python FENEXiter.py -h "${runname}_${temp}"
+	temp=$(sed -n "$linenum"p $tempfile)
+	temp=$( printf "%.0f" $temp )
+
+done
+
+

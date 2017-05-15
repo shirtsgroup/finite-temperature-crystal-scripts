@@ -1,0 +1,57 @@
+#!/bin/bash
+
+
+SETRUN_ARGS="$@"
+folder1="/home/nasc5274/finishedjobs/May_5_LJ/LJ_HCP_4_0030K_100P_NPT_/"
+folder2="/home/nasc5274/finishedjobs/May_5_LJ/LJ_HCP_4_0030K_090P_NPT_/"
+temperature="0.1"
+delt="1000"
+export pyloc="/home/nasc5274/crystals/NMA/phasediagram/releaseable"
+
+
+#=============================================================================================
+# READ IN USER INPUTS
+#=============================================================================================
+while getopts "a:b:t:d:" opt; do
+        case $opt in
+        a )
+                folder2=$OPTARG
+                ;;
+	b )
+                folder1=$OPTARG
+                ;;
+	t )
+                temperature=$OPTARG
+                ;;
+	d )
+                delt=$OPTARG
+                ;;
+		
+        esac
+done
+
+cd $folder1
+
+python ${pyloc}/LJmapping.py -a ${folder1} -b ${folder2} -t $temperature -d $delt 
+mv log.lammps logold.lammps
+sed -i 's/run             8000000/rerun		dumpnew.melt dump x y z/g' in.LJ
+lmp_serial -in in.LJ
+mv log.lammps lognew.lammps
+
+cd ..
+cd ${folder2}
+
+python ${pyloc}/LJmapping.py -a ${folder2} -b ${folder1} -t $temperature -d $delt 
+mv log.lammps logold.lammps
+sed -i 's/run             8000000/rerun		dumpnew.melt dump x y z/g' in.LJ
+lmp_serial -in in.LJ
+mv log.lammps lognew.lammps
+
+cd ..
+
+cd ${folder1}
+
+python ${pyloc}/LJmappingII.py -a ${folder1} -b ${folder2} -t $temperature -d $delt
+
+
+cd ..

@@ -1,0 +1,172 @@
+#!/bin/bash
+
+#BASH SCRIPT TO AUTOMATICALLY SET UP A BENZENE MD SIMULATIONS OVER A GIVEN POSITION RESTRAINT LAMBDA RANGE
+#By: Eric Dybeck 09/12/2014
+#param n - polymorph number (all 3 will be used if none is given)
+#param W - weakest lambda value (%)
+#param S - strongest lambda value (%)
+#param s - spacing between the lambdas
+#param f - functional form (exponent) of the spacing between the lambdas
+#param P - Pressure in ???
+#param N - Number of benzene molecules
+#param e - Number of steps in the equilibration step
+#param p - Number of steps in the production step
+#param i - Integrator
+#param t - Thermostat
+#param b - Barostat
+#param k - maximum harmonic restraint constant
+#NOTE: By definition, the simulations will be temperature coupled
+
+SETRUN_ARGS="$@"
+#Default Values
+polymorph_num="all"
+MINLAMBDA=0
+MAXLAMBDA=100
+LSPACING=-1
+EXPONENT=1
+MOLECULES=256
+equil_steps=30000
+prod_steps=200000
+integrator="md"
+thermostat="v-rescale"
+barostat=-1
+k_max=1000
+Lambda=0
+
+#options passed in from the users
+while getopts "n:W:S:s:f:T:P:N:e:p:i:t:b:k:" opt; do
+        case $opt in
+        n )
+                polymorph_num=$OPTARG
+                ;;
+        W )
+                MINLAMBDA=$OPTARG
+                ;;
+	S )
+		MAXLAMBDA=$OPTARG
+		;;
+	s )
+		LSPACING=$OPTARG
+		;;
+	f )
+		EXPONENT=$OPTARG
+		;;
+	T )
+		TEMP=$OPTARG
+		;;
+        P )
+                PRESSURE=$OPTARG
+                ;;
+        N )
+                MOLECULES=$OPTARG
+                ;;
+        e )
+                equil_steps=$OPTARG
+                ;;
+        p )
+                prod_steps=$OPTARG
+                ;;
+        i )
+                integrator=$OPTARG
+                ;;
+        t )
+                thermostat=$OPTARG
+                ;;
+        b )
+                barostat=$OPTARG
+                ;;
+	k )
+                k_max = $OPTARG
+                ;;
+        esac
+done
+
+#Ensure that the parameters are properly entered
+
+#POLYMORPH NUMBER
+if [ $polymorph_num != "p1" ] && [ $polymorph_num != "p2" ] && [ $polymorph_num != "p3" ] && [ $polymorph_num != "all" ]; then
+        echo "Unrecognized polymorph Number: $polymorph_num"
+        exit 1
+fi
+
+#LAMBDA
+if [ "$MINLAMBDA" -lt "0" ] || [ "$MAXLAMBDA" -gt "100" ] || [ "$MINLAMBDA" -gt "$MAXLAMBDA" ]; then
+	echo "Minimum Lambda: $MINLAMBDA"
+	echo "Maximum Lambda: $MAXLAMBDA"
+	echo "Is not a valid lambda range!"	
+	exit 1
+fi 
+
+if [ "$LSPACING" -le "0" ]; then
+	echo "Invalid Lambda Spacing: $LSPACING"
+	exit 1
+fi
+
+if [ "$EXPONENT" -lt "1" ] || [ "$EXPONENT" -gt "3" ]; then
+	echo "Invalid Exponent: $EXPONENT"
+	exit 1
+fi
+
+#NUMBER OF MOLECULES
+if [ $MOLECULES != 256 ] && [ $MOLECULES != 108 ]; then
+        echo "Unsupported number of molecules: $MOLECULES"
+        exit 1
+fi
+
+#NUMBER OF EQUILIBRATION TIMESTEPS
+#if [ N != 256 ]
+#        echo "Unsupported number of molecules: $MOLECULES"
+#        exit 1
+#fi
+
+#NUMBER OF PRODUCTION TIMESTEPS
+#if [ MOLECULES != 256 ]
+#        echo "Unsupported number of molecules: $MOLECULES"
+#        exit 1
+#fi
+
+#INTEGRATOR
+if [ $integrator != "md" ] && [ $integrator != "md-vv" ]; then
+        echo "Unrecognized integrator: $integrator"
+        exit 1
+fi
+
+#SPRING CONSTANT
+if [ $k_max -lt 0 ]; then
+        echo "Invalid spring constant: $k_max"
+        exit 1
+fi
+
+#Loop over all lambda points and set up a job
+RawLambda=$MINLAMBDA
+while [ "$RawLambda" -lt "$MAXLAMBDA" ]; do
+	Lambda=$(echo "($RawLambda^$EXPONENT) / ($MAXLAMBDA^($EXPONENT-1))" | bc)
+	print $Lambda
+	exit 1
+	if [ $polymorph_num == "p1" ]; then
+		setup_benzene -n p1 -T $TEMP -N $MOLECULES -e $equil_steps -p $prod_steps -k $k_max -W $MINLAMBDA -S $MAXLAMBDA -s $LSPACING -L $Lambda
+	elif [ $polymorph_num == "p2" ]; then
+		setup_benzene -n p2 -T $TEMP -N $MOLECULES -e $equil_steps -p $prod_steps -k $k_max -W $MINLAMBDA -S $MAXLAMBDA -s $LSPACING -L $Lambda
+	elif [ $polymorph_num == "p3" ]; then
+		setup_benzene -n p3 -T $TEMP -N $MOLECULES -e $equil_steps -p $prod_steps -k $k_max -W $MINLAMBDA -S $MAXLAMBDA -s $LSPACING -L $Lambda
+	else
+		setup_benzene -n p1 -T $TEMP -N $MOLECULES -e $equil_steps -p $prod_steps -k $k_max -W $MINLAMBDA -S $MAXLAMBDA -s $LSPACING -L $Lambda
+		setup_benzene -n p2 -T $TEMP -N $MOLECULES -e $equil_steps -p $prod_steps -k $k_max -W $MINLAMBDA -S $MAXLAMBDA -s $LSPACING -L $Lambda
+		setup_benzene -n p3 -T $TEMP -N $MOLECULES -e $equil_steps -p $prod_steps -k $k_max -W $MINLAMBDA -S $MAXLAMBDA -s $LSPACING -L $Lambda
+	fi
+	let "RawLambda=$RawLambda+$LSPACING"
+done
+
+#Catch the final temperature off-by-one exception
+if [ $polymorph_num == "p1" ]; then
+	setup_benzene -n p1 -T $TEMP -N $MOLECULES -e $equil_steps -p $prod_steps -k $k_max -W $MINLAMBDA -S $MAXLAMBDA -s $LSPACING -L $Lambda
+elif [ $polymorph_num == "p2" ]; then
+        setup_benzene -n p2 -T $TEMP -N $MOLECULES -e $equil_steps -p $prod_steps -k $k_max -W $MINLAMBDA -S $MAXLAMBDA -s $LSPACING -L $Lambda
+elif [ $polymorph_num == "p3" ]; then
+        setup_benzene -n p3 -T $TEMP -N $MOLECULES -e $equil_steps -p $prod_steps -k $k_max -W $MINLAMBDA -S $MAXLAMBDA -s $LSPACING -L $Lambda
+else
+        setup_benzene -n p1 -T $TEMP -N $MOLECULES -e $equil_steps -p $prod_steps -k $k_max -W $MINLAMBDA -S $MAXLAMBDA -s $LSPACING -L $MAXLAMBDA
+        setup_benzene -n p2 -T $TEMP -N $MOLECULES -e $equil_steps -p $prod_steps -k $k_max -W $MINLAMBDA -S $MAXLAMBDA -s $LSPACING -L $MAXLAMBDA
+        setup_benzene -n p3 -T $TEMP -N $MOLECULES -e $equil_steps -p $prod_steps -k $k_max -W $MINLAMBDA -S $MAXLAMBDA -s $LSPACING -L $MAXLAMBDA
+fi
+

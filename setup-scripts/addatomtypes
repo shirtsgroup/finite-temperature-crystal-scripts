@@ -1,0 +1,1020 @@
+#!/bin/bash
+#BASH SCRIPT TO ADD ATOM TYPES TO ALL TINKER XYZ FILES
+#param p - The name of the potential parameter file
+
+#=============================================================================================
+# READ IN USER INPUTS
+#=============================================================================================
+while getopts "f:p:o:" opt; do
+        case $opt in
+        p)
+                paramfile=$OPTARG
+                ;;
+        esac
+done
+
+#=============================================================================================
+# ENSURE THAT THE INPUTS ARE CORRECT
+#=============================================================================================
+if [ "$paramfile" == "amoeba09" ]; then
+	CarbonNum=217
+	HydrogenNum=218 
+elif [ "$paramfile" == "oplsaa" ]; then
+	CarbonNum=90
+        HydrogenNum=91
+else
+	echo "Unsupported Potential"
+	exit 1
+fi
+
+if [ -f ../keyfile.key ]; then
+   #Get the molecule from the key file
+   molecule=$(less ../keyfile.key | grep "Molecule: " | awk '{print $3}')
+else
+   #Get the molecule from the topology file
+   molecule=$(less ../topology.top | grep "solid" | awk '{print $1}')
+fi
+
+#=============================================================================================
+# ADD ATOM TYPES TO EACH XYZ FILE
+#=============================================================================================
+
+case $molecule in
+	benzene)
+		if [ "$paramfile" == "amoeba09" ]; then
+  			CarbonNum=217
+        		HydrogenNum=218
+		elif [ "$paramfile" == "oplsaa" ]; then
+        		CarbonNum=90
+        		HydrogenNum=91
+		else
+        		echo "Unsupported Potential"
+        		exit 1
+		fi
+		
+		for file in $(ls *.xyz); do
+    		    if [ $(sed -n '4p' $file | awk '{print $6}') == '0' ]; then
+            		echo "adding atom types to ${file}..."
+            		carbonsed="/C/ s/   0   /   $CarbonNum   /1"
+            		hydrogensed="/H/ s/   0   /   $HydrogenNum   /1"
+            		sed -i "$carbonsed" $file  #Carbon
+            		sed -i "$hydrogensed" $file  #Hydrogen
+            		carbonsed="/C/ s/   0  /   $CarbonNum   /1"
+            		hydrogensed="/H/ s/   0  /   $HydrogenNum   /1"
+            		sed -i "$carbonsed" $file  #Carbon
+            		sed -i "$hydrogensed" $file  #Hydrogen
+        	    fi
+		done
+		;;
+
+	glycin)
+                if [ "$paramfile" == "amoeba09" ] || [ "$paramfile" == "amoebabio09" ]; then
+			#C1Num=233
+                        #C2Num=2
+                        #H3Num=232
+                        #H4Num=232
+                        #H5Num=232
+                        #H6Num=6
+                        #H7Num=6
+                        #N8Num=231
+                        #O9Num=234
+                        #O10Num=234
+			C1Num=403
+                        C2Num=401
+                        H3Num=404
+                        H4Num=404
+                        H5Num=404
+                        H6Num=405
+                        H7Num=405
+                        N8Num=402
+                        O9Num=406
+                        O10Num=406
+                elif [ "$paramfile" == "oplsaa" ]; then
+			C1Num=782
+                        C2Num=781
+                        H3Num=785
+                        H4Num=785
+                        H5Num=785
+                        H6Num=780
+                        H7Num=780
+                        N8Num=783
+                        O9Num=784
+                        O10Num=784
+                else
+                        echo "Unsupported Potential"
+                        exit 1
+                fi
+                for file in $(ls *.xyz); do
+                    if [ $(sed -n '4p' $file | awk '{print $6}') == '0' ]; then
+                        echo "adding atom types to ${file}..."
+                        C1sed="/C1/ s/   0   /   $C1Num   /1"
+                        C2sed="/C2/ s/   0   /   $C2Num   /1"
+                        H3sed="/H3/ s/   0   /   $H3Num   /1"
+                        H4sed="/H4/ s/   0   /   $H4Num   /1"
+                        H5sed="/H5/ s/   0   /   $H5Num   /1"
+                        H6sed="/H6/ s/   0   /   $H6Num   /1"
+                        H7sed="/H7/ s/   0   /   $H7Num   /1"
+                        N8sed="/N8/ s/   0   /   $N8Num   /1"
+			O9sed="/O9/ s/   0   /   $O9Num   /1"
+			O10sed="/O10/ s/   0   /   $O10Num   /1"
+                        sed -i "$C1sed" $file  #C1
+                        sed -i "$C2sed" $file  #C2
+                        sed -i "$H3sed" $file  #H3
+                        sed -i "$H4sed" $file  #H4
+                        sed -i "$H5sed" $file  #H5
+                        sed -i "$H6sed" $file  #H6
+                        sed -i "$H7sed" $file  #H7
+                        sed -i "$N8sed" $file  #N8
+			sed -i "$O9sed" $file  #O9
+			sed -i "$O10sed" $file  #O10
+			C1sed="/C1/ s/   0  /   $C1Num   /1"
+                        C2sed="/C2/ s/   0  /   $C2Num   /1"
+                        H3sed="/H3/ s/   0  /   $H3Num   /1"
+                        H4sed="/H4/ s/   0  /   $H4Num   /1"
+                        H5sed="/H5/ s/   0  /   $H5Num   /1"
+                        H6sed="/H6/ s/   0  /   $H6Num   /1"
+                        H7sed="/H7/ s/   0  /   $H7Num   /1"
+                        N8sed="/N8/ s/   0  /   $N8Num   /1"
+                        O9sed="/O9/ s/   0  /   $O9Num   /1"
+                        O10sed="/O10/ s/   0  /   $O10Num   /1"
+                        sed -i "$C1sed" $file  #C1
+                        sed -i "$C2sed" $file  #C2
+                        sed -i "$H3sed" $file  #H3
+                        sed -i "$H4sed" $file  #H4
+                        sed -i "$H5sed" $file  #H5
+                        sed -i "$H6sed" $file  #H6
+                        sed -i "$H7sed" $file  #H7
+                        sed -i "$N8sed" $file  #N8
+                        sed -i "$O9sed" $file  #O9
+                        sed -i "$O10sed" $file  #O10
+
+
+                    fi
+                done
+
+		;;
+
+        acetac)
+		if [ "$paramfile" == "amoeba09" ]; then
+                        O1Num=150
+                        H2Num=151
+                        O3Num=153
+                        C4Num=152
+                        C5Num=154
+                        H6Num=155
+			H7Num=155
+			H8Num=155
+                elif [ "$paramfile" == "oplsaa" ]; then
+			O1Num=211
+                        H2Num=212
+                        O3Num=210
+                        C4Num=209
+                        C5Num=" 80"
+                        H6Num=" 85"
+                        H7Num=" 85"
+                        H8Num=" 85"
+                else
+                        echo "Unsupported Potential"
+                        exit 1
+                fi
+                for file in $(ls *.xyz); do
+                    if [ $(sed -n '4p' $file | awk '{print $6}') == '0' ]; then
+                        echo "adding atom types to ${file}..."
+                        O1sed="/O1/ s/   0   /   $O1Num   /1"
+                        H2sed="/H2/ s/   0   /   $H2Num   /1"
+                        O3sed="/O3/ s/   0   /   $O3Num   /1"
+                        C4sed="/C4/ s/   0   /   $C4Num   /1"
+                        C5sed="/C5/ s/   0   /   $C5Num   /1"
+                        H6sed="/H6/ s/   0   /   $H6Num   /1"
+			H7sed="/H7/ s/   0   /   $H7Num   /1"
+			H8sed="/H8/ s/   0   /   $H8Num   /1"
+                        sed -i "$O1sed" $file  #C1
+                        sed -i "$H2sed" $file  #N2
+                        sed -i "$O3sed" $file  #O3
+                        sed -i "$C4sed" $file  #H4
+                        sed -i "$C5sed" $file  #H5
+                        sed -i "$H6sed" $file  #H6
+			sed -i "$H7sed" $file  #H7
+			sed -i "$H8sed" $file  #H8
+			O1sed="/O1/ s/   0  /   $O1Num   /1"
+                        H2sed="/H2/ s/   0  /   $H2Num   /1"
+                        O3sed="/O3/ s/   0  /   $O3Num   /1"
+                        C4sed="/C4/ s/   0  /   $C4Num   /1"
+                        C5sed="/C5/ s/   0  /   $C5Num   /1"
+                        H6sed="/H6/ s/   0  /   $H6Num   /1"
+                        H7sed="/H7/ s/   0  /   $H7Num   /1"
+                        H8sed="/H8/ s/   0  /   $H8Num   /1"
+                        sed -i "$O1sed" $file  #C1
+                        sed -i "$H2sed" $file  #N2
+                        sed -i "$O3sed" $file  #O3
+                        sed -i "$C4sed" $file  #H4
+                        sed -i "$C5sed" $file  #H5
+                        sed -i "$H6sed" $file  #H6
+                        sed -i "$H7sed" $file  #H7
+                        sed -i "$H8sed" $file  #H8
+                    fi
+                done
+
+                ;;
+
+        formam)
+                if [ "$paramfile" == "amoeba09" ]; then
+                        C1Num=" 99"
+                        N2Num=102
+			O3Num=101
+			H4Num=103
+			H5Num=103
+			H6Num=100
+                elif [ "$paramfile" == "oplsaa" ]; then
+			C1Num=177
+                        N2Num=179
+                        O3Num=178
+                        H4Num=182
+                        H5Num=182
+                        H6Num=221
+                else
+                        echo "Unsupported Potential"
+                        exit 1
+                fi
+                for file in $(ls *.xyz); do
+                    if [ $(sed -n '4p' $file | awk '{print $6}') == '0' ]; then
+                        echo "adding atom types to ${file}..."
+                        C1sed="/C1/ s/   0   /   $C1Num   /1"
+                        N2sed="/N2/ s/   0   /   $N2Num   /1"
+			O3sed="/O3/ s/   0   /   $O3Num   /1"
+                        H4sed="/H4/ s/   0   /   $H4Num   /1"
+			H5sed="/H5/ s/   0   /   $H5Num   /1"
+                        H6sed="/H6/ s/   0   /   $H6Num   /1"
+                        sed -i "$C1sed" $file  #C1
+                        sed -i "$N2sed" $file  #N2
+                        sed -i "$O3sed" $file  #O3
+                        sed -i "$H4sed" $file  #H4
+                        sed -i "$H5sed" $file  #H5
+                        sed -i "$H6sed" $file  #H6
+			C1sed="/C1/ s/   0  /   $C1Num   /1"
+                        N2sed="/N2/ s/   0  /   $N2Num   /1"
+                        O3sed="/O3/ s/   0  /   $O3Num   /1"
+                        H4sed="/H4/ s/   0  /   $H4Num   /1"
+                        H5sed="/H5/ s/   0  /   $H5Num   /1"
+                        H6sed="/H6/ s/   0  /   $H6Num   /1"
+                        sed -i "$C1sed" $file  #C1
+                        sed -i "$N2sed" $file  #N2
+                        sed -i "$O3sed" $file  #O3
+                        sed -i "$H4sed" $file  #H4
+                        sed -i "$H5sed" $file  #H5
+                        sed -i "$H6sed" $file  #H6
+                    fi
+                done
+
+                ;;
+
+	imazol)
+                if [ "$paramfile" == "amoeba09" ]; then
+                        C1Num=260
+			C2Num=263
+			C3Num=265
+                        H4Num=259
+                        H5Num=261
+                        H6Num=264
+			H7Num=266
+			N8Num=258
+			N9Num=262
+                elif [ "$paramfile" == "oplsaa" ]; then
+			C1Num=499
+                        C2Num=501
+                        C3Num=502
+                        H4Num=503
+                        H5Num=504
+                        H6Num=505
+                        H7Num=506
+                        N8Num=498
+                        N9Num=500
+                else
+                        echo "Unsupported Potential"
+                        exit 1
+                fi
+                for file in $(ls *.xyz); do
+                    if [ $(sed -n '4p' $file | awk '{print $6}') == '0' ]; then
+                        echo "adding atom types to ${file}..."
+                        C1sed="/C1/ s/   0   /   $C1Num   /1"
+			C2sed="/C2/ s/   0   /   $C2Num   /1"
+			C3sed="/C3/ s/   0   /   $C3Num   /1"
+                        H4sed="/H4/ s/   0   /   $H4Num   /1"
+                        H5sed="/H5/ s/   0   /   $H5Num   /1"
+                        H6sed="/H6/ s/   0   /   $H6Num   /1"
+			H7sed="/H7/ s/   0   /   $H7Num   /1"
+			N8sed="/N8/ s/   0   /   $N8Num   /1"
+			N9sed="/N9/ s/   0   /   $N9Num   /1"
+                        sed -i "$C1sed" $file  #C1
+			sed -i "$C2sed" $file  #C2
+			sed -i "$C3sed" $file  #C3
+			sed -i "$H4sed" $file  #H4
+                        sed -i "$H5sed" $file  #H5
+                        sed -i "$H6sed" $file  #H6
+			sed -i "$H7sed" $file  #H7
+			sed -i "$N8sed" $file  #N8
+			sed -i "$N9sed" $file  #N9
+			C1sed="/C1/ s/   0  /   $C1Num   /1"
+                        C2sed="/C2/ s/   0  /   $C2Num   /1"
+                        C3sed="/C3/ s/   0  /   $C3Num   /1"
+                        H4sed="/H4/ s/   0  /   $H4Num   /1"
+                        H5sed="/H5/ s/   0  /   $H5Num   /1"
+                        H6sed="/H6/ s/   0  /   $H6Num   /1"
+                        H7sed="/H7/ s/   0  /   $H7Num   /1"
+                        N8sed="/N8/ s/   0  /   $N8Num   /1"
+                        N9sed="/N9/ s/   0  /   $N9Num   /1"
+                        sed -i "$C1sed" $file  #C1
+                        sed -i "$C2sed" $file  #C2
+                        sed -i "$C3sed" $file  #C3
+                        sed -i "$H4sed" $file  #H4
+                        sed -i "$H5sed" $file  #H5
+                        sed -i "$H6sed" $file  #H6
+                        sed -i "$H7sed" $file  #H7
+                        sed -i "$N8sed" $file  #N8
+                        sed -i "$N9sed" $file  #N9
+                    fi
+                done
+
+                ;;
+
+	cafine)
+                if [ "$paramfile" == "amoeba09" ]; then
+                        C1Num=" 99"
+                elif [ "$paramfile" == "oplsaa" ]; then
+                        C1Num=907
+                        C2Num=908
+                        C3Num=909
+                        C4Num=910
+                        C5Num=499
+                        C6Num=911
+                        C7Num=912
+                        C8Num=913
+                        N9Num=914
+                        N10Num=915
+                        N11Num=916
+                        N12Num=500
+                        O13Num=917
+                        O14Num=918
+                        H15Num="919"
+                        H16Num=" 85"
+                        H17Num=" 85"
+                        H18Num=" 85"
+                        H19Num=" 85"
+                        H20Num=" 85"
+                        H21Num=" 85"
+                        H22Num=" 85"
+                        H23Num=" 85"
+                        H24Num=" 85"
+
+                        #C1Num=194
+                        #C2Num=501
+                        #C3Num=502
+                        #C4Num=194
+                        #C5Num=499
+                        #C6Num=" 80"
+                        #C7Num=" 80"
+                        #C8Num=" 80"
+                        #N9Num=193
+                        #N10Num=191
+                        #N11Num=498
+                        #N12Num=500
+                        #O13Num=195
+                        #O14Num=195
+                        #H15Num=" 91"
+                        #H16Num=" 85"
+                        #H17Num=" 85"
+                        #H18Num=" 85"
+                        #H19Num=" 85"
+                        #H20Num=" 85"
+                        #H21Num=" 85"
+                        #H22Num=" 85"
+                        #H23Num=" 85"
+                        #H24Num=" 85"
+                else
+                        echo "Unsupported Potential"
+                        exit 1
+                fi
+		for file in $(ls *.xyz); do
+                    if [ $(sed -n '4p' $file | awk '{print $6}') == '0' ]; then
+                        echo "adding atom types to ${file}..."
+                        C1sed="/C1/ s/   0   /   $C1Num   /1"
+                        C2sed="/C2/ s/   0   /   $C2Num   /1"
+                        C3sed="/C3/ s/   0   /   $C3Num   /1"
+                        C4sed="/C4/ s/   0   /   $C4Num   /1"
+                        C5sed="/C5/ s/   0   /   $C5Num   /1"
+                        C6sed="/C6/ s/   0   /   $C6Num   /1"
+                        C7sed="/C7/ s/   0   /   $C7Num   /1"
+                        C8sed="/C8/ s/   0   /   $C8Num   /1"
+                        N9sed="/N9/ s/   0   /   $N9Num   /1"
+                        N10sed="/N10/ s/   0   /   $N10Num   /1"
+                        N11sed="/N11/ s/   0   /   $N11Num   /1"
+                        N12sed="/N12/ s/   0   /   $N12Num   /1"
+                        O13sed="/O13/ s/   0   /   $O13Num   /1"
+                        O14sed="/O14/ s/   0   /   $O14Num   /1"
+                        H15sed="/H15/ s/   0   /   $H15Num   /1"
+                        H16sed="/H16/ s/   0   /   $H16Num   /1"
+                        H17sed="/H17/ s/   0   /   $H17Num   /1"
+                        H18sed="/H18/ s/   0   /   $H18Num   /1"
+                        H19sed="/H19/ s/   0   /   $H19Num   /1"
+                        H20sed="/H20/ s/   0   /   $H20Num   /1"
+                        H21sed="/H21/ s/   0   /   $H21Num   /1"
+                        H22sed="/H22/ s/   0   /   $H22Num   /1"
+                        H23sed="/H23/ s/   0   /   $H23Num   /1"
+                        H24sed="/H24/ s/   0   /   $H24Num   /1"
+                        sed -i "$C1sed" $file  #C1
+                        sed -i "$C2sed" $file  #C2
+                        sed -i "$C3sed" $file  #C3
+                        sed -i "$C4sed" $file  #C4
+                        sed -i "$C5sed" $file  #C5
+                        sed -i "$C6sed" $file  #C6
+                        sed -i "$C7sed" $file  #C7
+                        sed -i "$C8sed" $file  #C8
+                        sed -i "$N9sed" $file  #N9
+                        sed -i "$N10sed" $file  #N10
+                        sed -i "$N11sed" $file  #N11
+                        sed -i "$N12sed" $file  #N12
+                        sed -i "$O13sed" $file  #O13
+                        sed -i "$O14sed" $file  #O14
+                        sed -i "$H15sed" $file  #H15
+                        sed -i "$H16sed" $file  #H16
+                        sed -i "$H17sed" $file  #H17
+                        sed -i "$H18sed" $file  #H18
+                        sed -i "$H19sed" $file  #H19
+                        sed -i "$H20sed" $file  #H20
+                        sed -i "$H21sed" $file  #H21
+                        sed -i "$H22sed" $file  #H22
+                        sed -i "$H23sed" $file  #H23
+                        sed -i "$H24sed" $file  #H24
+                        C1sed="/C1/ s/   0   /   $C1Num   /1"
+                        C2sed="/C2/ s/   0   /   $C2Num   /1"
+                        C3sed="/C3/ s/   0   /   $C3Num   /1"
+                        C4sed="/C4/ s/   0   /   $C4Num   /1"
+                        C5sed="/C5/ s/   0   /   $C5Num   /1"
+                        C6sed="/C6/ s/   0   /   $C6Num   /1"
+                        C7sed="/C7/ s/   0   /   $C7Num   /1"
+                        C8sed="/C8/ s/   0   /   $C8Num   /1"
+                        N9sed="/N9/ s/   0   /   $N9Num   /1"
+                        N10sed="/N10/ s/   0   /   $N10Num   /1"
+                        N11sed="/N11/ s/   0   /   $N11Num   /1"
+                        N12sed="/N12/ s/   0   /   $N12Num   /1"
+                        O13sed="/O13/ s/   0   /   $O13Num   /1"
+                        O14sed="/O14/ s/   0   /   $O14Num   /1"
+                        H15sed="/H15/ s/   0   /   $H15Num   /1"
+                        H16sed="/H16/ s/   0   /   $H16Num   /1"
+                        H17sed="/H17/ s/   0   /   $H17Num   /1"
+                        H18sed="/H18/ s/   0   /   $H18Num   /1"
+                        H19sed="/H19/ s/   0   /   $H19Num   /1"
+                        H20sed="/H20/ s/   0   /   $H20Num   /1"
+                        H21sed="/H21/ s/   0   /   $H21Num   /1"
+                        H22sed="/H22/ s/   0   /   $H22Num   /1"
+                        H23sed="/H23/ s/   0   /   $H23Num   /1"
+                        H24sed="/H24/ s/   0   /   $H24Num   /1"
+                        sed -i "$C1sed" $file  #C1
+                        sed -i "$C2sed" $file  #C2
+                        sed -i "$C3sed" $file  #C3
+                        sed -i "$C4sed" $file  #C4
+                        sed -i "$C5sed" $file  #C5
+                        sed -i "$C6sed" $file  #C6
+                        sed -i "$C7sed" $file  #C7
+                        sed -i "$C8sed" $file  #C8
+                        sed -i "$N9sed" $file  #N9
+                        sed -i "$N10sed" $file  #N10
+                        sed -i "$N11sed" $file  #N11
+                        sed -i "$N12sed" $file  #N12
+                        sed -i "$O13sed" $file  #O13
+                        sed -i "$O14sed" $file  #O14
+                        sed -i "$H15sed" $file  #H15
+                        sed -i "$H16sed" $file  #H16
+                        sed -i "$H17sed" $file  #H17
+                        sed -i "$H18sed" $file  #H18
+                        sed -i "$H19sed" $file  #H19
+                        sed -i "$H20sed" $file  #H20
+                        sed -i "$H21sed" $file  #H21
+                        sed -i "$H22sed" $file  #H22
+                        sed -i "$H23sed" $file  #H23
+                        sed -i "$H24sed" $file  #H24
+                    fi
+		done
+
+                ;;	
+
+        zzzvye)
+                if [ "$paramfile" == "amoeba09" ]; then
+                        C1Num=" 99"
+                elif [ "$paramfile" == "oplsaa" ]; then
+                        C1Num=" 81"
+                        H2Num=" 85"
+                        H3Num=" 85"
+                        C4Num=" 81"
+                        H5Num=" 85"
+                        H6Num=" 85"
+                        C7Num=" 81"
+                        H8Num=" 85"
+                        H9Num=" 85"
+                        C10Num=" 81"
+                        H11Num=" 85"
+                        H12Num=" 85"
+                        C13Num=" 81"
+                        H14Num=" 85"
+                        H15Num=" 85"
+                else
+                        echo "Unsupported Potential"
+                        exit 1
+                fi
+		for file in $(ls *.xyz); do
+                    if [ $(sed -n '4p' $file | awk '{print $6}') == '0' ]; then
+                        echo "adding atom types to ${file}..."
+                        C1sed="/C1/ s/   0   /   $C1Num   /1"
+                        H2sed="/H2/ s/   0   /   $H2Num   /1"
+                        H3sed="/H3/ s/   0   /   $H3Num   /1"
+                        C4sed="/C4/ s/   0   /   $C4Num   /1"
+                        H5sed="/H5/ s/   0   /   $H5Num   /1"
+                        H6sed="/H6/ s/   0   /   $H6Num   /1"
+                        C7sed="/C7/ s/   0   /   $C7Num   /1"
+                        H8sed="/H8/ s/   0   /   $H8Num   /1"
+                        H9sed="/H9/ s/   0   /   $H9Num   /1"
+                        C10sed="/C10/ s/   0   /   $C10Num   /1"
+                        H11sed="/H11/ s/   0   /   $H11Num   /1"
+                        H12sed="/H12/ s/   0   /   $H12Num   /1"
+                        C13sed="/C13/ s/   0   /   $C13Num   /1"
+                        H14sed="/H14/ s/   0   /   $H14Num   /1"
+                        H15sed="/H15/ s/   0   /   $H15Num   /1"
+                        sed -i "$C1sed" $file  #C1
+                        sed -i "$H2sed" $file  #H2
+                        sed -i "$H3sed" $file  #H3
+                        sed -i "$C4sed" $file  #C4
+                        sed -i "$H5sed" $file  #H5
+                        sed -i "$H6sed" $file  #H6
+                        sed -i "$C7sed" $file  #C7
+                        sed -i "$H8sed" $file  #H8
+                        sed -i "$H9sed" $file  #H9
+                        sed -i "$C10sed" $file  #C10
+                        sed -i "$H11sed" $file  #H11
+                        sed -i "$H12sed" $file  #H12
+                        sed -i "$C13sed" $file  #C13
+                        sed -i "$H14sed" $file  #H14
+                        sed -i "$H15sed" $file  #H15
+                        C1sed="/C1/ s/   0   /   $C1Num   /1"
+                        H2sed="/H2/ s/   0   /   $H2Num   /1"
+                        H3sed="/H3/ s/   0   /   $H3Num   /1"
+                        C4sed="/C4/ s/   0   /   $C4Num   /1"
+                        H5sed="/H5/ s/   0   /   $H5Num   /1"
+                        H6sed="/H6/ s/   0   /   $H6Num   /1"
+                        C7sed="/C7/ s/   0   /   $C7Num   /1"
+                        H8sed="/H8/ s/   0   /   $H8Num   /1"
+                        H9sed="/H9/ s/   0   /   $H9Num   /1"
+                        C10sed="/C10/ s/   0   /   $C10Num   /1"
+                        H11sed="/H11/ s/   0   /   $H11Num   /1"
+                        H12sed="/H12/ s/   0   /   $H12Num   /1"
+                        C13sed="/C13/ s/   0   /   $C13Num   /1"
+                        H14sed="/H14/ s/   0   /   $H14Num   /1"
+                        H15sed="/H15/ s/   0   /   $H15Num   /1"
+                        sed -i "$C1sed" $file  #C1
+                        sed -i "$H2sed" $file  #H2
+                        sed -i "$H3sed" $file  #H3
+                        sed -i "$C4sed" $file  #C4
+                        sed -i "$H5sed" $file  #H5
+                        sed -i "$H6sed" $file  #H6
+                        sed -i "$C7sed" $file  #C7
+                        sed -i "$H8sed" $file  #H8
+                        sed -i "$H9sed" $file  #H9
+                        sed -i "$C10sed" $file  #C10
+                        sed -i "$H11sed" $file  #H11
+                        sed -i "$H12sed" $file  #H12
+                        sed -i "$C13sed" $file  #C13
+                        sed -i "$H14sed" $file  #H14
+                        sed -i "$H15sed" $file  #H15
+                    fi
+		done
+
+                ;;
+
+
+        dohfem)
+                if [ "$paramfile" == "amoeba09" ]; then
+                        C1Num=" 99"
+                elif [ "$paramfile" == "oplsaa" ]; then
+                        N1Num="262"
+                        H2Num="268"
+                        C3Num="263"
+                        N4Num="264"
+                        H5Num="270"
+                        C6Num="265"
+                        C7Num="266"
+                        C8Num="267"
+                        H9Num="272"
+                        O10Num="269"
+                        O11Num="271"
+                        C12Num="759"
+                        C13Num="755"
+                        H14Num="756"
+                else
+                        echo "Unsupported Potential"
+                        exit 1
+                fi
+                for file in $(ls *.xyz); do
+		    if [ $(sed -n '4p' $file | awk '{print $6}') == '0' ]; then
+                        echo "adding atom types to ${file}..."
+                        N1sed="/N1/ s/   0   /   $N1Num   /1"
+                        H2sed="/H2/ s/   0   /   $H2Num   /1"
+                        C3sed="/C3/ s/   0   /   $C3Num   /1"
+                        N4sed="/N4/ s/   0   /   $N4Num   /1"
+                        H5sed="/H5/ s/   0   /   $H5Num   /1"
+                        C6sed="/C6/ s/   0   /   $C6Num   /1"
+                        C7sed="/C7/ s/   0   /   $C7Num   /1"
+                        C8sed="/C8/ s/   0   /   $C8Num   /1"
+                        H9sed="/H9/ s/   0   /   $H9Num   /1"
+                        O10sed="/O10/ s/   0   /   $O10Num   /1"
+                        O11sed="/O11/ s/   0   /   $O11Num   /1"
+                        C12sed="/C12/ s/   0   /   $C12Num   /1"
+                        C13sed="/C13/ s/   0   /   $C13Num   /1"
+                        H14sed="/H14/ s/   0   /   $H14Num   /1"
+                        sed -i "$N1sed" $file  #N1
+                        sed -i "$H2sed" $file  #H2
+                        sed -i "$C3sed" $file  #C3
+                        sed -i "$N4sed" $file  #N4
+                        sed -i "$H5sed" $file  #H5
+                        sed -i "$C6sed" $file  #C6
+                        sed -i "$C7sed" $file  #C7
+                        sed -i "$C8sed" $file  #C8
+                        sed -i "$H9sed" $file  #H9
+                        sed -i "$O10sed" $file  #O10
+                        sed -i "$O11sed" $file  #O11
+                        sed -i "$C12sed" $file  #C12
+                        sed -i "$C13sed" $file  #C13
+                        sed -i "$H14sed" $file  #H14
+			N1sed="/N1/ s/   0   /   $N1Num   /1"
+                        H2sed="/H2/ s/   0   /   $H2Num   /1"
+                        C3sed="/C3/ s/   0   /   $C3Num   /1"
+                        N4sed="/N4/ s/   0   /   $N4Num   /1"
+                        H5sed="/H5/ s/   0   /   $H5Num   /1"
+                        C6sed="/C6/ s/   0   /   $C6Num   /1"
+                        C7sed="/C7/ s/   0   /   $C7Num   /1"
+                        C8sed="/C8/ s/   0   /   $C8Num   /1"
+                        H9sed="/H9/ s/   0   /   $H9Num   /1"
+                        O10sed="/O10/ s/   0   /   $O10Num   /1"
+                        O11sed="/O11/ s/   0   /   $O11Num   /1"
+                        C12sed="/C12/ s/   0   /   $C12Num   /1"
+                        C13sed="/C13/ s/   0   /   $C13Num   /1"
+                        H14sed="/H14/ s/   0   /   $H14Num   /1"
+                        sed -i "$N1sed" $file  #N1
+                        sed -i "$H2sed" $file  #H2
+                        sed -i "$C3sed" $file  #C3
+                        sed -i "$N4sed" $file  #N4
+                        sed -i "$H5sed" $file  #H5
+                        sed -i "$C6sed" $file  #C6
+                        sed -i "$C7sed" $file  #C7
+                        sed -i "$C8sed" $file  #C8
+                        sed -i "$H9sed" $file  #H9
+                        sed -i "$O10sed" $file  #O10
+                        sed -i "$O11sed" $file  #O11
+                        sed -i "$C12sed" $file  #C12
+                        sed -i "$C13sed" $file  #C13
+                        sed -i "$H14sed" $file  #H14
+                    fi
+                done
+
+                ;;
+
+
+        bismev)
+		if [ "$paramfile" == "amoeba09" ]; then
+                        C1Num=" 99"
+                elif [ "$paramfile" == "oplsaa" ]; then
+                        C1Num="177"
+                        C2Num=" 81"
+                        C3Num=" 81"
+                        C4Num="187"
+                        C5Num="187"
+                        C6Num="177"
+                        N7Num="181"
+                        N8Num="179"
+                        O9Num="178"
+                        O10Num="178"
+                        H11Num=" 85"
+                        H12Num=" 85"
+                        H13Num=" 85"
+                        H14Num=" 85"
+                        H15Num=" 85"
+                        H16Num=" 85"
+                        H17Num=" 85"
+                        H18Num=" 85"
+                        H19Num="182"
+                        H20Num="182"
+                else
+                        echo "Unsupported Potential"
+                        exit 1
+                fi
+                for file in $(ls *.xyz); do
+		    if [ $(sed -n '4p' $file | awk '{print $6}') == '0' ]; then
+                        echo "adding atom types to ${file}..."
+			C1sed="/C1/ s/   0   /   $C1Num   /1"
+                        C2sed="/C2/ s/   0   /   $C2Num   /1"
+                        C3sed="/C3/ s/   0   /   $C3Num   /1"
+                        C4sed="/C4/ s/   0   /   $C4Num   /1"
+                        C5sed="/C5/ s/   0   /   $C5Num   /1"
+                        C6sed="/C6/ s/   0   /   $C6Num   /1"
+                        N7sed="/N7/ s/   0   /   $N7Num   /1"
+                        N8sed="/N8/ s/   0   /   $N8Num   /1"
+                        O9sed="/O9/ s/   0   /   $O9Num   /1"
+                        O10sed="/O10/ s/   0   /   $O10Num   /1"
+                        H11sed="/H11/ s/   0   /   $H11Num   /1"
+                        H12sed="/H12/ s/   0   /   $H12Num   /1"
+                        H13sed="/H13/ s/   0   /   $H13Num   /1"
+                        H14sed="/H14/ s/   0   /   $H14Num   /1"
+                        H15sed="/H15/ s/   0   /   $H15Num   /1"
+                        H16sed="/H16/ s/   0   /   $H16Num   /1"
+                        H17sed="/H17/ s/   0   /   $H17Num   /1"
+                        H18sed="/H18/ s/   0   /   $H18Num   /1"
+                        H19sed="/H19/ s/   0   /   $H19Num   /1"
+                        H20sed="/H20/ s/   0   /   $H20Num   /1"
+                        sed -i "$C1sed" $file  #C1
+                        sed -i "$C2sed" $file  #C2
+                        sed -i "$C3sed" $file  #C3
+                        sed -i "$C4sed" $file  #C4
+                        sed -i "$C5sed" $file  #C5
+                        sed -i "$C6sed" $file  #C6
+                        sed -i "$N7sed" $file  #N7
+                        sed -i "$N8sed" $file  #N8
+                        sed -i "$O9sed" $file  #O9
+                        sed -i "$O10sed" $file  #O10
+                        sed -i "$H11sed" $file  #H11
+                        sed -i "$H12sed" $file  #H12
+                        sed -i "$H13sed" $file  #H13
+                        sed -i "$H14sed" $file  #H14
+                        sed -i "$H15sed" $file  #H15
+                        sed -i "$H16sed" $file  #H16
+                        sed -i "$H17sed" $file  #H17
+                        sed -i "$H18sed" $file  #H18
+                        sed -i "$H19sed" $file  #H19
+                        sed -i "$H20sed" $file  #H20
+			C1sed="/C1/ s/  0   /   $C1Num   /1"
+                        C2sed="/C2/ s/  0   /   $C2Num   /1"
+                        C3sed="/C3/ s/  0   /   $C3Num   /1"
+                        C4sed="/C4/ s/  0   /   $C4Num   /1"
+                        C5sed="/C5/ s/  0   /   $C5Num   /1"
+                        C6sed="/C6/ s/  0   /   $C6Num   /1"
+                        N7sed="/N7/ s/  0   /   $N7Num   /1"
+                        N8sed="/N8/ s/  0   /   $N8Num   /1"
+                        O9sed="/O9/ s/  0   /   $O9Num   /1"
+                        O10sed="/O10/ s/  0   /   $O10Num   /1"
+                        H11sed="/H11/ s/  0   /   $H11Num   /1"
+                        H12sed="/H12/ s/  0   /   $H12Num   /1"
+                        H13sed="/H13/ s/  0   /   $H13Num   /1"
+                        H14sed="/H14/ s/  0   /   $H14Num   /1"
+                        H15sed="/H15/ s/  0   /   $H15Num   /1"
+                        H16sed="/H16/ s/  0   /   $H16Num   /1"
+                        H17sed="/H17/ s/  0   /   $H17Num   /1"
+                        H18sed="/H18/ s/  0   /   $H18Num   /1"
+                        H19sed="/H19/ s/  0   /   $H19Num   /1"
+                        H20sed="/H20/ s/  0   /   $H20Num   /1"
+                        sed -i "$C1sed" $file  #C1
+                        sed -i "$C2sed" $file  #C2
+                        sed -i "$C3sed" $file  #C3
+                        sed -i "$C4sed" $file  #C4
+                        sed -i "$C5sed" $file  #C5
+                        sed -i "$C6sed" $file  #C6
+                        sed -i "$N7sed" $file  #N7
+                        sed -i "$N8sed" $file  #N8
+                        sed -i "$O9sed" $file  #O9
+                        sed -i "$O10sed" $file  #O10
+                        sed -i "$H11sed" $file  #H11
+                        sed -i "$H12sed" $file  #H12
+                        sed -i "$H13sed" $file  #H13
+                        sed -i "$H14sed" $file  #H14
+                        sed -i "$H15sed" $file  #H15
+                        sed -i "$H16sed" $file  #H16
+                        sed -i "$H17sed" $file  #H17
+                        sed -i "$H18sed" $file  #H18
+                        sed -i "$H19sed" $file  #H19
+                        sed -i "$H20sed" $file  #H20
+                    fi
+                done
+
+                ;;
+
+
+        cbmzpn)
+		if [ "$paramfile" == "amoeba09" ]; then
+                        C1Num=" 99"
+                elif [ "$paramfile" == "oplsaa" ]; then
+                        C1Num=" 90"
+                        C2Num=" 90"
+                        C3Num=" 90"
+                        C4Num=" 90"
+                        C5Num="920"
+                        C6Num="208"
+			C7Num="920"
+			C8Num="208"
+			C9Num=" 90"
+			C10Num=" 90"
+			C11Num=" 90"
+			C12Num=" 90"
+			C13Num=" 87"
+			C14Num=" 87"
+			C15Num="921"
+                        N16Num="922"
+                        N17Num="923"
+                        O18Num="924"
+                        H19Num=" 91"
+                        H20Num=" 91"
+                        H21Num=" 91"
+                        H22Num=" 91"
+                        H23Num=" 91"
+                        H24Num=" 91"
+                        H25Num=" 91"
+                        H26Num=" 91"
+                        H27Num=" 89"
+                        H28Num=" 89"
+			H29Num="268"
+			H30Num="268"
+                else
+                        echo "Unsupported Potential"
+                        exit 1
+                fi
+                for file in $(ls *.xyz); do
+		    if [ $(sed -n '4p' $file | awk '{print $6}') == '0' ]; then
+                        echo "adding atom types to ${file}..."
+			C1sed="/C1 / s/   0   /   $C1Num   /1"
+                        C2sed="/C2 / s/   0   /   $C2Num   /1"
+                        C3sed="/C3 / s/   0   /   $C3Num   /1"
+                        C4sed="/C4/ s/   0   /   $C4Num   /1"
+                        C5sed="/C5/ s/   0   /   $C5Num   /1"
+                        C6sed="/C6/ s/   0   /   $C6Num   /1"
+			C7sed="/C7/ s/   0   /   $C7Num   /1"
+                        C8sed="/C8/ s/   0   /   $C8Num   /1"
+                        C9sed="/C9/ s/   0   /   $C9Num   /1"
+                        C10sed="/C10/ s/   0   /   $C10Num   /1"
+                        C11sed="/C11/ s/   0   /   $C11Num   /1"
+                        C12sed="/C12/ s/   0   /   $C12Num   /1"
+			C13sed="/C13/ s/   0   /   $C13Num   /1"
+                        C14sed="/C14/ s/   0   /   $C14Num   /1"
+                        C15sed="/C15/ s/   0   /   $C15Num   /1"
+                        N16sed="/N16/ s/   0   /   $N16Num   /1"
+                        N17sed="/N17/ s/   0   /   $N17Num   /1"
+                        O18sed="/O18/ s/   0   /   $O18Num   /1"
+                        H19sed="/H19/ s/   0   /   $H19Num   /1"
+                        H20sed="/H20/ s/   0   /   $H20Num   /1"
+                        H21sed="/H21/ s/   0   /   $H21Num   /1"
+                        H22sed="/H22/ s/   0   /   $H22Num   /1"
+                        H23sed="/H23/ s/   0   /   $H23Num   /1"
+                        H24sed="/H24/ s/   0   /   $H24Num   /1"
+                        H25sed="/H25/ s/   0   /   $H25Num   /1"
+                        H26sed="/H26/ s/   0   /   $H26Num   /1"
+                        H27sed="/H27/ s/   0   /   $H27Num   /1"
+                        H28sed="/H28/ s/   0   /   $H28Num   /1"
+			H29sed="/H29/ s/   0   /   $H29Num   /1"
+                        H30sed="/H30/ s/   0   /   $H30Num   /1"
+                        sed -i "$C1sed" $file  #C1
+                        sed -i "$C2sed" $file  #C2
+                        sed -i "$C3sed" $file  #C3
+                        sed -i "$C4sed" $file  #C4
+                        sed -i "$C5sed" $file  #C5
+                        sed -i "$C6sed" $file  #C6
+			sed -i "$C7sed" $file  #C7
+                        sed -i "$C8sed" $file  #C8
+                        sed -i "$C9sed" $file  #C9
+                        sed -i "$C10sed" $file  #C10
+                        sed -i "$C11sed" $file  #C11
+                        sed -i "$C12sed" $file  #C12
+			sed -i "$C13sed" $file  #C13
+                        sed -i "$C14sed" $file  #C14
+                        sed -i "$C15sed" $file  #C15
+                        sed -i "$N16sed" $file  #N16
+                        sed -i "$N17sed" $file  #N17
+                        sed -i "$O18sed" $file  #O18
+                        sed -i "$H19sed" $file  #H19
+                        sed -i "$H20sed" $file  #H20
+                        sed -i "$H21sed" $file  #H21
+                        sed -i "$H22sed" $file  #H22
+                        sed -i "$H23sed" $file  #H23
+                        sed -i "$H24sed" $file  #H24
+                        sed -i "$H25sed" $file  #H25
+                        sed -i "$H26sed" $file  #H26
+                        sed -i "$H27sed" $file  #H27
+                        sed -i "$H28sed" $file  #H28
+			sed -i "$H29sed" $file  #H29
+                        sed -i "$H30sed" $file  #H30
+			C1sed="/C1 / s/  0   /  $C1Num   /1"
+                        C2sed="/C2 / s/  0   /  $C2Num   /1"
+                        C3sed="/C3 / s/  0   /  $C3Num   /1"
+                        C4sed="/C4/ s/  0   /  $C4Num   /1"
+                        C5sed="/C5/ s/  0   /  $C5Num   /1"
+                        C6sed="/C6/ s/  0   /  $C6Num   /1"
+                        C7sed="/C7/ s/  0   /  $C7Num   /1"
+                        C8sed="/C8/ s/  0   /  $C8Num   /1"
+                        C9sed="/C9/ s/  0   /  $C9Num   /1"
+                        C10sed="/C10/ s/  0   /  $C10Num   /1"
+                        C11sed="/C11/ s/  0   /  $C11Num   /1"
+                        C12sed="/C12/ s/  0   /  $C12Num   /1"
+                        C13sed="/C13/ s/  0   /  $C13Num   /1"
+                        C14sed="/C14/ s/  0   /  $C14Num   /1"
+                        C15sed="/C15/ s/  0   /  $C15Num   /1"
+                        N16sed="/N16/ s/  0   /  $N16Num   /1"
+                        N17sed="/N17/ s/  0   /  $N17Num   /1"
+                        O18sed="/O18/ s/  0   /  $O18Num   /1"
+                        H19sed="/H19/ s/  0   /  $H19Num   /1"
+                        H20sed="/H20/ s/  0   /  $H20Num   /1"
+                        H21sed="/H21/ s/  0   /  $H21Num   /1"
+                        H22sed="/H22/ s/  0   /  $H22Num   /1"
+                        H23sed="/H23/ s/  0   /  $H23Num   /1"
+                        H24sed="/H24/ s/  0   /  $H24Num   /1"
+                        H25sed="/H25/ s/  0   /  $H25Num   /1"
+                        H26sed="/H26/ s/  0   /  $H26Num   /1"
+                        H27sed="/H27/ s/  0   /  $H27Num   /1"
+                        H28sed="/H28/ s/  0   /  $H28Num   /1"
+                        H29sed="/H29/ s/  0   /  $H29Num   /1"
+                        H30sed="/H30/ s/  0   /  $H30Num   /1"
+			sed -i "$C1sed" $file  #C1
+                        sed -i "$C2sed" $file  #C2
+                        sed -i "$C3sed" $file  #C3
+                        sed -i "$C4sed" $file  #C4
+                        sed -i "$C5sed" $file  #C5
+                        sed -i "$C6sed" $file  #C6
+                        sed -i "$C7sed" $file  #C7
+                        sed -i "$C8sed" $file  #C8
+                        sed -i "$C9sed" $file  #C9
+                        sed -i "$C10sed" $file  #C10
+                        sed -i "$C11sed" $file  #C11
+                        sed -i "$C12sed" $file  #C12
+                        sed -i "$C13sed" $file  #C13
+                        sed -i "$C14sed" $file  #C14
+                        sed -i "$C15sed" $file  #C15
+                        sed -i "$N16sed" $file  #N16
+                        sed -i "$N17sed" $file  #N17
+                        sed -i "$O18sed" $file  #O18
+                        sed -i "$H19sed" $file  #H19
+                        sed -i "$H20sed" $file  #H20
+                        sed -i "$H21sed" $file  #H21
+                        sed -i "$H22sed" $file  #H22
+                        sed -i "$H23sed" $file  #H23
+                        sed -i "$H24sed" $file  #H24
+                        sed -i "$H25sed" $file  #H25
+                        sed -i "$H26sed" $file  #H26
+                        sed -i "$H27sed" $file  #H27
+                        sed -i "$H28sed" $file  #H28
+                        sed -i "$H29sed" $file  #H29
+                        sed -i "$H30sed" $file  #H30
+                    fi
+                done
+
+                ;;
+
+
+	
+
+
+
+
+        hxacan)
+                for file in $(ls *.xyz); do
+		    addatomtypesindividual -p $paramfile -M $molecule
+                done
+
+                ;;
+
+	pyrzin)
+                for file in $(ls *.xyz); do
+                    addatomtypesindividual -p $paramfile -M $molecule
+                done
+
+                ;;
+
+	kobfud)
+                for file in $(ls *.xyz); do
+                    addatomtypesindividual -p $paramfile -M $molecule
+                done
+
+                ;;
+
+	qopbed)
+                for file in $(ls *.xyz); do
+                    addatomtypesindividual -p $paramfile -M $molecule
+                done
+
+                ;;
+
+        resora)
+                for file in $(ls *.xyz); do
+                    addatomtypesindividual -p $paramfile -M $molecule
+                done
+
+                ;;
+
+        zzzpus)
+                for file in $(ls *.xyz); do
+                    addatomtypesindividual -p $paramfile -M $molecule
+                done
+
+                ;;
+
+        zzzpro)
+                for file in $(ls *.xyz); do
+                    addatomtypesindividual -p $paramfile -M $molecule
+                done
+
+                ;;
+
+
+esac
+

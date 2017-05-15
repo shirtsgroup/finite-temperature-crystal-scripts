@@ -1,0 +1,206 @@
+#!/bin/bash
+
+#BASH SCRIPT TO AUTOMATICALLY SET UP BENZENE MD SIMULATIONS TO SWITCH FROM ONE POTENTIAL TO ANOTHER
+#By: Eric Dybeck 08/01/2015
+#param n - polymorph number (all 3 will be used if none is given)
+#param d - incremental delta change
+#param f - functional form (exponent) of the spacing between the deltas
+#param T - Temperature in K
+#param P - Pressure in bar
+#param M - Molecule name
+#param N - Number of total molecules
+#param I - Number of independent molecules (the remainder will be averaged)
+#param e - Number of steps in the equilibration step
+#param p - Number of steps in the production step
+#param i - Integrator
+#param t - Thermostat
+#param b - Barostat
+#param a - number of cores (threads) to run on
+#param r - vdw/coulomb cutoff distance (in angstroms)
+#param u - potential to be used in the simulation
+#param z - specify which simulation package we will use (gromacs or tinker)
+#param o - number of production outputs
+#param h - optional string hinge to add to the job
+
+#=============================================================================================
+# SETUP DEFAULT VALUES AND READ IN PARAMETERS FROM USER
+#=============================================================================================
+
+SETRUN_ARGS="$@"
+polymorph_num="p1 p2 p3"
+DSPACING=10
+EXPONENT=1
+TEMP=200
+PRESSURE=1
+MOLECULE="benzene"
+MOLECULES=72
+INDEPENDENT="same"
+equil_steps=1000000
+prod_steps=1000000
+integrator="sd"
+thermostat="nose-hoover"
+barostat="Parrinello-Rahman"
+cores=1
+Delta=0
+CUTOFF="8"
+POTENTIAL="amoeba09todesa"
+SIMULATION="tinker"
+ENSEMBLE="NVT"
+OUTPUTS=200
+hinge="DefaultHinge"
+
+#options passed in from the users
+while getopts "n:d:f:T:P:M:N:I:E:e:p:i:o:t:b:a:r:u:z:h:" opt; do
+        case $opt in
+        n )
+                polymorph_num=$OPTARG
+                ;;
+	d )
+		DSPACING=$OPTARG
+		;;
+	f )
+		EXPONENT=$OPTARG
+		;;
+	T )
+		TEMP=$OPTARG
+		;;
+        P )
+                PRESSURE=$OPTARG
+                ;;
+	M )
+		MOLECULE=$OPTARG
+		;;
+        N )
+                MOLECULES=$OPTARG
+                ;;
+	I )
+                INDEPENDENT=$OPTARG
+                ;;
+        e )
+                equil_steps=$OPTARG
+                ;;
+        p )
+                prod_steps=$OPTARG
+                ;;
+        i )
+                integrator=$OPTARG
+                ;;
+	o )
+                OUTPUTS=$OPTARG
+                ;;
+        t )
+                thermostat=$OPTARG
+                ;;
+        b )
+                barostat=$OPTARG
+                ;;
+	a )
+                cores=$OPTARG
+                ;;	
+	r )
+                CUTOFF=$OPTARG
+                ;;
+	u )
+                POTENTIAL=$OPTARG
+                ;;
+        z )
+                SIMULATION=$OPTARG
+                ;;
+	E )
+                ENSEMBLE=$OPTARG
+                ;;
+        h )
+                hinge=$OPTARG
+                ;;
+        esac
+done
+
+#=============================================================================================
+# ENSURE THAT INPUTS HAVE BEEN PROPERLY ENTERED
+#=============================================================================================
+
+#TEMPERATURE
+if [ $TEMP == -1 ]; then
+	echo "Invalid Temperature: $Temp"
+	exit 1
+fi
+
+#POLYMORPH NUMBER
+if [ $polymorph_num != "p1" ] && [ $polymorph_num != "p2" ] && [ $polymorph_num != "p3" ]  && [ $polymorph_num != "gas" ] && [ $polymorph_num != "p1 p2" ] && [ $polymorph_num != "p1 p3" ] && [ $polymorph_num != "p2 p3" ] && [ $polymorph_num != "p1 p2 p3" ]; then
+        echo "Unrecognized polymorph Number: $polymorph_num"
+        exit 1
+fi
+
+#INDEPENDENT MOLECULES
+if [ "$INDEPENDENT" == "same" ] || [ "$INDEPENDENT" == "$MOLECULES" ]; then
+    INDEPENDENT=$MOLECULES
+fi
+
+#DELTA
+
+#if [ "$DSPACING" -le "0" ]; then
+#	echo "Invalid Delta Spacing: $DSPACING"
+#	exit 1
+#fi
+
+if [ "$EXPONENT" -lt "1" ] || [ "$EXPONENT" -gt "4" ]; then
+	echo "Invalid Exponent: $EXPONENT"
+	exit 1
+fi
+
+#INTEGRATOR
+if [ "$integrator" != "md" ] && [ "$integrator" != "md-vv" ] && [ "$integrator" != "sd" ]; then
+        echo "Unrecognized integrator: $integrator"
+        exit 1
+fi
+
+#CUTOFF RADIUS
+if [ "$CUTOFF" -lt "0" ]; then
+        echo "Invalid Cutoff Radius: $CUTOFF"
+        exit 1
+fi
+
+#POTENTIAL
+if [ "$POTENTIAL" != "oplsaatofakeg" ] && [ "$POTENTIAL" != "oplsaatofakea" ] && [ "$POTENTIAL" != "designeda" ] && [ "$POTENTIAL" != "amoeba09todesa" ] && [ "$POTENTIAL" != "amoeba09restraint" ] && [ "$POTENTIAL" != "amoeba09interactions" ]; then 
+        echo "Invalid Potential: $POTENTIAL"
+        echo "Supported Potentials: oplsaatofakeg oplsaatofakea designeda amoeba09todesa amoeba09restraint amoeba09interactions"
+        exit 1
+fi
+
+#HINGE
+if [ "$hinge" == "DefaultHinge" ]; then
+    hinge="DefaultHinge"
+else
+    hinge="$hinge"
+fi
+
+#=============================================================================================
+# SETUP HAMILTONIAN SWITCH PATH
+#=============================================================================================
+
+delta=0
+
+for i in $(seq 0 $DSPACING); do
+	
+	delta=$(echo "scale=8;${i}/${DSPACING}" | bc | sed -r 's/^(-?)\./\10./')
+	rawdelta=$delta
+	echo $rawdelta
+	delta=$(echo "scale=6; ($delta^$EXPONENT)" | bc | sed -r 's/^(-?)\./\10./')
+	DeltaHinge=$(echo "scale=0;$i*100/${DSPACING}" | bc | sed -r 's/^(-?)\./\10./')
+	if [ "$DeltaHinge" -lt 10 ]; then
+                    DeltaHinge="00${DeltaHinge}D"
+            elif [ "$DeltaHinge" -lt 100 ]; then
+                    DeltaHinge="0${DeltaHinge}D"
+            else
+                    DeltaHinge="100D"
+        fi
+	
+	if [ "$DSPACING" -le "0" ]; then
+		DeltaHinge=""
+	fi
+	
+	for poly in $polymorph_num; do
+		setup_molecule -n $poly -T $TEMP -P $PRESSURE -M $MOLECULE -N $MOLECULES -I $INDEPENDENT -E $ENSEMBLE -e $equil_steps -p $prod_steps -a $cores -i $integrator -o $OUTPUTS -t $thermostat -b $barostat -d $delta -f $rawdelta -r $CUTOFF -u $POTENTIAL -z $SIMULATION -h $hinge
+	done
+done
+

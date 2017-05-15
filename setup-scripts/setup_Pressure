@@ -1,0 +1,209 @@
+#!/bin/bash
+
+#BASH SCRIPT TO AUTOMATICALLY SET UP MD SIMULATIONS OVER A GIVEN PRESSURE RANGE
+#By: Eric Dybeck 03/31/2014
+#param C - Charges (supplied as a list in quotation marks separated by spaces)
+#param n - polymorph number (all 3 will be used if none is given)
+#param M - Molecule name
+#param T - Temperature(s) in K
+#param P - Pressure in bar
+#param N - Number of molecules
+#param I - Number of independent molecules (the remainder will be averaged)
+#param e - Number of steps in the equilibration step
+#param p - Number of steps in the production step
+#param i - Integrator
+#param t - Thermostat
+#param b - Barostat
+#param a - number of cores (threads) to run on
+#param r - vdw/coulomb cutoff distance (in angstroms)
+#param u - potential to be used in the simulation
+#param z - specify which simulation package we will use (gromacs or tinker)
+#param h - optional string hinge to add to the job
+#param E - specify the Thermodynamic Ensemble that will be used
+#param o - number of production outputs
+
+#=============================================================================================
+# SETUP DEFAULT VALUES AND READ IN PARAMETERS FROM USER
+#=============================================================================================
+
+SETRUN_ARGS="$@"
+#Charges="0.0500 0.1150 0.1500 0.2000 0.2500"
+#Charges="0.0550 0.0700 0.0850 0.1000 0.1150 0.1300 0.1450 0.1600 0.1750 0.1900" 
+Charge="0.1150"
+polymorph_num="p1 p2 p3"
+TEMPERATURE=300
+PRESSURES="1000 2000 3000 4000 5000 6000 7000 8000 9000 10000 11000 12000 13000 14000 15000 16000 17000 18000 19000 20000 21000 22000 23000 24000 25000 26000 27000 28000 29000 30000 31000 32000 33000 34000 35000 36000 37000 38000 39000 40000"
+MOLECULE="benzene"
+MOLECULES=72
+INDEPENDENT="same"
+equil_steps=1000000
+prod_steps=10000000
+PRODOUTPUTS=1000
+integrator="sd"
+thermostat="nose-hoover"
+barostat="Parrinello-Rahman"
+cores=1
+k_max=1000
+Lambda=0
+CUTOFF="8"
+POTENTIAL="oplsaa"
+SIMULATION="gromacs"
+hinge="DefaultHinge"
+ENSEMBLE="NPT"
+export TEMPLATEPATH="../runfiles"
+
+#options passed in from the users
+while getopts "c:n:M:C:H:T:P:N:I:e:p:i:t:b:a:k:r:u:z:h:E:o:" opt; do
+        case $opt in
+	C )
+                Charge=$OPTARG
+                ;;
+        n )
+                polymorph_num=$OPTARG
+                ;;
+      	M )
+                MOLECULE=$OPTARG
+                ;; 
+	T )
+		TEMPERATURE=$OPTARG
+		;;
+        P )
+                PRESSURES=$OPTARG
+                ;;
+        N )
+                MOLECULES=$OPTARG
+                ;;
+	I )
+                INDEPENDENT=$OPTARG
+                ;;
+        e )
+                equil_steps=$OPTARG
+                ;;
+        p )
+                prod_steps=$OPTARG
+                ;;
+        i )
+                integrator=$OPTARG
+                ;;
+        t )
+                thermostat=$OPTARG
+                ;;
+        b )
+                barostat=$OPTARG
+                ;;
+	a )
+                cores=$OPTARG
+                ;;
+	k )
+                k_max=$OPTARG
+                ;;
+	r )
+                CUTOFF=$OPTARG
+                ;;
+	u )
+                POTENTIAL=$OPTARG
+                ;;
+	z )
+                SIMULATION=$OPTARG
+                ;;	
+        h )
+                hinge=$OPTARG
+                ;;
+	o )
+                PRODOUTPUTS=$OPTARG
+		;;
+        esac
+done
+
+#=============================================================================================
+# ENSURE THAT INPUTS HAVE BEEN PROPERLY ENTERED
+#=============================================================================================
+
+#INDEPENDENT MOLECULES
+if [ "$INDEPENDENT" == "same" ] || [ "$INDEPENDENT" == "$MOLECULES" ]; then
+    INDEPENDENT=$MOLECULES
+    independenthinge="$MOLECULES"
+else
+    independenthinge="${INDEPENDENT}ind"
+fi
+
+#SYSTEM
+files=$(ls ${TEMPLATEPATH}/*.gro | grep "_$MOLECULE_" | grep "_$polymorph_num_" | grep "_$MOLECULES" | grep "_$independenthinge")
+if [ "$files" == "" ]; then
+    echo "There are no available files in the runfiles directory for the combination: "
+    echo "Molecule: $MOLECULE"
+    echo "Polymorph: $polymorph_num"
+    echo "Number: $MOLECULES"
+    echo "Independent: $INDEPENDENT"
+    exit 1
+fi
+
+#NUMBER OF EQUILIBRATION TIMESTEPS
+#if [ N != 256 ]
+#        echo "Unsupported number of molecules: $MOLECULES"
+#        exit 1
+#fi
+
+#NUMBER OF PRODUCTION TIMESTEPS
+#if [ MOLECULES != 256 ]
+#        echo "Unsupported number of molecules: $MOLECULES"
+#        exit 1
+#fi
+
+#INTEGRATOR
+if [ "$integrator" != "md" ] && [ "$integrator" != "md-vv" ] && [ "$integrator" != "sd" ]; then
+	echo "Unrecognized integrator: $integrator"
+        exit 1
+fi
+
+#SPRING CONSTANT
+if [ $k_max -lt 0 ]; then
+        echo "Invalid spring constant: $k_max"
+        exit 1
+fi
+
+#CUTOFF RADIUS
+if [ "$CUTOFF" -lt "0" ]; then
+        echo "Invalid Cutoff Radius: $CUTOFF"
+        exit 1
+fi
+
+#POTENTIAL
+potentiallist=("oplsaa gromos designedg oplsaatodesignedg designeda oplsaatodesigneda amoeba09 drude")
+valid="false"
+for pot in $potentiallist; do
+    if [ "$POTENTIAL" == "$pot" ]; then
+        valid="true"
+    fi
+done
+if [ "$valid" == "false" ]; then
+        echo "Unsupported potential: $POTENTIAL"
+        echo "Supported potentials: $potentiallist"
+        exit 1
+fi
+
+#ENSEMBLE
+if [ "$ENSEMBLE" != "NVE" ] && [ "$ENSEMBLE" != "NVT" ] && [ "$ENSEMBLE" != "NPT" ]; then
+        echo "Invalid Thermodynamic Ensemble: $ENSEMBLE"
+        echo "Supported Ensembles: NVE, NVT, NPT"
+        exit 1
+fi
+
+#HINGE
+if [ "$hinge" == "DefaultHinge" ]; then
+    hinge="DefaultHinge"
+else
+    hinge="$hinge"
+fi
+
+#=============================================================================================
+# SETUP CHARGES
+#=============================================================================================
+
+#Loop through each supplied charge and create a benzene job
+for press in $PRESSURES; do
+	for poly in $polymorph_num; do
+		setup_molecule -n $poly -T $TEMPERATURE -P $press -M $MOLECULE -N $MOLECULES -I $INDEPENDENT -e $equil_steps -p $prod_steps -E $ENSEMBLE -i $integrator -t $thermostat -b $barostat -a $cores -c $Charge -k $k_max -r $CUTOFF -u $POTENTIAL -z $SIMULATION -h $hinge -o $PRODOUTPUTS 
+	done
+done
+

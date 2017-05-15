@@ -1,0 +1,66 @@
+#!/bin/bash
+
+
+#By: Natalie Schieber 1/8/16
+
+
+SETRUN_ARGS="$@"
+
+polymorph="HCP FCC"
+basedir="/home/nasc5274/finishedjobs/May_23_LJ"
+tempfile="/home/nasc5274/finishedjobs/May_23_LJ/tempfile.txt"
+presfile="/home/nasc5274/finishedjobs/May_23_LJ/presfile.txt"
+delT="1000"
+
+
+
+#options passed in from the users
+while getopts "n:b:p:t:d:" opt; do
+	case $opt in 
+	n )
+		polymorph=$OPTARG
+		;;
+	b )
+		basedir=$OPTARG
+		;;
+	p )
+		presfile=$OPTARG
+		;;
+	t )
+		tempfile=$OPTARG
+		;;
+	d )
+		delT=$OPTARG
+		;;
+	esac
+done
+
+
+
+linenum=$(wc -l < $presfile)
+echo "$linenum"
+iter=1
+iter2=2
+ispace=1
+
+
+while [ "$iter" -le "$linenum" ]; do
+
+	temp=$(sed -n "$iter"p $tempfile)
+	pressure=$(sed -n "$iter"p $presfile)
+
+	pressure1=$(sed -n "$iter2"p $presfile)
+
+	
+
+	for poly in $polymorph; do
+		nameA="${basedir}/LJ_${poly}_4_${temp}K_${pressure}P_NPT_/"
+		nameB="${basedir}/LJ_${poly}_4_${temp}K_${pressure1}P_NPT_/"
+		mapJLtwostate -a ${nameA} -b ${nameB} -t ${temp} -d ${delT}
+	done
+
+	let "iter=$iter+$ispace"
+	let "iter2=$iter2+$ispace"
+
+
+done

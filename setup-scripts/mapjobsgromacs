@@ -1,0 +1,118 @@
+#!/bin/bash
+#BASH SCRIPT TO CALCULATE THE ENERGY OF A GROMACS TRAJECTORY IN VARIOUS GROMACS POTENTIALS
+#param d - Path to the job directory to map to
+#param o - The name of the output.xvg file
+#param s - Which software did we simulate in? (gromacs/tinker)
+
+SETRUN_ARGS="$@"
+inputfile="benzene_PROD"
+paramfile_oplsaa="oplsaa.ff"
+paramfile_oplsaa_fake="oplsaafake.ff"
+paramfile_gromos="gromos54a7.ff"
+paramfile_amoeba="amoeba09.prm"
+outputfile="energy.xvg"
+simulation="gromacs"
+mode="full"
+export GRO_LOC="/h3/n1/shirtsgroup/gromacs_forceavg2/install/bin"
+export Tinker_LOC="/h3/n1/shirtsgroup/tinker"
+export SCRIPT_LOC="/home/ecd4bd/scripts"
+dt="1"
+
+#=============================================================================================
+# READ IN USER INPUTS
+#=============================================================================================
+while getopts "f:d:o:s:m:" opt; do
+        case $opt in
+        f )
+                inputfile=$OPTARG
+                ;;
+	d )
+                PolymorphBMapConfig=$OPTARG
+                ;;
+        o )
+                outputfile=$OPTARG
+                ;;
+	s )
+		simulation=$OPTARG
+		;;
+	m )
+		mode="energy"
+		;;
+		
+        esac
+done
+
+
+#=============================================================================================
+# ENSURE THE INPUTS ARE CORRECT
+#=============================================================================================
+if [ "$simulation" != "gromacs" ] && [ "$simulation" != "tinker" ]; then
+	echo "Invalid simulation type: $simulation"
+	exit 1
+fi
+
+#Determine the timestep between each output frame based on the job_specs file
+dt=$(less job_specs.txt | grep OUTPUT | awk '{print $2}')
+
+if [ "$mode" == 'energy' ]; then
+	echo "Processing only the energy"
+else
+
+#Make a directory for the individual frames if it does not aleady exist
+mkdir MappedGRO
+
+#Convert the trajectory into a set of full precision gro files using trjconv
+echo 0 | trjconv_d -f ${inputfile}.trr -s ${inputfile}.tpr -o MappedGRO/frame.gro -sep -pbc whole -ndec 8
+
+cd MappedGRO
+
+#Map each configuration to the other ensemble
+for file in $(ls *.gro); do
+	echo "Mapping ${file} to the trajectory of ${PolymorphBMapConfig} ..."
+	filename=$(echo $file | cut -d '.' --complement -f2-)
+	python ${SCRIPT_LOC}/mapgro.py ../benzene_restraint.gro ../$PolymorphBMapConfig $file $filename 
+done
+
+cd ..
+fi
+
+#=============================================================================================
+# COMPUTE MAPPED CONFIGURATION ENERGY
+#=============================================================================================
+
+#Copy over the appropriate itp file and topology file
+echo "Copying itp and topology file..."
+mapname=$(echo $PolymorphBMapConfig | cut -d '.' --complement -f2-)
+
+#Remove any symmetry averaging if it is included
+less ${mapname}.mdp | grep -v "ave-group" | grep -v "ave-ngroup" | grep -v "symmetry-averaging" > ${mapname}_reweighting.mdp
+
+potname="mapped"
+
+#Rerun on each .gro file
+cd MappedGRO
+
+frame=0
+fname="frame${frame}-mapped.gro"
+while [ -f $fname ]; do
+	echo "Calculating ${file} energy..."
+	${GRO_LOC}/grompp_d -f ../${mapname}_reweighting.mdp -c $fname -r ../${mapname}.gro -p ../${mapname}.top -o ${mapname}.tpr -maxwarn 10
+	${GRO_LOC}/mdrun_d  -v -rerun $fname -s ${mapname}.tpr -deffnm mapped -e mappedenergy.edr
+	echo -e "Potential\n1 2 3 4 5 7 8 6 9 10 0" | ${GRO_LOC}/g_energy_d -f mappedenergy.edr -o "mappedenergy.xvg"
+	energy=$(less mappedenergy.xvg | tail -1 | awk '{print $2}')
+        if [ "$frame" == "0" ]; then
+            less mappedenergy.xvg | head -n -1 > ${potname}_energy.xvg
+        fi
+        #timestep=$(echo "scale=8;$frame*$dt;" | bc | sed -r 's/^(-?)\./\10./')
+        #sed -i "0,/1.000000/s/1.000000/$timestep/" mappedenergy.xvg
+        less mappedenergy.xvg | tail -1 >> ${potname}_energy.xvg
+	let "frame=$frame+1"
+        fname="frame${frame}-mapped.gro"	
+done
+
+mv ${potname}_energy.xvg ../${potname}_energy.xvg
+
+cd ..
+
+echo "Energy Evaluation Done!"
+

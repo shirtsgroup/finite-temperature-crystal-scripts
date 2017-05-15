@@ -1,0 +1,45 @@
+#!/bin/bash
+
+#BASH SCRIPT TO WRAP ALL JOBS IN THE CURRENT DIRECTORY INTO A SINGLE REPLICA EXCHANGE SIMULATION
+#By: Eric Dybeck 04/20/2016
+#param d - name of the wrapper replica exchange directory
+#param n - number of steps until exchanges between the replica
+#param h - optional string hinge to pull jobs into the new directory
+
+#=============================================================================================
+# SETUP DEFAULT VALUES AND READ IN PARAMETERS FROM USER
+#=============================================================================================
+dirname="replex"
+replexnum=100
+hinge="_GRO_"
+
+#options passed in from the users
+while getopts "d:h:" opt; do
+        case $opt in
+	d )	dirname=$OPTARG
+		;;
+	n )	replexnum=$OPTARG
+		;;
+        h )
+                hinge=$OPTARG
+                ;;
+	esac
+done
+
+export TEMPLATEPATH="../runfiles"
+
+#Create new directory and move all jobs inside
+mkdir $dirname
+
+dirnum=0
+for direct in $(ls -l | egrep '^d' | awk '{print $9}' | grep "$hinge"); do
+    mv $direct ${dirname}/${direct}
+    let "dirnum=$dirnum+1"
+done
+
+#Copy over the submission script
+cp ${TEMPLATEPATH}/submit_localitc_replex.sh ${dirname}/submit_localitc.sh
+cp ${TEMPLATEPATH}/submit_cluster_replex.slurm ${dirname}/submit_cluster.slurm
+sed -i "s/REPLEXNUM/$replexnum/g" ${dirname}/submit_localitc.sh
+sed -i "s/REPLEXNUM/$replexnum/g" ${dirname}/submit_cluster.slurm
+sed -i "s/TASKSTASKSTASKS/$dirnum/g" ${dirname}/submit_cluster.slurm

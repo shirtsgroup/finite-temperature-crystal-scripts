@@ -1,0 +1,44 @@
+#!/bin/bash
+
+#BASH SCRIPT TO LIST ALL DIRECTORIES WITH A HINGE/IGNORE-STRING COMBINATION
+#param h - move jobs that contain this string
+#param i - ignore jobs that contain this string
+#param d - destination directory for the finished job
+
+SETRUN_ARGS="$@"
+hinge="DefaultHinge"
+ignore_string="DefaultIgnore"
+DEST="DefaultDest"
+
+#options passed in from the users
+while getopts "h:i:d:" opt; do
+        case $opt in
+        h )
+                hinge=$OPTARG
+                ;;
+        i )
+                ignore_string=$OPTARG
+                ;;
+	esac
+done
+
+#Echo all jobs
+if [ "$hinge" == "DefaultHinge" ] && [ $ignore_string == "DefaultIgnore" ]; then
+	for direct in $(ls -l | egrep '^d' | awk '{print $9}'); do
+		echo "$direct"
+	done
+#Echo all jobs containing the hinge
+elif [ $ignore_string == "DefaultIgnore" ]; then
+	for direct in $(ls -l | egrep '^d' | awk '{print $9}' | grep "$(echo $hinge | awk '{print $1}')" | grep "$(echo $hinge | awk '{print $2}')" | grep "$(echo $hinge | awk '{print $3}')"); do
+		echo "$direct"
+	done
+#Echo all jobs except those containing the ignore string
+elif [ "$hinge" == "DefaultHinge" ]; then
+	for direct in $(ls -l | egrep '^d' | awk '{print $9}' | grep -v $ignore_string); do
+        	echo "$direct"
+	done
+else
+	for direct in $(ls -l | egrep '^d' | awk '{print $9}' | grep -v $ignore_string | grep "$(echo $hinge | awk '{print $1}')" | grep "$(echo $hinge | awk '{print $2}')" | grep "$(echo $hinge | awk '{print $3}')"); do
+        	echo "$direct"
+	done
+fi

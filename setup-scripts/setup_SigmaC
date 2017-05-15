@@ -1,0 +1,197 @@
+#!/bin/bash
+
+#BASH SCRIPT TO AUTOMATICALLY SET UP BENZENE MD SIMULATIONS OVER A GIVEN RANGE OF SIGMAC VALUES
+#By: Eric Dybeck 03/31/2014
+#param C - SigmaC values (supplied as a list in quotation marks separated by spaces)
+#param n - polymorph number (all 3 will be used if none is given)
+#param T - Temperature in K
+#param P - Pressure in bar
+#param N - Number of benzene molecules
+#param I - Number of independent benzene molecules (the remainder will be averaged)
+#param f - functional form (exponent) of the spacing between the lambdas
+#param e - Number of steps in the equilibration step
+#param p - Number of steps in the production step
+#param i - Integrator
+#param t - Thermostat
+#param b - Barostat
+#param k - maximum harmonic restraint constant
+#param r - vdw/coulomb cutoff distance (in angstroms)
+#param u - potential to be used in the simulation
+#param h - optional string hinge to add to the job
+#param E - specify the Thermodynamic Ensemble that will be used
+#param o - number of production outputs
+
+#=============================================================================================
+# SETUP DEFAULT VALUES AND READ IN PARAMETERS FROM USER
+#=============================================================================================
+
+SETRUN_ARGS="$@"
+SigmaCs="96 98 100 102 104" 
+polymorph_num="p1 p2 p3"
+TEMP=200
+PRESSURE=1
+MOLECULES=72
+INDEPENDENT=4
+equil_steps=100000
+prod_steps=4000000
+PRODOUTPUTS=2000
+integrator="md"
+thermostat="nose-hoover"
+barostat="Parrinelo-Rahman"
+k_max=1000
+Lambda=0
+CUTOFF="7"
+POTENTIAL="oplsaafakeg"
+hinge="DefaultHinge"
+ENSEMBLE="NPT"
+
+#options passed in from the users
+while getopts "C:n:T:P:N:I:e:p:i:t:b:k:r:u:h:E:o:" opt; do
+        case $opt in
+	C )
+                SigmaCs=$OPTARG
+                ;;
+        n )
+                polymorph_num=$OPTARG
+                ;;
+	T )
+		TEMP=$OPTARG
+		;;
+        P )
+                PRESSURE=$OPTARG
+                ;;
+        N )
+                MOLECULES=$OPTARG
+                ;;
+	I )
+                INDEPENDENT=$OPTARG
+                ;;
+        e )
+                equil_steps=$OPTARG
+                ;;
+        p )
+                prod_steps=$OPTARG
+                ;;
+        i )
+                integrator=$OPTARG
+                ;;
+        t )
+                thermostat=$OPTARG
+                ;;
+        b )
+                barostat=$OPTARG
+                ;;
+	k )
+                k_max=$OPTARG
+                ;;
+	r )
+                CUTOFF=$OPTARG
+                ;;
+	u )
+                POTENTIAL=$OPTARG
+                ;;
+        h )
+                hinge=$OPTARG
+                ;;
+	o )
+                PRODOUTPUTS=$OPTARG
+		;;
+        esac
+done
+
+#=============================================================================================
+# ENSURE THAT INPUTS HAVE BEEN PROPERLY ENTERED
+#=============================================================================================
+
+#TEMPERATURE
+if [ $TEMP == -1 ]; then
+	echo "Invalid Temperature: $Temp"
+	exit 1
+fi
+
+#POLYMORPH NUMBER
+if [ $polymorph_num != "p1" ] && [ $polymorph_num != "p2" ] && [ $polymorph_num != "p3" ] && [ $polymorph_num != "p1 p2" ] && [ $polymorph_num != "p1 p3" ] && [ $polymorph_num != "p2 p3" ] && [ $polymorph_num != "p1 p2 p3" ]; then
+        echo "Unrecognized polymorph Number: $polymorph_num"
+        exit 1
+fi
+
+#NUMBER OF MOLECULES (currently only 72, 108, 256 is accepted)
+if [ $MOLECULES != 256 ] && [ $MOLECULES != 108 ] && [ $MOLECULES != 72 ]; then
+        echo "Unsupported number of molecules: $MOLECULES"
+        exit 1
+fi
+
+#NUMBER OF INDEPENDENT MOLECULES (currently only 4, 8, 16, 32, 72, 108, 256 is accepted)
+if [ $INDEPENDENT != 256 ] && [ $INDEPENDENT != 108 ] && [ $INDEPENDENT != 72 ] && [ $INDEPENDENT != 32 ] && [ $INDEPENDENT != 16 ] && [ $INDEPENDENT != 8 ] && [ $INDEPENDENT != 4 ] && [ $INDEPENDENT != 2 ]; then
+        echo "Unsupported number of independent molecules: $INDEPENDENT"
+        exit 1
+elif [ "$MOLECULES" -lt "$INDEPENDENT" ]; then
+        echo "Number of total molecules is less than the number of independent molecules!"
+        echo "Total Molecules: $MOLECULES"
+        echo "Independent Molecules: $INDEPENDENT"
+        exit 1
+fi
+
+#NUMBER OF EQUILIBRATION TIMESTEPS
+#if [ N != 256 ]
+#        echo "Unsupported number of molecules: $MOLECULES"
+#        exit 1
+#fi
+
+#NUMBER OF PRODUCTION TIMESTEPS
+#if [ MOLECULES != 256 ]
+#        echo "Unsupported number of molecules: $MOLECULES"
+#        exit 1
+#fi
+
+#INTEGRATOR
+if [ $integrator != "md" ] && [ $integrator != "md-vv" ]; then
+        echo "Unrecognized integrator: $integrator"
+        exit 1
+fi
+
+#SPRING CONSTANT
+if [ $k_max -lt 0 ]; then
+        echo "Invalid spring constant: $k_max"
+        exit 1
+fi
+
+#CUTOFF RADIUS
+if [ "$CUTOFF" -lt "0" ]; then
+        echo "Invalid Cutoff Radius: $CUTOFF"
+        exit 1
+fi
+
+#POTENTIAL
+if [ "$POTENTIAL" != "oplsaafakeg" ] && [ "$POTENTIAL" != "oplsaafakea" ] && [ "$Charges" != "0.1150" ]; then
+        echo "Invalid Potential: $POTENTIAL"
+        echo "Supported Potentials: oplsaafakeg oplsaafakea"
+        exit 1
+fi
+
+#ENSEMBLE
+if [ "$ENSEMBLE" != "NVE" ] && [ "$ENSEMBLE" != "NVT" ] && [ "$ENSEMBLE" != "NPT" ]; then
+        echo "Invalid Thermodynamic Ensemble: $ENSEMBLE"
+        echo "Supported Ensembles: NVE, NVT, NPT"
+        exit 1
+fi
+
+#HINGE
+if [ "$hinge" == "DefaultHinge" ]; then
+    hinge="C"
+else
+    hinge="C_$hinge"
+fi
+
+#=============================================================================================
+# SETUP HARMONIC RESTRAINT PATH
+#=============================================================================================
+
+#Loop through each supplied charge and create a benzene job
+for sigmaC in $SigmaCs; do
+	for poly in $polymorph_num; do
+		setup_benzene -n $poly -T $TEMP -P $PRESSURE -N $MOLECULES -I $INDEPENDENT -e $equil_steps -p $prod_steps -E $ENSEMBLE -i $integrator -t $thermostat -b $barostat -C $sigmaC -k $k_max -r $CUTOFF -u $POTENTIAL -h $hinge -o $PRODOUTPUTS  
+	fi
+	done
+done
+

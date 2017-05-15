@@ -1,0 +1,271 @@
+#!/bin/bash
+
+#Bash script to utomatically set up a Lennard-Jonesium MD simulation
+#Natalie Schieber 08/27/2015
+
+#param n - phase "fcc" "bcc" "hcp"
+#param T - Tempereature in K
+#param P - Pressure in bar
+#param x - molecules in the x direction
+#param y - molecules in the y direction
+#param z - molecules in the z direction
+#param e - number of equilibration steps
+#param p - number of production steps
+#param i - integrator 
+#param t - thermostat
+#param b - barostat
+#param h - optional hinge
+#param E - thermodynamic ensemble
+
+SETRUN_ARGS="$@"
+#Default Values
+polymorph="fcc"
+temp=-1
+pressure=1
+xmol=8
+ymol=8
+zmol=8
+equil_steps=100000
+prod_steps=40000000
+integrator="md"
+thermostat="v-rescale"
+barostat="Parrinello-Rahman"
+ensemble="NVT"
+hinge="DefaultHinge"
+k_max=1000
+Lambda=0
+MINLAMBDA=0
+MAXLAMBDA=0
+LSPACING=100
+MAXGAMMA=100
+MINGAMMA=100
+GAMMA=100
+GSPACING=100
+EXPONENT=1
+
+
+#user defined options
+while getopts "n:T:P:x:y:z:e:p:i:t:b:h:E:k:L:U:R:s:f:A:B:G:g:" opt; do
+	case $opt in 
+	n )
+		polymorph=$OPTARG
+		;;
+	T )
+		temp=$OPTARG
+		;;
+	P )
+		pressure=$OPTARG
+		;;
+	x )
+		xmol=$OPTARG
+		;;
+	y )
+		ymol=$OPTARG
+		;;
+	z )
+		zmol=$OPTARG
+		;;
+	e )
+		equil_steps=$OPTARG
+		;;
+	p )
+		prod_steps=$OPTARG
+		;;
+	i )
+		integator=$OPTARG
+		;;
+	t )
+		thermostat=$OPTARG
+		;;
+	b )
+		barostat=$OPTARG
+		;;
+	h )
+		hinge=$OPTARG
+		;;
+	E )
+		ensemble=$OPTARG
+		;;
+	k )
+		k_max=$OPTARG
+		;;
+	L )
+		Lambda=$OPTARG
+		;;
+	U )
+                MINLAMBDA=$OPTARG
+                ;;
+        R )
+                MAXLAMBDA=$OPTARG
+                ;;
+        s )
+                LSPACING=$OPTARG
+                ;;
+	f )
+		EXPONENT=$OPTARG
+		;;
+	A )
+		MAXGAMMA=$OPTARG
+		;;
+	B )
+		MINGAMMA=$OPTARG
+		;;
+	G )
+		GAMMA=$OPTARG
+		;;
+	g )
+		GSPACING=$OPTARG
+		;;
+	esac
+done
+
+#Make sure inputs are allowed and formatted correctly
+
+if [ $polymorph != "fcc" ] && [ $polymorph != "bcc" ] && [ $polymorph != "hcp" ]; then
+	echo "Unrecognized polymorph: $polymorph"
+	exit 1
+fi 
+
+if [ "$temp" == "-1" ]; then
+	echo "Invalid Temperature: $temp"
+	exit 1
+fi
+
+
+if [ "$pressure" -lt "0" ]; then
+	echo "Invalid pressure: $pressure"
+	exit 1
+fi
+
+if [ "$integrator" != "md" ] && [ "$integrator" != "md-vv" ] && [ "$integrator" != "sd" ]; then
+	echo "Unrecognized integrator: $integrator"
+	exit 1
+fi 
+
+if [ "$thermostat" != "v-rescale" ] && [ "$thermostat" != "andersen" ] && [ "$thermostat" != "nose-hoover" ]; then
+        echo "Unrecognized thermostat: $thermostat"
+        echo "Supported thermostats: v-rescale andersen nose-hoover"
+        exit 1
+fi
+
+if [ "$barostat" != "berendsen" ] && [ "$barostat" != "Parrinello-Rahman" ] && [ "$barostat" != "MTTK" ] && [ "$barostat" != "-1" ]; then
+        echo "Unrecognized barostat: $barostat"
+        echo "Supported barostats: berendsen Parrinello-Rahman MTTK"
+        exit 1
+fi
+
+if [ "$ensemble" != "NVE" ] && [ "$ensemble" != "NVT" ] && [ "$ensemble" != "NPT" ]; then
+	echo "Invalid Thermodynamic Ensemble: $ensemble"
+	echo "Supported Ensembles: NVE, NVT, NPT"
+	exit 1	
+fi
+
+#Create job name
+
+molnum=`expr $xmol \\* $ymol \\* $zmol`
+export MOLNUM="_${molnum}"
+
+if [ "$polymorph" == "fcc" ]; then
+	export PHASENAME="LJ_FCC"
+elif [ "$polymorph" == "bcc" ]; then
+	export PHASENAME="LJ_BCC"
+elif [ "$polymorph" == "hcp" ]; then
+	export PHASENAME="LJ_HCP"
+fi
+
+
+if [ $pressure == "-1" ]; then
+        PNAME=""
+elif [ "$pressure" -lt "10" ]; then
+        PNAME="_00${pressure}P"
+elif [ "$pressure" -lt "100" ]; then
+        PNAME=$(echo "$pressure*100/1" | bc)
+        PNAME="_0${pressure}P"
+else
+        PNAME="_${pressure}P"
+fi
+
+
+if [ "$temp" -lt "10" ]; then
+        export TNAME="_00${temp}K"
+elif [ "$temp" -lt "100" ]; then
+        export TNAME="_0${temp}K"
+else
+        export TNAME="_${temp}K"
+fi
+
+
+export ENNAME="_${ensemble}_"
+
+if [ "$hinge" == "DefaultHinge" ]; then
+	export HNAME=""
+else
+	export HNAME="$hinge"
+fi
+
+export GNAME="_${GAMMA}G"
+export LNAME="_${Lambda}L"
+
+#Make job directory and copy over relevant files
+
+export JOBNAME="${PHASENAME}${MOLNUM}${TNAME}${PNAME}${ENNAME}${GNAME}${LNAME}${HNAME}"
+mkdir $JOBNAME
+export JOBPATH="../jobs/${JOBNAME}"
+
+scp ../LJrunfiles/LJ.top ${JOBNAME}/LJ.top 
+scp ../LJrunfiles/LJ.itp ${JOBNAME}/LJ.itp
+scp ../LJrunfiles/submit_cluster.slurm ${JOBNAME}/submit_cluster.slurm 
+scp ../LJrunfiles/LJequil.mdp ${JOBNAME}/LJequil.mdp
+scp ../LJrunfiles/LJprod.mdp ${JOBNAME}/LJprod.mdp
+
+if [ "$polymorph" == "fcc" ]; then
+	scp ../LJrunfiles/fccinitial.gro ${JOBNAME}/initial.gro
+elif [ "$polymorph" == "hcp" ]; then
+	scp ../LJrunfiles/hcpinitial.gro ${JOBNAME}/initial.gro
+else
+	scp ../LJrunfiles/bccinitial.gro ${JOBNAME}/initial.gro
+fi
+
+#alter .top file to reflect user inputs
+nummol=$(sed -n '2p' ${JOBNAME}/initial.gro)
+sed -i "s/NNNN/$nummol/g" ${JOBNAME}/LJ.top
+
+#alter LJequil.mdp to reflect user inputs
+
+sed -i "s/nsteps.*/nsteps		= ${equil_steps}/g" ${JOBNAME}/LJequil.mdp
+sed -i "s/integrator.*/integrator		= ${integrator}/g" ${JOBNAME}/LJequil.mdp
+sed -i "s/tcoupl.*/tcoupl		= ${thermostat}/g" ${JOBNAME}/LJequil.mdp
+sed -i "s/nsttcoupl.*/nsttcouple		= 1/g" ${JOBNAME}/LJequil.mdp 
+sed -i "s/ref_t.*/ref_t			= ${temp}/g" ${JOBNAME}/LJequil.mdp
+sed -i "s/gen_temp.*/gen_temp		= ${temp}/g" ${JOBNAME}/LJequil.mdp
+
+#alter LJprod.mdp to reflect user inputs
+
+sed -i "s/nsteps.*/nsteps		= ${prod_steps}/g" ${JOBNAME}/LJprod.mdp 
+sed -i "s/integrator.*/integrator		= ${integrator}/g" ${JOBNAME}/LJprod.mdp
+sed -i "s/tcoupl.*/tcoupl		= ${thermostat}/g" ${JOBNAME}/LJprod.mdp
+sed -i "s/ref_t.*/ref_t			= ${temp}/g" ${JOBNAME}/LJprod.mdp
+sed -i "s/gen_temp.*/gen_temp		= ${temp}/g" ${JOBNAME}/LJprod.mdp
+sed -i "s/nsttcoupl.*/nsttcouple		= 1/g" ${JOBNAME}/LJprod.mdp
+
+#alter pressure coupling session if in NPT ensemble
+
+setup_mdpLambdasNPS -L $Lambda -W $MINLAMBDA -S $MAXLAMBDA -s $LSPACING -A $MAXGAMMA -B $MINGAMMA -G $GAMMA -g $GSPACING -f $EXPONENT -d $JOBPATH
+
+if [ $ensemble == "NPT" ]; then
+	sed -i "s/pcoupl	= no/pcoupl	= ${barostat}/g" ${JOBNAME}/LJprod.mdp
+	sed -i "s/;pcoupltype/pcoupltype/g" ${JOBNAME}/LJprod.mdp
+	sed -i "s/;ref_p.*/ref_p		= ${pressure}/g" ${JOBNAME}/LJprod.mdp
+	sed -i "s/;nstpcouple.*/nstpcouple		= 1/g" ${JOBNAME}/LJprod.mdp
+	sed -i "s/;tau_p/tau_p/g" ${JOBNAME}/LJprod.mdp
+	sed -i "s/;compressibility/compressibility/g" ${JOBNAME}/LJprod.mdp
+	sed -i "s/;refcoord-scaling/refcoord-scaling/g" ${JOBNAME}/LJprod.mdp
+
+	sed -i "s/pcoupl	= no/pcoupl	= ${barostat}/g" ${JOBNAME}/LJequil.mdp
+	sed -i "s/;pcoupltype/pcoupltype/g" ${JOBNAME}/LJequil.mdp
+	sed -i "s/;ref_p.*/ref_p		= ${pressure}/g" ${JOBNAME}/LJequil.mdp
+	sed -i "s/;nstpcouple/nstpcouple/g" ${JOBNAME}/LJequil.mdp
+	sed -i "s/;tau_p/tau_p/g" ${JOBNAME}/LJequil.mdp
+	sed -i "s/;compressibility/compressibility/g" ${JOBNAME}/LJequil.mdp
+	sed -i "s/;refcoord-scaling/refcoord-scaling/g" ${JOBNAME}/LJequil.mdp
+fi

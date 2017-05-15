@@ -1,0 +1,225 @@
+#!/bin/bash
+
+#BASH SCRIPT TO AUTOMATICALLY SET UP BENZENE MD SIMULATIONS OVER A GIVEN POSITION RESTRAINT LAMBDA RANGE
+#By: Eric Dybeck 09/12/2014
+#param n - polymorph number (all 3 will be used if none is given)
+#param M - Molecule name
+#param U - unrestrained lambda value (%)
+#param R - restrained lambda value (%)
+#param L - incremental lambda change
+#param f - functional form (exponent) of the spacing between the lambdas
+#param G - Gamma value for the intermolecular interactions (%)
+#param T - Temperature in K
+#param P - Pressure in bar
+#param N - Number of benzene molecules
+#param I - Number of independent benzene molecules (the remainder will be averaged)
+#param e - Number of steps in the equilibration step
+#param p - Number of steps in the production step
+#param i - Integrator
+#param t - Thermostat
+#param b - Barostat
+#param a - number of cores (threads) to run on
+#param k - minimum harmonic restraint constant
+#param K - maximum harmonic restraint constant
+#param r - vdw/coulomb cutoff distance (in angstroms)
+#param u - potential to be used in the simulation
+#param h - optional string hinge to add to the job
+
+#=============================================================================================
+# SETUP DEFAULT VALUES AND READ IN PARAMETERS FROM USER
+#=============================================================================================
+
+SETRUN_ARGS="$@"
+polymorph_num="p1 p2 p3"
+MINLAMBDA=0
+MAXLAMBDA=100
+LSPACING=5
+EXPONENT=4
+GAMMA=100
+TEMP=200
+PRESSURE=1
+MOLECULE="benzene"
+MOLECULES=72
+INDEPENDENT=4
+equil_steps=1000000
+prod_steps=10000000
+integrator="sd"
+thermostat="nose-hoover"
+barostat=-1
+cores=7
+k_min=0
+k_max=1000
+Lambda=0
+CUTOFF="8"
+POTENTIAL="oplsaa"
+hinge="DefaultHinge"
+
+#options passed in from the users
+while getopts "n:M:U:R:L:f:G:T:P:N:I:e:p:i:t:b:a:k:K:r:u:h:" opt; do
+        case $opt in
+        n )
+                polymorph_num=$OPTARG
+                ;;
+	M )
+                MOLECULE=$OPTARG
+                ;;	
+        U )
+                MINLAMBDA=$OPTARG
+                ;;
+	R )
+		MAXLAMBDA=$OPTARG
+		;;
+	L )
+		LSPACING=$OPTARG
+		;;
+	f )
+		EXPONENT=$OPTARG
+		;;
+	G )
+		GAMMA=$OPTARG
+		;;
+	T )
+		TEMP=$OPTARG
+		;;
+        P )
+                PRESSURE=$OPTARG
+                ;;
+        N )
+                MOLECULES=$OPTARG
+                ;;
+	I )
+                INDEPENDENT=$OPTARG
+                ;;
+        e )
+                equil_steps=$OPTARG
+                ;;
+        p )
+                prod_steps=$OPTARG
+                ;;
+        i )
+                integrator=$OPTARG
+                ;;
+        t )
+                thermostat=$OPTARG
+                ;;
+        b )
+                barostat=$OPTARG
+                ;;
+	a )
+                cores=$OPTARG
+                ;;	
+	k )
+                k_min=$OPTARG
+                ;;
+	K )
+                k_max=$OPTARG
+                ;;
+	r )
+                CUTOFF=$OPTARG
+                ;;
+	u )
+                POTENTIAL=$OPTARG
+                ;;
+        h )
+                hinge=$OPTARG
+                ;;
+        esac
+done
+
+#=============================================================================================
+# ENSURE THAT INPUTS HAVE BEEN PROPERLY ENTERED
+#=============================================================================================
+
+#TEMPERATURE
+if [ $TEMP == -1 ]; then
+	echo "Invalid Temperature: $Temp"
+	exit 1
+fi
+
+#LAMBDA
+if [ "$MINLAMBDA" -lt "0" ] || [ "$MAXLAMBDA" -gt "100" ] || [ "$MINLAMBDA" -gt "$MAXLAMBDA" ]; then
+	echo "Minimum Lambda: $MINLAMBDA"
+	echo "Maximum Lambda: $MAXLAMBDA"
+	echo "Is not a valid lambda range!"	
+	exit 1
+fi 
+
+if [ "$LSPACING" -le "0" ]; then
+	echo "Invalid Lambda Spacing: $LSPACING"
+	exit 1
+fi
+
+if [ "$EXPONENT" -lt "1" ] || [ "$EXPONENT" -gt "4" ]; then
+	echo "Invalid Exponent: $EXPONENT"
+	exit 1
+fi
+
+#GAMMA POINT
+if [ $GAMMA -lt 0 ] || [ $GAMMA -gt 100 ]; then
+        echo "Invalid Gamma point: $GAMMA"
+        exit 1
+fi
+
+#INTEGRATOR
+if [ "$integrator" != "md" ] && [ "$integrator" != "md-vv" ] && [ "$integrator" != "sd" ]; then
+        echo "Unrecognized integrator: $integrator"
+        exit 1
+fi
+
+#SPRING CONSTANT
+if [ $k_max -lt 0 ]; then
+        echo "Invalid spring constant: $k_max"
+        exit 1
+fi
+
+#CUTOFF RADIUS
+if [ "$CUTOFF" -lt "0" ]; then
+        echo "Invalid Cutoff Radius: $CUTOFF"
+        exit 1
+fi
+
+#POTENTIAL
+potentiallist=("oplsaa gromos designedg oplsaatodesignedg designeda oplsaatodesigneda amoeba09 drude")
+valid="false"
+for pot in $potentiallist; do
+    if [ "$POTENTIAL" == "$pot" ]; then
+        valid="true"
+    fi
+done
+if [ "$valid" == "false" ]; then
+        echo "Unsupported potential: $POTENTIAL"
+        echo "Supported potentials: $potentiallist"
+        exit 1
+fi
+
+#HINGE
+if [ "$GAMMA" == "100" ]; then
+    hingeLetter="L"
+else
+    hingeLetter="R"
+fi
+
+if [ "$hinge" == "DefaultHinge" ]; then
+    hinge="$hingeLetter"
+else
+    hinge="${hingeLetter}_$hinge"
+fi
+
+#=============================================================================================
+# SETUP HARMONIC RESTRAINT PATH
+#=============================================================================================
+
+Lambda=$MINLAMBDA
+while [ "$Lambda" -lt "$MAXLAMBDA" ]; do
+	for poly in $polymorph_num; do
+	#Lambda=$(echo "($RawLambda^$EXPONENT) / ($MAXLAMBDA^($EXPONENT-1))" | bc)
+		setup_molecule -n $poly -T $TEMP -P $PRESSURE -M $MOLECULE -N $MOLECULES -I $INDEPENDENT -e $equil_steps -p $prod_steps -a $cores -i $integrator -t $thermostat -k $k_min -K $k_max -U $MINLAMBDA -R $MAXLAMBDA -s $LSPACING -f $EXPONENT -E NVT -L $Lambda -A $GAMMA -B $GAMMA -G $GAMMA -r $CUTOFF -u $POTENTIAL -h $hinge
+	#let "RawLambda=$RawLambda+$LSPACING"
+	done
+	let "Lambda=$Lambda+$LSPACING"
+done
+
+#Catch the final Lambda off-by-one exception
+for poly in $polymorph_num; do
+	setup_molecule -n $poly -T $TEMP -P $PRESSURE -M $MOLECULE -N $MOLECULES -I $INDEPENDENT -e $equil_steps -p $prod_steps -a $cores -i $integrator -t $thermostat -k $k_min -K $k_max -U $MINLAMBDA -R $MAXLAMBDA -s $LSPACING -f $EXPONENT -E NVT -L $MAXLAMBDA -A $GAMMA -B $GAMMA -G $GAMMA -r $CUTOFF -u $POTENTIAL -h $hinge
+done

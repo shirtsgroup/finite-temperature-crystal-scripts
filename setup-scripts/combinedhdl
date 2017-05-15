@@ -1,0 +1,63 @@
+#!/bin/bash
+
+#BASH SCRIPT TO COMBINE ALL RUN DHDL FILES INTO A SINGLE DIRECTORY SO THAT IT CAN BE RUN WITH alchemical-gromacs.py
+#param h - copy jobs that contain this string
+#param i - ignore jobs that contain this string
+#param d - copy the dhdl files to this directory
+
+SETRUN_ARGS="$@"
+hinge="DefaultHinge"
+ignore_string="DefaultIgnore"
+dhdl_dir="dhdldir"
+
+#options passed in from the users
+while getopts "h:i:d:" opt; do
+        case $opt in
+        h )
+                hinge=$OPTARG
+                ;;
+        i )
+                ignore_string=$OPTARG
+                ;;
+	d )
+		dhdl_dir=$OPTARG
+		;;
+	esac
+done
+
+#Make the new directory
+mkdir $dhdl_dir
+
+#Set the index to zero
+i=0;
+
+#Copy jobs that contain the hinge but not the ignore string
+
+#Copy all jobs
+if [ "$hinge" == "DefaultHinge" ] && [ $ignore_string == "DefaultIgnore" ]; then
+	for direct in $(ls -l | egrep '^d' | awk '{print $9}' | grep -v "$dhdl_dir"); do
+		echo "Copying job: $direct"
+		cp -r $direct/benzene_dhdl_PROD.xvg "$dhdl_dir/dhdl.${i}.xvg"
+		let "i=$i+1"
+	done
+#Copy all jobs containing the hinge
+elif [ $ignore_string == "DefaultIgnore" ]; then
+	for direct in $(ls -l | egrep '^d' | awk '{print $9}' | grep "$(echo $hinge | awk '{print $1}')" | grep "$(echo $hinge | awk '{print $2}')" | grep "$(echo $hinge | awk '{print $3}')" | grep -v "$dhdl_dir"); do
+		echo "Copying job: $direct"
+		cp -r $direct/benzene_dhdl_PROD.xvg "$dhdl_dir/dhdl.${i}.xvg"
+                let "i=$i+1"
+	done
+#Copy all jobs except those containing the ignore string
+elif [ "$hinge" == "DefaultHinge" ]; then
+	for direct in $(ls -l | egrep '^d' | awk '{print $9}' | grep -v $ignore_string | grep -v "$dhdl_dir"); do
+        	echo "Copying job: $direct"
+		cp -r $direct/benzene_dhdl_PROD.xvg "$dhdl_dir/dhdl.${i}.xvg"
+                let "i=$i+1"
+	done
+else
+	for direct in $(ls -l | egrep '^d' | awk '{print $9}' | grep "$(echo $hinge | awk '{print $1}')" | grep "$(echo $hinge | awk '{print $2}')" | grep "$(echo $hinge | awk '{print $3}')" | grep -v $ignore_string | grep -v "$dhdl_dir"); do
+        	echo "Copying job: $direct"
+		cp -r $direct/benzene_dhdl_PROD.xvg "$dhdl_dir/dhdl.${i}.xvg"
+                let "i=$i+1"
+	done
+fi

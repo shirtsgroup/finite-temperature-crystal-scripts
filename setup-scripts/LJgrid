@@ -1,0 +1,110 @@
+#!/bin/bash
+
+
+#BASH SCRIPT TO AUTOMATICALLY SET UP BENZENE MD SIMULATIONS OVER A T AND P RANGE
+#By: Natalie Schieber 1/8/16
+#param n - phase "fcc" "bcc" "hcp"
+#param T - Tempereature in K
+#param P - Pressure in bar
+#param x - molecules in the x direction
+#param y - molecules in the y direction
+#param z - molecules in the z direction
+#param p - number of production steps
+#param h - optional hinge
+#param E - thermodynamic ensemble
+
+SETRUN_ARGS="$@"
+#Default Values
+polymorph="hcp fcc"
+xmol=2
+ymol=2
+zmol=2
+prod_steps=10000000
+integrator="md"
+thermostat="v-rescale"
+barostat="Parrinello-Rahman"
+ensemble="NPT"
+hinge="DefaultHinge"
+density=1
+
+#options passed in from the users
+while getopts "n:T:P:x:y:z:p:h:E:" opt; do
+	case $opt in 
+	n )
+		polymorph=$OPTARG
+		;;
+	F )
+		filename=$OPTARG
+		;;
+	x )
+		xmol=$OPTARG
+		;;
+	y )
+		ymol=$OPTARG
+		;;
+	z )
+		zmol=$OPTARG
+		;;
+	p )
+		prod_steps=$OPTARG
+		;;
+	h )
+		hinge=$OPTARG
+		;;
+	E )
+		ensemble=$OPTARG
+		;;
+	esac
+done
+
+
+
+
+
+#==============================================================================================
+# ENSURE THAT INPUTS HAVE BEEN PROPERLY ENTERED
+#=============================================================================================
+
+
+
+#INTEGRATOR
+if [ $integrator != "md" ] && [ $integrator != "md-vv" ] && [integrator != "sd" ]; then
+        echo "Unrecognized integrator: $integrator"
+        exit 1
+fi
+
+if [ $polymorph != "fcc" ] && [ $polymorph != "bcc" ] && [ $polymorph != "hcp" ]; then
+	echo "Unrecognized polymorph: $polymorph"
+	exit 1
+fi 
+
+
+#=============================================================================================
+# SETUP Jobs at T,P
+#=============================================================================================
+
+linenum=$(wc -l < $tempfile)
+echo "$linenum"
+iter=1
+ispace=1
+
+
+while [ "$iter" -le "$linenum" ]; do
+
+	temp=$(sed -n "$iter"p $tempfile)
+	pressure=$(sed -n "$iter"p $presfile)
+	density=$(sed -n "$iter"p $densname)
+	temp=$( printf "%.0f" $temp )
+	pressure=$( printf "%.0f" $pressure )
+	
+	echo "$temp"
+	echo "$pressure"
+	echo "$density"
+	for poly in $polymorph; do
+	setup_LJlammps -n $poly -T $temp -P $pressure -p $prod_steps -x $xmol -y $ymol -z $zmol -h $hinge -E $ensemble -d $density
+	done
+
+	let "iter=$iter+$ispace"
+
+
+done

@@ -1,0 +1,5 @@
+
+
+
+for direct in $(ls -l | egrep '^d' | awk '{print $9}'); do
+

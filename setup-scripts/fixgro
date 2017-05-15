@@ -1,0 +1,77 @@
+#!/bin/bash
+#FIX A GRO FILE AFTER CONVERSION FROM XYZ 
+
+#=============================================================================================
+# READ IN USER INPUTS
+#=============================================================================================
+while getopts "g:p:o:" opt; do
+        case $opt in
+        g )
+                grofile=$OPTARG
+                ;;
+	p )
+		pdbfile=$OPTARG
+        esac
+done
+
+#Loop through all atoms in the pdb file
+pdbline=4
+totalatoms=$(sed '2q;d' $grofile)
+atomnum=0
+oldmolnum=0
+for i in $(seq 1 $totalatoms); do
+    let "pdbline=${i}+3"
+    let "groline=${i}+2"
+    echo $i
+    atomname=$(sed "${pdbline}q;d" $pdbfile | awk '{print $3}')
+    tinkernum=$(sed "${pdbline}q;d" $pdbfile | awk '{print $4}')
+    molnum=$(sed "${pdbline}q;d" $pdbfile | awk '{print $5}')
+    if [ "$oldmolnum" != "$molnum" ]; then
+	atomnum=1
+    else
+	let "atomnum=$atomnum+1"
+    fi
+
+    #Remove the eroneous tinkernum after the molnum
+    if [ "$tinkernum" -gt 99 ]; then
+	sed -i "${groline}s/  ${molnum}${tinkernum}/    ${molnum}/g" $grofile 
+    else
+	sed -i "${groline}s/   ${molnum}${tinkernum}/    ${molnum}/g" $grofile
+    fi
+
+    #Change the name of the atom to the appropriate number
+    if [ "$atomnum" -gt "9" ]; then
+	sed -i "${groline}s/ $atomname/${atomname}${atomnum}/g" $grofile
+    else
+	sed -i "${groline}s/$atomname/${atomname}${atomnum}/g" $grofile
+    fi
+
+    #Change the name of the atom to just the first letter (unless its a Cl)
+    length=${#atomname}
+    element=${atomname:0:2}
+    if [ "$element" == "Cl" ]; then
+	if [ "$length" -gt "3" ]; then
+            sed -i "${groline}s/$atomname/  ${element}/g" $grofile
+        elif [ "$length" -gt "2" ]; then
+            sed -i "${groline}s/$atomname/ ${element}/g" $grofile
+        elif [ "$length" -gt "1" ]; then
+            sed -i "${groline}s/$atomname/${element}/g" $grofile
+	fi
+    else
+	element=${atomname:0:1}
+	if [ "$length" -gt "3" ]; then
+            sed -i "${groline}s/$atomname/   ${element}/g" $grofile
+    	elif [ "$length" -gt "2" ]; then
+            sed -i "${groline}s/$atomname/  ${element}/g" $grofile
+    	elif [ "$length" -gt "1" ]; then
+            sed -i "${groline}s/$atomname/ ${element}/g" $grofile
+    	else
+            sed -i "${groline}s/$atomname/${element}/g" $grofile
+	fi
+    fi
+
+
+    oldmolnum=$molnum
+
+done
+

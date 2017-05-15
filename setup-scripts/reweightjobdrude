@@ -1,0 +1,293 @@
+#!/bin/bash
+#BASH SCRIPT TO CALCULATE THE ENERGY OF A GROMACS TRAJECTORY IN THE DRUDE OSCILLATOR POTENTIAL
+#param f - The name of the input TRR file
+#param u - The name of the potentials to examine
+#param o - The name of the output.xvg file
+#param s - Which software did we simulate in? (gromacs/tinker)
+
+SETRUN_ARGS="$@"
+inputfile="benzene_PROD"
+potentials="drude"
+paramfile_oplsaa="oplsaa.ff"
+paramfile_oplsaa_fake="oplsaafake.ff"
+paramfile_gromos="gromos54a7.ff"
+paramfile_amoeba="amoeba09.prm"
+outputfile="energy.xvg"
+simulation="gromacs"
+mode="full"
+#export GRO_LOC="/h3/n1/shirtsgroup/gromacs_forceavg2/install/bin"
+#export GRO_LOC="/h3/n1/shirtsgroup/gromacs_drude2/install_SSE2/bin"
+export GRO_LOC="/h3/n1/shirtsgroup/gromacs_drude/install/bin"
+export Tinker_LOC="/h3/n1/shirtsgroup/tinker"
+export SCRIPT_LOC="/home/ecd4bd/scripts"
+#charges=("0.0115 0.0230 0.0575 0.0690 0.0805 0.0920 0.1035 0.1150 0.1265 0.1380 0.1495 0.1725 0.2300 0.3450 0.4600 0.5750 1.1500")
+#chargenames=("C00115 C00230 C00575 C00690 C00805 C00920 C01035 C01150 C01265 C01380 C01495 C01725 C02300 C03450 C04600 C05750 C11500")
+#charges=("0.0690 0.0920 0.1150 0.1380 0.1725")
+#chargenames=("C00690 C00920 C01150 C01380 C01725")
+#charges=("0.0100 0.0200 0.0300 0.0400 0.0500 0.0600 0.0700 0.0800 0.0900 0.1000 0.1100 0.1150 0.1500 0.2000 0.2500 0.3000 0.3500 0.4000")
+#chargenames=("C00100 C00200 C00300 C00400 C00500 C00600 C00700 C00800 C00900 C01000 C01100 C01150 C01500 C02000 C02500 C03000 C03500 C04000")
+charges=("0.1150")
+chargenames=("C01150")
+#charges=("0.0500 0.1150 0.1500 0.2000 0.2500")
+#chargenames=("C00500 C01150 C01500 C02000 C02500")
+#sigmaCs=("C99 C100 C101 C102")
+#sigmaHs=("H97 H98 H99 H100")
+sigmaCs=("C100")
+sigmaHs=("H100")
+dt="1"
+
+#=============================================================================================
+# READ IN USER INPUTS
+#=============================================================================================
+while getopts "f:u:o:s:m:" opt; do
+        case $opt in
+        f )
+                inputfile=$OPTARG
+                ;;
+	u)
+		potentials=$OPTARG
+		;;
+        o )
+                outputfile=$OPTARG
+                ;;
+	s )
+		simulation=$OPTARG
+		;;
+	m )
+		mode="energy"
+		;;
+		
+        esac
+done
+
+
+#=============================================================================================
+# ENSURE THE INPUTS ARE CORRECT
+#=============================================================================================
+if [ "$simulation" != "gromacs" ] && [ "$simulation" != "tinker" ] && [ "$simulation" != "drude" ]; then
+	echo "Invalid simulation type: $simulation"
+	exit 1
+fi
+
+if [ "$potentials" != "drude" ] ; then
+	echo "Unsupported potentials: $potentials"
+	exit 1
+fi
+
+#If we simulated in tinker, convert trajectory to gromacs .gro files
+if [ "$simulation" == "tinker" ]; then
+	#Determine the timestep between each output frame based on the job_specs file
+	dt=$(less job_specs.txt | grep OUTPUT | awk '{print $2}')
+
+	if [ "$mode" == 'energy' ]; then
+		echo "Processing only the energy"
+	else
+		#Make a directory for the individual frames if it does not aleady exist
+		mkdir TinkerGRO
+		
+		for file in $(ls benzene.* | grep -v benzene.key | grep -v benzene.xyz | grep -v benzene.dyn); do
+                        framenum=${file##*.}
+                        #Remove any leading zeroes
+                        framenum=$(expr $framenum + 0)
+                        echo "Moving ${file}..."
+                        cp $file TinkerGRO/"frame${framenum}.xyz"
+                done		
+	
+		cd TinkerGRO	
+		#Convert each tinker xyz file into a pdb file
+                for file in $(ls *.xyz); do
+                        echo "Converting ${file} to pdb..."
+                        ${Tinker_LOC}/bin/xyzpdb $file ${Tinker_LOC}/params/${paramfile_amoeba} > /dev/null
+                done
+		
+		#Convert each pdb file into a gro file
+		if [ $(less ../benzene.xyz | head -1 | awk '{print $1}') == "12" ]; then
+		    cp /home/ecd4bd/runfiles/benzene_PROD_gas.tpr ../reweighting.tpr
+		else
+	       	    cp /home/ecd4bd/runfiles/benzene_PROD.tpr ../reweighting.tpr
+		fi
+                for file in $(ls *.pdb); do
+                        echo "Converting ${file} to gro..."
+                        filename=$(echo $file | cut -d '.' --complement -f2-)
+                        echo 0 | trjconv_d -f $file -s ../reweighting.tpr -o "${filename}.gro" -pbc whole -ndec 8 > /dev/null
+                done
+
+		#Add the box vector to the bottom of the .gro file
+		for file in $(ls *.gro); do
+                        echo "Adding box vectors to ${file}..."
+			filename=$(echo $file | cut -d '.' --complement -f2-)
+			python /home/ecd4bd/scripts/addboxvectors.py -g $file -x ${filename}.xyz -n 0.1
+			#x=$(less "${filename}.xyz" | head -2 | tail -1 | awk '{print $1}')
+			#y=$(less "${filename}.xyz" | head -2 | tail -1 | awk '{print $2}')
+			#z=$(less "${filename}.xyz" | head -2 | tail -1 | awk '{print $3}')
+			#
+			##Scale the box vector back by a factor of 10
+			#x=$(echo "scale=8;x=0.1*$x; if(x<1) print 0; x" | bc)
+			#y=$(echo "scale=8;x=0.1*$y; if(x<1) print 0; x" | bc)
+			#z=$(echo "scale=8;x=0.1*$z; if(x<1) print 0; x" | bc)
+			#sed -i "s/0.00000000   0.00000000   0.00000000/ $x  $y  $z/g" $file
+			#Change the extraneous time stamp of the gro file to an arbitrary positive number
+			sed -i "s/benzene solid t=  -1.00000/benzene solid t=  1.00000/g" $file
+		done
+
+		#Updgrade each gromacs GRO file into full precision
+                for file in $(ls *.gro); do
+                       echo "Upgrading ${file} to full precision..."
+                       filename=$(echo $file | cut -d '.' --complement -f2-)
+                       upgradegro -x "${filename}.xyz" -g $file
+                       python /home/ecd4bd/scripts/upgradegro.py -g $file -n 0.1
+                done
+
+	
+		#Expand the unit cell into a supercell so that it can be calculated with gromacs
+		if [ $(less ../benzene.xyz | head -1 | awk '{print $1}') == "12" ]; then
+		    echo "Gas Phase!"
+		else
+                    for file in $(ls *.gro); do
+                        echo "Expanding ${file} to supercell..."
+			python ${SCRIPT_LOC}/unitcell_to_supercell.py -g $file -l 3 -w 3 -z 3 
+                    done
+		fi
+		cd ..
+	fi
+
+#If we simulated with a fixed-charge potential in gromacs, split the trajectory into individual frames
+elif [ "$simulation" == "gromacs" ]; then
+    #Determine the timestep between each output frame based on the mdp file
+        dt=$(less benzene_production.mdp | grep -m 1 'dt' | awk '{print $3}')
+        log=$(less benzene_production.mdp | grep -m 1 'nstxout' | awk '{print $3}')
+
+        if [ "$mode" == 'energy' ]; then
+                echo "Processing only the energy"
+                #cd DrudeGRO
+        else
+                #Make a directory for the individual frames if it does not aleady exist
+                mkdir DrudeGRO
+
+                #Convert the trajectory into a set of full precision gro files using trjconv
+                #echo 0 | ${GRO_LOC}/gmx trjconv -f ${inputfile}.trr -s ${inputfile}.tpr -o DrudeGRO/frame.gro -sep -pbc whole -ndec 8
+		echo 0 | trjconv -f ${inputfile}.trr -s ${inputfile}.tpr -o DrudeGRO/frame.gro -sep -pbc whole -ndec 8
+		
+		#Add drude particles to each frame
+		cd DrudeGRO
+		for file in *.gro; do
+		    python ${SCRIPT_LOC}/add_drude.py -g $file
+		done 
+		cd ..
+        fi
+
+fi
+
+#=============================================================================================
+# REWEIGHT TO THE DRUDE OSCILLATOR POTENTIAL
+#=============================================================================================
+for potential in $potentials; do
+    #Copy over the appropriate itp file and topology file
+    echo "Copying itp and topology file..."
+    cp /home/ecd4bd/runfiles/benzene_${potential}.itp benzene_${potential}.itp
+    cp benzene_topology.top reweighting_topology.top
+    sed -i "s/oplsaa.ff/${potential}.ff/g" reweighting_topology.top
+    sed -i "s/oplsaafakegb.ff/${potential}.ff/g" reweighting_topology.top
+    sed -i "s/oplsaafaked.ff/${potential}.ff/g" reweighting_topology.top
+    sed -i "s/oplsaafakea.ff/${potential}.ff/g" reweighting_topology.top
+    sed -i "s/gromos54a7.ff/${potential}.ff/g" reweighting_topology.top
+    sed -i "s/drude.ff/${potential}.ff/g" reweighting_topology.top
+    sed -i "s/#include \"benzene.*/#include \"benzene_${potential}.itp\"/g" reweighting_topology.top
+
+    #Remove any symmetry averaging if it is included
+    less benzene_production.mdp | grep -v "ave-group" | grep -v "ave-ngroup" | grep -v "symmetry-averaging" > benzene_production_reweighting.mdp
+
+    #Add drude oscillators if it is not included
+    echo "; DRUDE-SPECIFIC SETTINGS" >> benzene_production_reweighting.mdp
+    echo "drude           = yes" >> benzene_production_reweighting.mdp
+    echo "drude-mode      = SCF" >> benzene_production_reweighting.mdp
+    echo "drude-hardwall  = no" >> benzene_production_reweighting.mdp
+
+    #Grab the original charge number
+    oldcharge=$(less benzene_${potential}.itp | grep 1.008 | head -1 | awk '{print $7}')
+    oldsigmaC=$(less benzene_${potential}.itp | grep 12.011 | head -1 | awk '{print $2}')
+    oldsigmaH=$(less benzene_${potential}.itp | grep 1.008 | head -1 | awk '{print $2}')
+    i=1
+
+    if [ "$simulation" == "drude" ]; then
+        #Setup the rerun files
+	echo "Rerunning the trajectory file..."
+	for charge in $charges; do #Loop over all charges
+	    for sigmaC in $sigmaCs; do #Loop over all sigmaC values
+		for sigmaH in $sigmaHs; do #Loop over all sigmaH values
+		    rm ${potential}energy.edr
+		    potname="${potential}"
+		    sed -i "s/-${oldcharge}    12.011/-${charge}    12.011/g" benzene_${potential}.itp
+		    sed -i "s/${oldcharge}     1.008/${charge}     1.008/g" benzene_${potential}.itp
+		    #sed -i "s/${oldsigmaC}/opls_${sigmaC}/g" benzene_oplsaafakeg.itp
+		    #sed -i "s/${oldsigmaH}/opls_${sigmaH}/g" benzene_oplsaafakeg.itp
+		    ${GRO_LOC}/grompp_d -f benzene_production_reweighting.mdp -c benzene_EM.gro -p reweighting_topology.top -o reweighting.tpr -maxwarn 10
+		    ${GRO_LOC}/mdrun_d  -v -rerun benzene_PROD.trr -s reweighting.tpr -deffnm $potname -e ${potential}energy.edr
+
+		    rm ${potname}.trr
+		    #rm ${potname}.log
+		    rm reweighting.tpr
+		    rm '#reweighting.tpr.1#'
+		    rm '#mdout.mdp.1#'
+		    #rm ${potname}.xvg
+
+		    #Output the potential energy to a file
+		    echo -e "Potential\n1 2 3 4 5 7 8 6 9 10 0" | ${GRO_LOC}/g_energy_d -f ${potential}energy.edr -o "${potname}_energy.xvg"
+
+		    oldcharge=$charge
+		    oldsigmaC="opls_${sigmaC}"
+		    oldsigmaH="opls_${sigmaH}"
+		    let "i=$i+1"
+		done
+	    done
+	done
+    elif [ "$simulation" == "tinker" ]; then
+	echo "TINKER!!!"
+    elif [ "$simulation" == "gromacs" ]; then
+	#for charge in $charges; do
+	    #charge_name=$(echo $chargenames | cut -d" " -f${i})
+	    #potname="${potential}_${charge_name}"
+	    potname="${potential}"
+	    rm DrudeGRO/${potname}_energy.xvg
+	    echo "TIME(ps)    ENERGY" > DrudeGRO/${potname}_energy.xvg
+	    echo "=====================" >> ${potname}_energy.xvg
+	    #sed -i "s/-${oldcharge}    12.011/-${charge}    12.011/g" benzene_${potential}.itp
+	    #sed -i "s/${oldcharge}     1.008/${charge}     1.008/g" benzene_${potential}.itp
+
+	    #Rerun on each .gro file
+	    cd DrudeGRO
+	    #cp ../benzene_PROD.tpr ../reweighting.tpr
+	    frame=0
+	    fname="frame${frame}_drude.gro"
+	    while [ -f $fname ]; do
+		echo "Calculating ${fname} energy..."
+		${GRO_LOC}/grompp_d -f ../benzene_production_reweighting.mdp -c $fname -p ../reweighting_topology.top -o ../reweighting.tpr -maxwarn 10
+		${GRO_LOC}/mdrun_d  -v -rerun ${fname} -s ../reweighting.tpr -deffnm ${potname} -e ${potential}energy.edr
+		#echo Potential | ${GRO_LOC}/g_energy_d -f ${potential}energy.edr -o "${potential}energy.xvg"
+		echo -e "Potential\n1 2 3 4 5 7 8 6 9 10 0" | ${GRO_LOC}/g_energy_d -f ${potential}energy.edr -o "${potential}energy.xvg"
+		energy=$(less ${potential}energy.xvg | tail -1 | awk '{print $2}')
+		if [ "$frame" == "0" ]; then
+		    less ${potential}energy.xvg | head -n -1 > ${potname}_energy.xvg
+		fi
+		timestep=$(echo "scale=8;$frame*$dt;" | bc | sed -r 's/^(-?)\./\10./')
+		sed -i "0,/1.000000/s/1.000000/$timestep/" ${potential}energy.xvg
+		less ${potential}energy.xvg | tail -1 >> ${potname}_energy.xvg
+		#echo "$timestep         $energy" >> ${potname}_energy.xvg
+		rm ${potname}.trr
+		rm ${potname}.log
+		rm ${potential}energy.edr
+		rm '${potential}energy.xvg.1#'
+		rm '#mdout.mdp.1#'
+		let "frame=$frame+1"
+		fname="frame${frame}_drude.gro"
+	    done
+	    oldcharge=$charge
+	    let "i=$i+1"
+	    mv ${potname}_energy.xvg ../${potname}_energy.xvg
+	    cd ..
+	#done
+
+    fi
+    echo "$potential Done!"
+done
+

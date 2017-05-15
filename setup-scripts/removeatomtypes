@@ -1,0 +1,48 @@
+#!/bin/bash
+#BASH SCRIPT TO REMOVE ATOM TYPES FROM ALL TINKER XYZ FILES
+#param p - The name of the potential parameter file
+
+#=============================================================================================
+# READ IN USER INPUTS
+#=============================================================================================
+while getopts "f:p:o:" opt; do
+        case $opt in
+        p)
+                paramfile=$OPTARG
+                ;;
+        esac
+done
+
+#=============================================================================================
+# ENSURE THAT THE INPUTS ARE CORRECT
+#=============================================================================================
+if [ "$paramfile" == "amoeba09" ]; then
+	CarbonNum=217
+	HydrogenNum=218 
+elif [ "$paramfile" == "oplsaa" ]; then
+	CarbonNum=11
+        HydrogenNum=12
+else
+	echo "Unsupported Potential"
+	exit 1
+fi
+
+#=============================================================================================
+# REMOVE ATOM TYPES FROM EACH XYZ FILE
+#=============================================================================================
+#Add appropriate atom types to each xyz file
+echo "Removing the atom type from each xyz file!"
+for file in $(ls *.xyz); do
+	if [ $(sed -n '4p' $file | awk '{print $6}') == "$CarbonNum" ] || [ $(sed -n '4p' $file | awk '{print $6}') == "$HydrogenNum" ]; then
+            echo "removing atom types from ${file}..."
+	    carbonsed="/C/ s/   $CarbonNum   /   0   /1"
+	    hydrogensed="/H/ s/   $HydrogenNum   /   0   /1"
+            sed -i "$carbonsed" $file  #Carbon
+            sed -i "$hydrogensed" $file  #Hydrogen
+	    #carbonsed="/C/ s/   $CarbonNum  /   0   /1"
+            #hydrogensed="/H/ s/   $HydrogenNum  /   0   /1"
+            #sed -i "$carbonsed" $file  #Carbon
+            #sed -i "$hydrogensed" $file  #Hydrogen
+	fi
+done
+

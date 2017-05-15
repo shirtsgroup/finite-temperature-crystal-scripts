@@ -1,0 +1,276 @@
+#!/bin/bash
+
+#BASH SCRIPT TO AUTOMATICALLY SET UP THE MDP FILES TO TAKE ON MULTIPLE LAMBDA VALUES
+#By: Eric Dybeck 09/12/2014
+
+#param L - lambda state for the harmonic restraint
+#param W - weakest lambda value (%)
+#param S - strongest lambda value (%)
+#param s - spacing between the lambdas
+#param A - Maximum gamma value (%)
+#param B - Minimum gamma value (%)
+#param G - Gamma state for the harmonic restraint
+#param g - spacing between the Gammas
+#param f - functional form (exponent) of the spacing between the lambdas
+#parap d - path to the mdp files
+
+SETRUN_ARGS="$@"
+#Default Values
+polymorph_num="all"
+MINLAMBDA=0
+MAXLAMBDA=100
+LSPACING=-1
+MINGAMMA=0
+MAXGAMMA=100
+GSPACING=-1
+EXPONENT=2
+EXPONENTG=2
+JOBPATH="DefaultPath"
+
+#options passed in from the users
+while getopts "L:W:S:s:A:B:G:g:f:d:" opt; do
+        case $opt in
+	L )
+		LAMBDA=$OPTARG
+		;;
+        W )
+                MINLAMBDA=$OPTARG
+                ;;
+        S )
+                MAXLAMBDA=$OPTARG
+                ;;
+        s )
+                LSPACING=$OPTARG
+                ;;
+	A )
+		MAXGAMMA=$OPTARG
+		;;
+	B )
+		MINGAMMA=$OPTARG
+		;;
+	G )
+                GAMMA=$OPTARG
+                ;;
+	g )
+                GSPACING=$OPTARG
+                ;;
+	f )
+		EXPONENT=$OPTARG
+		;;
+	d )
+		JOBPATH=$OPTARG
+		;;
+	esac
+
+done
+
+#Ensure that the parameters are properly entered
+
+#LAMBDA
+if [ "$MINLAMBDA" -lt "0" ] || [ "$MAXLAMBDA" -gt "100" ] || [ "$MINLAMBDA" -gt "$MAXLAMBDA" ]; then
+        echo "Minimum Lambda: $MINLAMBDA"
+        echo "Maximum Lambda: $MAXLAMBDA"
+        echo "Is not a valid lambda range!"
+        exit 1
+fi
+
+if [ "$LSPACING" -le "0" ]; then
+        echo "Invalid Lambda Spacing: $LSPACING"
+        exit 1
+fi
+
+if [ $MINLAMBDA == $MAXLAMBDA ] && [ $LAMBDA != $MAXLAMBDA ]; then
+	echo "Minimum Lambda: $MINLAMBDA Maximum Lambda: $MAXLAMBDA and Lambda: $LAMBDA are not the same!"
+	exit 1
+fi
+
+if [ "$EXPONENT" -lt "1" ] || [ "$EXPONENT" -gt "4" ]; then
+        echo "Invalid Exponent: $EXPONENT"
+        exit 1
+fi
+
+#GAMMA
+if [ "$MINGAMMA" -lt "0" ] || [ "$MAXGAMMA" -gt "100" ] || [ "$MINGAMMA" -gt "$MAXGAMMA" ]; then
+        echo "Minimum Lambda: $MINGAMMA"
+        echo "Maximum Lambda: $MAXGAMMA"
+        echo "Is not a valid Gamma range!"
+        exit 1
+fi
+
+if [ "$GSPACING" -le "0" ]; then
+        echo "Invalid Gambda Spacing: $GSPACING"
+        exit 1
+fi
+
+if [ $MINGAMMA == $MAXGAMMA ] && [ $GAMMA != $MAXGAMMA ]; then
+        echo "Minimum Gamma: $MINGAMMA Maximum Gamma: $MAXGAMMA and Gamma: $GAMMA are not the same!"
+        exit 1
+fi
+
+#JOBPATH
+if [ $JOBPATH == "DefaultPath" ]; then
+	echo "Enter the job path!"
+	exit 1
+fi
+
+#If we have no harmonic restraints and full interactions, no need to proceed further
+if [ $MINLAMBDA = $MAXLAMBDA ] && [ $MAXLAMBDA = 0 ] && [ $MINGAMMA = $MAXGAMMA ] && [ $MAXGAMMA = 100 ]; then
+	echo "No lambda values added."
+	exit 1
+fi 
+
+#If we are adding harmonic restraints, we should not be changing gamma (and vice versa)
+if [ $MINLAMBDA != $MAXLAMBDA ] && [ $MINGAMMA != $MAXGAMMA ]; then
+	echo "Harmonic restraints and Interactions changing simultaneously!!"
+	echo 1
+fi
+
+#Change the free energy setting from 'no' to 'yes' and the output from 0 to nstxout
+sed -i "/free_energy/c free_energy              = yes" ${JOBPATH}/equilibration.mdp
+sed -i "/free_energy/c free_energy              = yes" ${JOBPATH}/production.mdp
+log_equil=$(less ${JOBPATH}/equilibration.mdp | grep -m 1 'nstenergy' | awk '{print $3}')
+log_prod=$(less ${JOBPATH}/production.mdp | grep -m 1 'nstenergy' | awk '{print $3}')
+sed -i "/nstdhdl/c nstdhdl                  = $log_equil" ${JOBPATH}/equilibration.mdp
+sed -i "/nstdhdl/c nstdhdl                  = $log_prod" ${JOBPATH}/production.mdp
+
+Lambda_indicies=""
+Lambda_vect=""
+Gamma_indicies=""
+Gamma_vect=""
+
+#If harmonic restraints are being added, loop over all lambda points and set up the lambda vector in the mdp files
+if [ $MINLAMBDA != $MAXLAMBDA ]; then
+RawLambda=$MINLAMBDA
+lambda=0.0
+i=0
+while [ "$RawLambda" -lt "$MAXLAMBDA" ]; do
+	
+        if [ "$i" -lt "10" ]; then
+                Lambda_indicies="${Lambda_indicies}    ${i}    "
+        else
+                Lambda_indicies="${Lambda_indicies}    ${i}   "
+        fi
+	
+	Lambda=$(echo "scale=6; ($RawLambda^$EXPONENT) / ($MAXLAMBDA^($EXPONENT-1))" | bc)
+        lambda=$(echo "x=$Lambda*0.010000; if(x==0) print \"0.00000\"; if(x<1 && x>0) print 0; x" | bc)
+	Gamma=$(echo "scale=6; ($MAXGAMMA^2) / (100)" | bc)
+	gamma=$(echo "x=$Gamma*0.010000; if(x==0) print \"0.00000\"; if(x<1 && x>0) print 0; x" | bc)
+        Lambda_vect="${Lambda_vect}${lambda} "
+	Gamma_vect="${Gamma_vect}${gamma} "
+
+	if [ $LAMBDA == $RawLambda ]; then
+		sed -i "/init_lambda_state/c init_lambda_state        = $i    ;Which state are we sampling from?" ${JOBPATH}/equilibration.mdp
+		sed -i "/init_lambda_state/c init_lambda_state        = $i    ;Which state are we sampling from?" ${JOBPATH}/production.mdp
+	fi
+
+        let "RawLambda=$RawLambda+$LSPACING"
+        let "i=i+1"
+done
+
+#Catch the final temperature off-by-one exception
+Lambda_indicies="${Lambda_indicies}   ${i}    "
+lambda=$(echo "x=$MAXLAMBDA*0.010000; if(x==0) print \"0.00000\"; if(x<1 && x>0) print 0; x" | bc)
+Gamma=$(echo "scale=6; ($MAXGAMMA^2) / (100)" | bc)
+gamma=$(echo "x=$Gamma*0.010000; if(x==0) print \"0.00000\"; if(x<1 && x>0) print 0; x" | bc)
+Lambda_vect="${Lambda_vect}${lambda} "
+Gamma_vect="${Gamma_vect}${gamma} "
+
+if [ $LAMBDA == $MAXLAMBDA ]; then
+                sed -i "/init_lambda_state/c init_lambda_state        = $i    ;Which state are we sampling from?" ${JOBPATH}/equilibration.mdp
+                sed -i "/init_lambda_state/c init_lambda_state        = $i    ;Which state are we sampling from?" ${JOBPATH}/production.mdp
+fi
+
+#Set the coupling specifications for turning the interactions off
+if [ "$GAMMA" == "0" ]; then
+    sed -i "/couple-lambda0/c couple-lambda0           = none" ${JOBPATH}/equilibration.mdp
+    sed -i "/couple-lambda1/c couple-lambda1           = vdw-q" ${JOBPATH}/equilibration.mdp
+    sed -i "/couple-intramol/c couple-intramol          = yes" ${JOBPATH}/equilibration.mdp
+    sed -i "/couple-lambda0/c couple-lambda0           = none" ${JOBPATH}/production.mdp
+    sed -i "/couple-lambda1/c couple-lambda1           = vdw-q" ${JOBPATH}/production.mdp
+    sed -i "/couple-intramol/c couple-intramol          = yes" ${JOBPATH}/production.mdp
+fi
+Lambda_indicies=";Lambda Indicies         = ${Lambda_indicies}"
+Lambda_vect="restraint_lambdas        = ${Lambda_vect}"
+Gamma_vect1="coul-lambdas             = ${Gamma_vect}"
+Gamma_vect2="vdw-lambdas              = ${Gamma_vect}"
+Gamma_vect3="bonded-lambdas           = "
+
+else
+#If the interactions are changing, loop over all gamma points and set up the gamma vector in the mdp files
+RawGamma=$MINGAMMA
+Lambda_indicies=""
+Lambda_vect=""
+Gamma_indicies=""
+Gamma_vect=""
+#Gamma_vect_bond=""
+gamma=0.0
+i=0
+while [ "$RawGamma" -lt "$MAXGAMMA" ]; do
+
+        if [ "$i" -lt "10" ]; then
+		Lambda_indicies="${Lambda_indicies}    ${i}    "
+        else
+		Lambda_indicies="${Lambda_indicies}    ${i}   "
+        fi
+
+        Gamma=$(echo "scale=6; ($RawGamma^$EXPONENT) / ($MAXGAMMA^($EXPONENT-1))" | bc)
+	lambda=$(echo "x=$MAXLAMBDA*0.010000; if(x==0) print \"0.00000\"; if(x<1 && x>0) print 0; x" | bc)
+        gamma=$(echo "x=$Gamma*0.010000; if(x==0) print \"0.00000\"; if(x<1 && x>0) print 0; x" | bc)
+	#gamma_bond=$(echo "x=1.000000-$gamma; if(x==0) print \"0.00000\"; if(x<1 && x>0) print 0; x" | bc)
+	#gamma="1.000000"
+	Lambda_vect="${Lambda_vect}${lambda} "
+        Gamma_vect="${Gamma_vect}${gamma} "
+	Gamma_vect_bond="${Gamma_vect_bond}${gamma_bond} "
+
+        if [ $GAMMA == $RawGamma ] && [ $MINLAMBDA == $MAXLAMBDA ]; then
+                sed -i "/init_lambda_state/c init_lambda_state        = $i    ;Which state are we sampling from?" ${JOBPATH}/equilibration.mdp
+                sed -i "/init_lambda_state/c init_lambda_state        = $i    ;Which state are we sampling from?" ${JOBPATH}/production.mdp
+        fi
+
+        let "RawGamma=$RawGamma+$GSPACING"
+        let "i=i+1"
+done
+
+
+#Catch the final gamma off-by-one exception
+Lambda_indicies="${Lambda_indicies}    ${i}   "
+lambda=$(echo "x=$MAXLAMBDA*0.010000; if(x==0) print \"0.00000\"; if(x<1 && x>0) print 0; x" | bc)
+gamma=$(echo "x=$MAXGAMMA*0.010000; if(x==0) print \"0.00000\"; if(x<1 && x>0) print 0; x" | bc)
+#gamma_bond=$(echo "x=1.000000-$gamma; if(x==0) print \"0.00000\"; if(x<1 && x>0) print 0; x" | bc)
+#gamma="1.000000"
+Lambda_vect="${Lambda_vect}${lambda} "
+Gamma_vect="${Gamma_vect}${gamma} "
+Gamma_vect_bond="${Gamma_vect_bond}${gamma_bond} "
+
+if [ $GAMMA == $MAXGAMMA ] && [ $MINLAMBDA == $MAXLAMBDA ]; then
+                sed -i "/init_lambda_state/c init_lambda_state        = $i    ;Which state are we sampling from?" ${JOBPATH}/equilibration.mdp
+                sed -i "/init_lambda_state/c init_lambda_state        = $i    ;Which state are we sampling from?" ${JOBPATH}/production.mdp
+fi
+
+Lambda_indicies=";Lambda Indicies         = ${Lambda_indicies}"
+Lambda_vect="restraint_lambdas        = ${Lambda_vect}"
+Gamma_vect1="coul-lambdas             = ${Gamma_vect}"
+Gamma_vect2="vdw-lambdas              = ${Gamma_vect}"
+Gamma_vect3="bonded-lambdas           = ${Gamma_vect_bond}"
+
+#Set the coupling specifications for turning the interactions off
+sed -i "/couple-lambda0/c couple-lambda0           = none" ${JOBPATH}/equilibration.mdp
+sed -i "/couple-lambda1/c couple-lambda1           = vdw-q" ${JOBPATH}/equilibration.mdp
+sed -i "/couple-intramol/c couple-intramol          = yes" ${JOBPATH}/equilibration.mdp
+sed -i "/couple-lambda0/c couple-lambda0           = none" ${JOBPATH}/production.mdp
+sed -i "/couple-lambda1/c couple-lambda1           = vdw-q" ${JOBPATH}/production.mdp
+sed -i "/couple-intramol/c couple-intramol          = yes" ${JOBPATH}/production.mdp
+fi
+
+#Now replace the free-energy section with the new strings
+sed -i "/;Lambda Indicies/c ${Lambda_indicies}" ${JOBPATH}/equilibration.mdp
+sed -i "/restraint_lambdas/c ${Lambda_vect}" ${JOBPATH}/equilibration.mdp
+sed -i "/coul-lambdas/c ${Gamma_vect1}" ${JOBPATH}/equilibration.mdp
+sed -i "/vdw-lambdas/c ${Gamma_vect2}" ${JOBPATH}/equilibration.mdp
+sed -i "/bonded-lambdas/c ${Gamma_vect3}" ${JOBPATH}/equilibration.mdp
+sed -i "/;Lambda Indicies/c ${Lambda_indicies}" ${JOBPATH}/production.mdp
+sed -i "/restraint_lambdas/c ${Lambda_vect}" ${JOBPATH}/production.mdp
+sed -i "/coul-lambdas/c ${Gamma_vect1}" ${JOBPATH}/production.mdp
+sed -i "/vdw-lambdas/c ${Gamma_vect2}" ${JOBPATH}/production.mdp
+sed -i "/bonded-lambdas/c ${Gamma_vect3}" ${JOBPATH}/production.mdp
+

@@ -1,0 +1,60 @@
+#!/bin/bash
+#BASH SCRIPT TO CONVERT A SINGLE GRO FILE INTO A SINGLE XYZ FILE
+#param x - The name of the input .xyz file
+#param o - The name of the output .gro file
+
+SETRUN_ARGS="$@"
+#SET THE DEFAULT INPUT PARAMETER VALUES
+inputfile="benzene_PROD"
+potentials="oplsaa oplsaafakeg oplsaafakea oplsaafaked drude gromos"
+DSPACING="0"
+paramfile_oplsaa="oplsaa.ff"
+paramfile_oplsaa_fake="oplsaafake.ff"
+paramfile_gromos="gromos54a7.ff"
+paramfile_amoeba="amoeba09.prm"
+outputfile="energy.xvg"
+simulation="gromacs"
+mode="full"
+export GRO_LOC="/h3/n1/shirtsgroup/gromacs_forceavg3/install/bin"
+#export GRO_LOC="/h3/n1/shirtsgroup/gromacs_drude2/install_SSE2/bin"
+export DRUDE_LOC="/h3/n1/shirtsgroup/gromacs_drude/install/bin"
+export Tinker_LOC="/home/common/tinker-7"
+export SCRIPT_LOC="/home/ecd4bd/scripts"
+export RUNFILES_LOC="/home/ecd4bd/runfiles"
+outputfile="Default"
+
+#=============================================================================================
+# READ IN USER INPUTS
+#=============================================================================================
+while getopts "g:o:" opt; do
+        case $opt in
+        g )
+                grofile=$OPTARG
+                ;;
+        o )
+                outputfile=$OPTARG
+                ;;
+		
+        esac
+done
+
+#=============================================================================================
+# CONVERT THE XYZ FILE INTO A GRO FILE
+#=============================================================================================
+
+filename=$(echo $grofile | cut -d '.' --complement -f2-)
+
+#Convert the gro file into a pdb file
+echo 0 | trjconv_d -f ${filename}.gro -s ${filename}.gro -o ${filename}.pdb -pbc whole -ndec 8 > /dev/null
+
+#Convert the pdb file into a tinker xyz file
+${Tinker_LOC}/bin/pdbxyz ${filename}.pdb ${Tinker_LOC}/params/${paramfile_amoeba} > /dev/null
+
+#Upgrade the XYZ file into full precision
+upgradexyz -g "${filename}.gro" -x ${filename}.xyz
+python ${SCRIPT_LOC}/upgradexyz.py -x ${filename}.xyz -n 10
+
+if [ $outputfile != "Default" ]; then
+	mv ${filename}.xyz $outputfile
+fi
+

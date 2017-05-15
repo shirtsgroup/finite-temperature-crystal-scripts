@@ -1,0 +1,7 @@
+#include "binaryLJ.itp"
+
+[ system ]
+binary LJ ordered crystal
+
+[ molecules ]
+A    NNNN

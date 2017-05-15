@@ -1,0 +1,47 @@
+#!/bin/bash
+#BASH SCRIPT TO ADD ATOM TYPES TO ALL TINKER XYZ FILES
+#param p - The name of the potential parameter file
+
+#=============================================================================================
+# READ IN USER INPUTS
+#=============================================================================================
+while getopts "f:p:o:" opt; do
+        case $opt in
+        p)
+                paramfile=$OPTARG
+                ;;
+        esac
+done
+
+#=============================================================================================
+# ENSURE THAT THE INPUTS ARE CORRECT
+#=============================================================================================
+if [ "$paramfile" == "amoeba09" ]; then
+	CarbonNum=217
+	HydrogenNum=218 
+elif [ "$paramfile" == "oplsaa" ]; then
+	CarbonNum=11
+        HydrogenNum=12
+else
+	echo "Unsupported Potential"
+	exit 1
+fi
+
+#=============================================================================================
+# ADD ATOM TYPES TO EACH XYZ FILE
+#=============================================================================================
+#Add appropriate atom types to each xyz file
+for file in $(ls *.xyz); do
+	if [ $(sed -n '4p' $file | awk '{print $6}') == '0' ]; then
+            echo "adding atom types to ${file}..."
+	    carbonsed="/C/ s/   0   /   $CarbonNum   /1"
+	    hydrogensed="/H/ s/   0   /   $HydrogenNum   /1"
+            sed -i "$carbonsed" $file  #Carbon
+            sed -i "$hydrogensed" $file  #Hydrogen
+	    carbonsed="/C/ s/   0  /   $CarbonNum   /1"
+            hydrogensed="/H/ s/   0  /   $HydrogenNum   /1"
+            sed -i "$carbonsed" $file  #Carbon
+            sed -i "$hydrogensed" $file  #Hydrogen
+	fi
+done
+

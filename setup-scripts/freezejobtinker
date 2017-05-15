@@ -1,0 +1,408 @@
+#!/bin/bash
+#BASH SCRIPT TO XTALMIN ALL FRAMES USING THE TINKER XTALMIN SUBROUTINE
+#param f - The name of the input TRR file
+#param p - The name of the potentials to examine
+#param o - The name of the output.xvg file
+#param d - The number of intermediate interpolation states in the potential(s)
+#param s - Which software did we simulate in? (gromacs/tinker)
+#param I - How many independent benzenes are in the gro files? (Gromacs only)
+
+SETRUN_ARGS="$@"
+inputfile="PROD"
+potential="oplsaa"
+#potentials="amoeba09 amoeba09mononp amoeba09monop amoeba09multinp"
+paramfile_amoeba09="amoeba09.prm"
+paramfile_amoeba09monop="amoeba09_mono_p.prm"
+paramfile_amoeba09mononp="amoeba09_mono_np.prm"
+paramfile_amoeba09mononppt="amoeba09_mono_nppt.prm"
+paramfile_amoeba09mononpoop="amoeba09_mono_npoop.prm"
+paramfile_amoeba09mononpopls="amoeba09_mono_npopls.prm"
+paramfile_amoeba09multinp="amoeba09_multi_np.prm"
+paramfile_oplsaa="oplsaa.prm"
+paramfile_oplsaa_fake="oplsaafake.prm"
+outputfile="energy.xvg"
+simulation="gromacs"
+DSPACING="0"
+mode="full"
+
+export SCRIPT_LOC="/home/ecd4bd/scripts"
+export TINKER_LOC="/h3/n1/shirtsgroup/tinker-7"
+export RUNFILES_LOC="/home/ecd4bd/runfiles"
+
+#=============================================================================================
+# READ IN USER INPUTS
+#=============================================================================================
+while getopts "f:u:o:d:s:I:m:" opt; do
+        case $opt in
+        f )
+                inputfile=$OPTARG
+                ;;
+	u)
+		potentials=$OPTARG
+		;;
+        o )
+                outputfile=$OPTARG
+                ;;
+	d )
+                DSPACING=$OPTARG
+                ;;
+	s )
+		simulation=$OPTARG
+		;;
+	I )
+		INDEPENDENT=$OPTARG
+		;;
+	m )
+		mode="energy"
+		;;
+		
+        esac
+done
+
+
+#=============================================================================================
+# ENSURE THE INPUTS ARE CORRECT
+#=============================================================================================
+if [ "$simulation" != "gromacs" ] && [ "$simulation" != "tinker" ]; then
+	echo "Invalid simulation type: $simulation"
+	exit 1
+fi
+
+#if [ "${potentials/"amoeba09"}" == "$potentials" ] && [ "${potentials/"oplsaa"}" == "$potentials"  ] ; then
+#	echo "Unsupported potentials: $potentials"
+#	exit 1
+#fi
+
+#=============================================================================================
+# DETERMINE THE MOLECULE FROM THE INPUT FILES
+#=============================================================================================
+if [ "$simulation" == "tinker" ]; then
+   #Get the molecule from the key file
+   molecule=$(less keyfile.key | grep "Molecule: " | awk '{print $3}')
+else
+   #Get the molecule from the topology file
+   molecule=$(less topology.top | grep "solid" | awk '{print $1}')
+fi
+#if [ "$molecule" == "benzene" ]; then
+#    apermol=12
+#elif [ "$molecule" == "glycin" ]; then
+#    apermol=10
+#    #paramfile_amoeba09="amoebapro13.prm"
+#elif [ "$molecule" == "acetac" ]; then
+#    apermol=8
+#elif [ "$molecule" == "hxacan" ]; then
+#    apermol=20
+#elif [ "$molecule" == "formam" ]; then
+#    apermol=6
+#elif [ "$molecule" == "imazol" ]; then
+#    apermol=9
+#elif [ "$molecule" == "cafine" ]; then
+#    apermol=24
+#elif [ "$molecule" == "zzzvye" ]; then
+#    apermol=15
+#elif [ "$molecule" == "dohfem" ]; then
+#    apermol=14
+#elif [ "$molecule" == "pyrdna" ]; then
+#    apermol=11
+#elif [ "$molecule" == "qopbed" ]; then
+#    apermol=10
+#elif [ "$molecule" == "resora" ]; then
+#    apermol=10
+#else
+#    echo "Unrecognized molecule: $molecule"
+#    exit 1
+#fi
+
+#=============================================================================================
+# FORMAT THE INPUTS
+#=============================================================================================
+
+#Interpolations
+delta=0
+deltas=""
+DeltaHinges=""
+if [ "$DSPACING" -gt "0" ]; then
+    for i in $(seq 0 $DSPACING); do
+        delta=$(echo "scale=8;${i}/${DSPACING}" | bc | sed -r 's/^(-?)\./\10./')
+        DeltaHinge=$(echo "scale=0;$i*100/${DSPACING}" | bc | sed -r 's/^(-?)\./\10./')
+        if [ "$DeltaHinge" -lt 10 ]; then
+                        DeltaHinge="00${DeltaHinge}D"
+                elif [ "$DeltaHinge" -lt 100 ]; then
+                        DeltaHinge="0${DeltaHinge}D"
+                else
+                        DeltaHinge="100D"
+        fi
+        deltas="$deltas $delta"
+        DeltaHinges="$DeltaHinges $DeltaHinge"
+    done
+else
+    deltas="0"
+    DeltaHinges="None"
+fi
+
+echo $deltas
+echo $DeltaHinges
+
+
+#=============================================================================================
+# CREATE THE NECESSARY SAMPLE FRAMES THAT WILL BE MINIMIZED
+#=============================================================================================
+#If we simulated in gromacs, convert trajectory to tinker xyz files
+if [ "$simulation" == "gromacs" ]; then
+	#Determine the timestep between each output frame based on the mdp file
+	dt=$(less production.mdp | grep -m 1 'dt' | awk '{print $3}')
+	log=$(less production.mdp | grep -m 1 'nstxout' | awk '{print $3}')
+
+	if [ "$mode" == 'energy' ]; then
+		echo "Processing only the energy"
+		cd TinkerXTALMIN
+	else
+		#Make a directory for the individual frames if it does not aleady exist
+		mkdir TinkerXTALMIN
+		
+		#Convert the trr trajectory into a gro file using trjconv
+		echo "0 0" | trjconv_d -s pre_EQ.gro -f ${inputfile}.trr -o Traj.gro -pbc nojump -ndec 8
+
+		#Convert the trajectory into a set of full precision gro files using trjconv
+		echo 0 | trjconv_d -s pre_EQ.gro -f Traj.gro -o TinkerXTALMIN/frame.gro -sep -pbc nojump -ndec 8
+
+		cd TinkerXTALMIN
+
+		##Fix the periodic copies so that the molecules are in the correct periodic position
+                #for file in $(ls *.gro); do
+                #        echo "Fixing periodic copies in: $file"
+                #        python ${SCRIPT_LOC}/fixpbc.py -f $file -r ../benzene_restraint.gro
+                #done
+
+		#randomstring=$(sed -n '4p' frame0.gro | awk '{print $1}')
+		#echo "Fixing random string: $randomstring"
+		#for file in $(ls *.gro); do
+		#	sed -i "s/$randomstring    /    zzzv/g" $file
+		#done
+		 
+
+		#Convert each gro file into a pdb file
+                for file in $(ls *.gro); do
+                        echo "Converting ${file} to pdb..."
+			filename=$(echo $file | cut -d '.' --complement -f2-)
+                        echo 0 | trjconv_d -f $file -s $file -o "${filename}.pdb" -pbc whole -ndec 8 > /dev/null
+                done
+
+		#Convert each pdb file into a tinker XYZ file
+		string=$(less frame10.pdb | grep -m 1 "ATOM" | awk '{print $4}')
+		for file in $(ls *.pdb); do 
+			echo "Converting ${file} to xyz..."
+			sed -i "/ATOM/{s/ $string /    0 /}" $file 
+			pdbxyz $file ${TINKER_LOC}/params/${paramfile_amoeba09} > /dev/null
+		done
+
+
+		#Updgrade each tinker XYZ file into full precision
+		for file in $(ls *.xyz); do
+			echo "Upgrading ${file} to full precision..."
+			filename=$(echo $file | cut -d '.' --complement -f2-)
+			upgradexyz -g "${filename}.gro" -x $file
+			python ${SCRIPT_LOC}/upgradexyz.py -x $file -n 10
+		done
+
+		#Add the box vectors to the second line of the xyz file if it is not in the gas phase
+		if [ "$(less ../topology.top | grep -A 1 molecules | tail -1 | awk '{print $2}')" -gt "1" ]; then
+		    for file in $(ls *.pdb); do
+			xyzfile=$(echo $file | cut -d '.' --complement -f2-)
+			xyzfile="${xyzfile}.xyz"
+		        echo "Adding Box Vectors to ${file}..."
+		        #Grab the box lengths from the pdb file
+		        X=$(sed -n '4p' $file | awk '{print $2}')
+		        Y=$(sed -n '4p' $file | awk '{print $3}')
+		        Z=$(sed -n '4p' $file | awk '{print $4}')
+		        #Grab the box angles from the pdb file
+		        alpha=$(sed -n '4p' $file | awk '{print $5}')
+		        beta=$(sed -n '4p' $file | awk '{print $6}')
+		        gamma=$(sed -n '4p' $file | awk '{print $7}')
+
+		        sed -i "2i     $X $Y $Z $alpha $beta $gamma" $xyzfile 
+			done
+		fi
+
+		#Create one master key file
+		if [ "$(less ../topology.top | grep -A 1 molecules | tail -1 | awk '{print $2}')" == "1" ]; then
+                            cp /home/ecd4bd/runfiles/gas.key keyfile.key
+                    else
+                            #cp /home/ecd4bd/runfiles/${molecule}.key keyfile.key
+			    cp /home/ecd4bd/runfiles/cbmzpn.key keyfile.key
+		fi
+
+		#Cut out all but the independent benzenes
+		if [[ -s ../index.ndx ]]; then
+                	for file in $(ls *.gro); do
+                        	echo "Cutting extra molecules from: $file"
+                        	python ${SCRIPT_LOC}/cut_dependent.py -f $file -n ../index.ndx
+                	done
+		fi
+
+		##Change Chlorine if necessary
+                #for file in $(ls *.xyz); do
+                #        sed -i 's/ CL/ Cl/g' $file
+		#done
+
+		#Add appropriate atom types to each xyz file if necessary
+		if [ "$potential" == "oplsaa" ]; then
+                	addatomtypes -p "oplsaa"
+		else
+			addatomtypes -p "amoeba09"
+		fi
+		
+
+	fi
+
+#If we simulated in tinker, format each output file and move it to the TinkerXTALMIN directory
+elif [ "$simulation" == "tinker" ]; then
+	#Determine the timestep between each output frame based on the job_specs file
+        dt=$(less job_specs.txt | grep OUTPUT | awk '{print $2}')
+	if [ "$mode" == 'energy' ]; then
+		echo "Processing only the energy"
+		cd TinkerXTALMIN
+	else
+		#Make a directory for the individual frames if it does not aleady exist
+                mkdir TinkerXTALMIN
+
+		for file in $(ls molecule.* | grep -v molecule.xyz | grep -v molecule.dyn); do
+			framenum=${file##*.}
+			#Remove any leading zeroes
+			framenum=$(expr $framenum + 0)
+			echo "Moving ${file}..."
+			cp $file TinkerXTALMIN/"frame${framenum}.xyz"
+		done
+
+		cd TinkerXTALMIN
+
+		#Create the master key file
+		cp ../keyfile.key keyfile.key
+
+		#Add appropriate atom types to each xyz file if necessary
+                if [ "$potentials" == "oplsaa" ]; then
+                        addatomtypes -p "oplsaa"
+                else
+                        addatomtypes -p "amoeba09"
+                fi
+	fi
+
+fi
+
+#=============================================================================================
+# MINIMIZED THE CONFIGURATION FILES AND CALCULATE THE ENERGIES
+#=============================================================================================
+fname="frame${frame}.xyz"
+	if [ -f "frame0.xyz" ]; then
+            frame=0
+        else
+            frame=1
+        fi
+	fname="frame${frame}.xyz"
+
+	#Calculate the energy of each frame in the potential and store it in a file
+	paramfile=${potential}.prm
+        energyfile=$(echo $paramfile | cut -d '.' --complement -f2-)
+        energyfile=${energyfile}${delta_hinge}_freeze_energy.xvg
+        echo "TIME(ps)    ENERGY          BOND          ANGLE          STRETCHBEND         OOP         TORSION         PIORBITAL         VDW         MULTIPOLE         POLARIZATION         CHARGECHARGE" > $energyfile
+        echo "=====================" >> $energyfile
+        echo "TIME(ps)    VOLUME" > volume_freeze.xvg
+        echo "=====================" >> volume_freeze.xvg
+
+	sed -i "s/\/params.*/\/params\/${paramfile}/g" keyfile.key
+
+
+
+
+	while [ -f $fname ]; do
+	    echo "Freezing frame: $fname"
+
+	    ##Minimize and then freeze the job
+	    minimize $fname -k keyfile.key 0.01
+	    #mv "frame${frame}.xyz_2" "frame${frame}_frozen.xyz"
+	    mv "frame${frame}.xyz_2" "frame${frame}_minimized.xyz"
+	    xtalmin "frame${frame}_minimized.xyz" -k keyfile.key 0.01
+	    mv "frame${frame}_minimized.xyz_2" "frame${frame}_frozen.xyz"
+
+	    ##Change the configuration to the proper space group and then minimize
+	    #sed -i '2s/.*/14.831   14.831    6.765  90.00  90.00 120.00/' $fname
+	    #anneal frame1.xyz -k keyfile.key 300 0 0 10000 L 0.5 5.0 0.0
+	    #minimize $fname -k keyfile.key 0.001
+	    #mv "frame${frame}.xyz_2" "frame${frame}_frozen.xyz"
+
+                #sed -i "s/\/params.*/\/params\/${paramfile}/g" keyfile.key
+
+                    timestep=$(echo "x=$frame*$dt; if(x==0) print \"0.0\"; if(x<1 && x>0) print 0; x" | bc)
+                    echo "Calculating the energy of frame${frame}_frozen..."
+                    if [ "$frame" == "1" ]; then
+                        ${TINKER_LOC}/bin/analyze frame${frame}_frozen.xyz -k keyfile.key e
+                    fi
+
+		    #Convert the frozen XYZ file into a GRO file
+		    ${SCRIPT_LOC}/xyztogro -x frame${frame}_frozen.xyz -o frame${frame}_frozen.gro
+		    
+                    echo "$(/h3/n1/shirtsgroup/tinker/bin/analyze frame${frame}_frozen.xyz -k keyfile.key  e)" > tempenergy.txt
+                    volume=$(/h3/n1/shirtsgroup/tinker/bin/analyze frame${frame}_frozen.xyz -k keyfile.key G | grep "Volume" | awk '{print $3}')
+                    volume=$(echo "scale=8; ${volume}*0.001;" | bc | sed -r 's/^(-?)\./\10./') #Convert to nm^3
+                    energy=$(less tempenergy.txt | grep "Potential Energy" | awk '{print $5}')
+                    bond=$(less tempenergy.txt | grep "Bond Stretching" | awk '{print $3}')
+                    angle=$(less tempenergy.txt | grep "Angle Bending" | awk '{print $3}')
+                    stretchbend=$(less tempenergy.txt | grep "Stretch-Bend" | awk '{print $2}')
+                    oop=$(less tempenergy.txt | grep "Out-of-Plane Bend" | awk '{print $3}')
+                    torsion=$(less tempenergy.txt | grep "Torsional Angle" | awk '{print $3}')
+                    pi=$(less tempenergy.txt | grep "Pi-Orbital Torsion" | awk '{print $3}')
+                    vdw=$(less tempenergy.txt | grep "Van der Waals" | awk '{print $4}')
+                    multipole=$(less tempenergy.txt | grep "Atomic Multipoles" | awk '{print $3}')
+                    polarization=$(less tempenergy.txt | grep "Polarization" | awk '{print $2}')
+                    cc=$(less tempenergy.txt | grep "Charge-Charge" | awk '{print $2}') 
+
+		    #If any numbers are blank, fill them with zero
+                    if [ "$energy" == "" ]; then
+                        energy="0.00000000"
+                    fi
+                    if [ "$bond" == "" ]; then
+                        bond="0.00000000"
+                    fi
+                    if [ "$angle" == "" ]; then
+                        angle="0.00000000"
+                    fi
+                    if [ "$stretchbend" == "" ]; then
+                        stretchbend="0.00000000"
+                    fi
+                    if [ "$oop" == "" ]; then
+                        oop="0.00000000"
+                    fi
+                    if [ "$torsion" == "" ]; then
+                        torsion="0.00000000"
+                    fi
+                    if [ "$pi" == "" ]; then
+                        pi="0.00000000"
+                    fi
+                    if [ "$vdw" == "" ]; then
+                        vdw="0.00000000"
+                    fi
+                    if [ "$multipole" == "" ]; then
+                        multipole="0.00000000"
+                    fi
+                    if [ "$polarization" == "" ]; then
+                        polarization="0.00000000"
+                    fi
+                    if [ "$cc" == "" ]; then
+                        cc="0.00000000"
+                    fi
+
+                    echo "$timestep     $energy     $bond     $angle     $stretchbend     $oop     $torsion     $pi     $vdw     $multipole     $polarization     $cc" >> $energyfile
+                    echo "$timestep         $volume" >> volume_freeze.xvg
+
+		let "frame=$frame+1"
+                fname="frame${frame}.xyz"
+
+	done
+
+	#Copy the final files outside the directory
+	cp $energyfile ../$energyfile
+	cp volume_freeze.xvg ../volume_freeze.xvg
+
+
+
+

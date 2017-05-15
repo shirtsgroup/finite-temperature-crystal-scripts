@@ -1,0 +1,54 @@
+#!/bin/bash
+#BASH SCRIPT TO CONVERT AN MP4 INTO A GIF
+
+#param f - input mp4 file
+
+SETRUN_ARGS="$@"
+fname="movie"
+
+#options passed in from the users
+while getopts "f:" opt; do
+        case $opt in
+        f )
+                fname=$OPTARG
+                ;;
+	esac
+done
+
+#Cut the extension
+fname=$(echo $fname | cut -d'.' -f1)
+
+#ffmpeg -r 60 -i ${fname}.mp4 -vcodec wmv2 -s uxga ${fname}.wmv
+
+#Convert the mp4 file into a set of jpg frames
+ffmpeg -t 10 -ss 00:00:00 -s 400x300 -i ${fname}.mp4 frame%04d.jpg
+
+#Combine the jpg frames into a single gif
+#for file in frame*jpg; do
+#    convert $file ${file%.*}.gif
+#done
+
+#gifsicle -l -d 10 frame*gif > ${fname}.gif
+
+#Create extra frames to add a pause at the end of the gif
+frame=1
+filename="frame$(printf "%04d\n" $frame).jpg"
+while [ -f $filename ];do
+    let "frame=$frame+1"
+    filename="frame$(printf "%04d\n" $frame).jpg"
+done
+let "frame=$frame-1"
+filename="frame$(printf "%04d\n" $frame).jpg"
+let "totalframes=$frame+$frame"
+let "frame=$frame+1"
+for i in $(seq $frame $totalframes); do
+    newfile="frame$(printf "%04d\n" $i).jpg"
+    cp $filename $newfile
+done
+
+convert -delay 10 -loop 0 frame*jpg ${fname}.gif
+
+#Save the first frame and delete the other frames
+mv frame0001.jpg ${fname}.jpg
+rm frame*jpg
+

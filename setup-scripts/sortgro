@@ -1,0 +1,79 @@
+#!/bin/bash
+#SORT A GRO FILE INTO AN ORDERED FORM BASED ON THE NUMBER AFTER THE ATOM LABEL
+
+#=============================================================================================
+# READ IN USER INPUTS
+#=============================================================================================
+while getopts "g:o:" opt; do
+        case $opt in
+        g )
+                grofile=$OPTARG
+                ;;
+        esac
+done
+
+#=============================================================================================
+# DETERMINE THE NUMBER OF ATOMS PER MOL
+#=============================================================================================
+molecule=${grofile%%_*}
+if [ "$molecule" == "benzene" ]; then
+    apermol=12
+elif [ "$molecule" == "glycin" ]; then
+    apermol=10
+elif [ "$molecule" == "acetac" ]; then
+    apermol=8
+elif [ "$molecule" == "hxacan" ]; then
+    apermol=20
+elif [ "$molecule" == "formam" ]; then
+    apermol=6
+elif [ "$molecule" == "imazol" ]; then
+    apermol=9
+elif [ "$molecule" == "cafine" ]; then
+    apermol=24
+elif [ "$molecule" == "zzzvye" ]; then
+    apermol=15
+elif [ "$molecule" == "dohfem" ]; then
+    apermol=14
+elif [ "$molecule" == "bismev" ]; then
+    apermol=20
+elif [ "$molecule" == "cbmzpn" ]; then
+    apermol=30
+elif [ "$molecule" == "pyrzin" ]; then
+    apermol=14
+elif [ "$molecule" == "kobfud" ]; then
+    apermol=15
+else
+    echo "Unrecognized molecule: $molecule"
+    exit 1
+fi
+
+#Loop through all molecules in the file
+counter=2
+totalatoms=$(sed '2q;d' $grofile)
+molecules=$(echo "$totalatoms/$apermol" | bc)
+let "apermol=$apermol-1"
+
+for m in $(seq 1 $molecules); do
+	for i in $(seq 1 $apermol); do
+		for j in $(seq 1 $apermol); do
+			let "line1=$counter+$j"
+			let "line2=$counter+$j+1"
+			line1=$(sed "${line1}q;d" $grofile)
+			line2=$(sed "${line2}q;d" $grofile)
+			num1=$(echo $line1 | awk '{print $2}')
+			num2=$(echo $line2 | awk '{print $2}')
+			num1=${num1:1}
+			num2=${num2:1}
+			if [ "$num1" -gt "$num2" ]; then
+				#Remove the first line from the file
+				sed -i "/$line1/d" $grofile
+				#Insert the first line after the second line
+				sed -i "/$line2/a $line1" $grofile
+			fi
+		done
+	done
+	
+	let "counter=$counter+$apermol+1"
+done
+
+

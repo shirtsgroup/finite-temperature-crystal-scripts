@@ -1,0 +1,244 @@
+#!/bin/bash
+
+#BASH SCRIPT TO AUTOMATICALLY SET UP BENZENE MD SIMULATIONS OVER A GIVEN VOLUME RANGE
+#By: Eric Dybeck 10/07/2014
+#param n - polymorph number (all 3 will be used if none is given)
+#param S - smallest box vector scaling parameter
+#param B - biggest box vector scaling parameter
+#param s - spacing between the scaling parameters
+#param T - Temperature
+#param P - Pressure in bar
+#param N - Number of benzene molecules
+#param I - Number of independent benzene molecules (the remainder will be averaged)
+#param M - Molecule name
+#param e - Number of steps in the equilibration step
+#param p - Number of steps in the production step
+#param i - Integrator
+#param t - Thermostat
+#param b - Barostat
+#param k - maximum harmonic restraint constant
+#param L - lambda value for the harmonic restraint (%) (should be zero)
+#param G - gamma value for the intermolecular interactions (%)
+#param r - vdw/coulomb cutoff distance (in angstroms)
+#param u - potential to be used in the simulation
+#param h - optional string hinge to add to the job
+
+#=============================================================================================
+# SETUP DEFAULT VALUES AND READ IN PARAMETERS FROM USER
+#=============================================================================================
+
+SETRUN_ARGS="$@"
+polymorph_num="p1 p2 p3"
+TEMP=-1
+MINVOLUME=770
+MAXVOLUME=970
+VSPACING=5
+PRESSURE=1
+MOLECULES=72
+INDEPENDENT=72
+MOLECULE="benzene"
+equil_steps=100000
+prod_steps=40000000
+integrator="sd"
+thermostat="nose-hoover"
+barostat=-1
+k_max=1000
+Lambda=0
+GAMMA=100
+CUTOFF="8"
+POTENTIAL="oplsaa"
+
+hinge="DefaultHinge"
+
+#options passed in from the users
+while getopts "n:M:S:B:s:T:P:N:I:e:p:i:t:b:k:L:G:r:u:h:" opt; do
+        case $opt in
+        n )
+                polymorph_num=$OPTARG
+                ;;
+	M )
+                MOLECULE=$OPTARG
+                ;;
+        S )
+                MINVOLUME=$OPTARG
+                ;;
+	B )
+		MAXVOLUME=$OPTARG
+		;;
+	s )
+		VSPACING=$OPTARG
+		;;
+	T )
+		TEMP=$OPTARG
+		;;
+        P )
+                PRESSURE=$OPTARG
+                ;;
+        N )
+                MOLECULES=$OPTARG
+                ;;
+	I )
+                INDEPENDENT=$OPTARG
+                ;;
+        e )
+                equil_steps=$OPTARG
+                ;;
+        p )
+                prod_steps=$OPTARG
+                ;;
+        i )
+                integrator=$OPTARG
+                ;;
+        t )
+                thermostat=$OPTARG
+                ;;
+        b )
+                barostat=$OPTARG
+                ;;
+	k )
+                k_max=$OPTARG
+                ;;
+        L )
+                Lambda=$OPTARG
+                ;;
+	G )
+		GAMMA=$OPTARG
+		;;
+	r )
+                CUTOFF=$OPTARG
+                ;;
+	u )
+                POTENTIAL=$OPTARG
+                ;;
+        h )
+                hinge=$OPTARG
+                ;;
+        esac
+done
+
+#=============================================================================================
+# ENSURE THAT INPUTS HAVE BEEN PROPERLY ENTERED
+#=============================================================================================
+
+#POLYMORPH NUMBER
+if [ $polymorph_num != "p1" ] && [ $polymorph_num != "p2" ] && [ $polymorph_num != "p3" ] && [ $polymorph_num != "p1 p2" ] && [ $polymorph_num != "p1 p3" ] && [ $polymorph_num != "p2 p3" ] && [ $polymorph_num != "p1 p2 p3" ]; then
+        echo "Unrecognized polymorph Number: $polymorph_num"
+        exit 1
+fi
+
+#MOLECULE
+moleculelist=("benzene glycin formam acetac hxacan imidazole")
+valid="false"
+for molecule in $moleculelist; do
+    if [ "$MOLECULE" == "$molecule" ]; then
+        valid="true"
+    fi
+done
+if [ "$valid" == "false" ]; then
+        echo "Unsupported molecule: $MOLECULE"
+        echo "Supported molecules: $moleculelist"
+        exit 1
+fi
+
+#VOLUME
+if [ $MINVOLUME == -1 ] || [ $MAXVOLUME == -1 ] || [ "$MINVOLUME" -gt "$MAXVOLUME" ]; then
+        echo "Minimum Volume: $MINVOLUME"
+        echo "Maximum Volume: $MAXVOLUME"
+        echo "Is not a valid volume range!"
+        exit 1
+fi
+if [ $VSPACING == -1 ]; then
+        echo "Invalid Volume Spacing: $VSPACING"
+        exit 1
+fi
+
+
+#TEMPERATURE
+if [ $TEMP == -1 ]; then
+	echo "Invalid temperature: $TEMP"	
+	exit 1
+fi 
+
+#PRESSURE
+if [ "$PRESSURE" -lt "0" ]; then
+        echo "Invalid Pressure: $PRESSURE"
+        exit 1
+fi
+
+#NUMBER OF MOLECULES (currently only 4, 8, 16, 32, 72, 108, 256 is accepted)
+if [ $MOLECULES != 256 ] && [ $MOLECULES != 108 ] && [ $MOLECULES != 72 ] && [ $MOLECULES != 32 ] && [ $MOLECULES != 16 ] && [ $MOLECULES != 8 ]&& [ $MOLECULES != 4 ]; then
+        echo "Unsupported number of molecules: $MOLECULES"
+        exit 1
+fi
+
+#NUMBER OF INDEPENDENT MOLECULES (currently only 4, 8, 16, 32, 72, 108, 256 is accepted)
+if [ $INDEPENDENT != 256 ] && [ $INDEPENDENT != 108 ] && [ $INDEPENDENT != 72 ] && [ $INDEPENDENT != 32 ] && [ $INDEPENDENT != 16 ] && [ $INDEPENDENT != 8 ] && [ $INDEPENDENT != 4 ] && [ $INDEPENDENT != 2 ]; then
+        echo "Unsupported number of independent molecules: $INDEPENDENT"
+        exit 1
+elif [ "$MOLECULES" -lt "$INDEPENDENT" ]; then
+        echo "Number of total molecules is less than the number of independent molecules!"
+        echo "Total Molecules: $MOLECULES"
+        echo "Independent Molecules: $INDEPENDENT"
+        exit 1
+fi
+
+#INTEGRATOR
+if [ "$integrator" != "md" ] && [ "$integrator" != "md-vv" ] && [ "$integrator" != "sd" ]; then
+        echo "Unrecognized integrator: $integrator"
+        exit 1
+fi
+
+#POTENTIAL
+potentiallist=("oplsaa gromos designedg oplsaatodesignedg designeda oplsaatodesigneda amoeba09 drude")
+valid="false"
+for pot in $potentiallist; do
+    if [ "$POTENTIAL" == "$pot" ]; then
+        valid="true"
+    fi
+done
+if [ "$valid" == "false" ]; then
+        echo "Unsupported potential: $POTENTIAL"
+        echo "Supported potentials: $potentiallist"
+        exit 1
+fi
+
+#SPRING CONSTANT
+if [ $k_max -lt 0 ]; then
+        echo "Invalid spring constant: $k_max"
+        exit 1
+fi
+
+#LAMBDA POINT
+if [ $Lambda -lt 0 ] || [ $Lambda -gt 100 ]; then
+        echo "Invalid Lambda point: $Lambda"
+        exit 1
+fi
+
+#GAMMA POINT
+if [ "$GAMMA" -lt 0 ] || [ "$GAMMA" -gt 100 ]; then
+        echo "Invalid Gamma point: $GAMMA"
+        exit 1
+fi
+
+#CUTOFF RADIUS
+if [ "$CUTOFF" -lt "0" ]; then
+        echo "Invalid Cutoff Radius: $CUTOFF"
+        exit 1
+fi
+
+#=============================================================================================
+# SETUP VOLUME CHANGE PATH
+#=============================================================================================
+
+VOL=$MINVOLUME
+while [ "$VOL" -lt "$MAXVOLUME" ]; do
+	for poly in $polymorph_num; do
+		setup_molecule -n $poly -T $TEMP -P $PRESSURE -N $MOLECULES -I $INDEPENDENT -e $equil_steps -p $prod_steps -u $POTENTIAL -i $integrator -k $k_max -U $Lambda -R $Lambda -E NVT -s 10 -L $Lambda -A $GAMMA -B $GAMMA -G $GAMMA -V $VOL -r $CUTOFF -h $hinge
+	done
+	let "VOL=$VOL+$VSPACING"
+done
+
+#Catch the final volume off-by-one exception
+for poly in $polymorph_num; do
+	setup_molecule -n $poly -T $TEMP -P $PRESSURE -N $MOLECULES -I $INDEPENDENT -e $equil_steps -p $prod_steps -u $POTENTIAL -i $integrator -k $k_max -U $Lambda -R $Lambda -E NVT -s 10 -L $Lambda -A $GAMMA -B $GAMMA -G $GAMMA -V $MAXVOLUME -r $CUTOFF -h $hinge
+done

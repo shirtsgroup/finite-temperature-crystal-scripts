@@ -1,0 +1,227 @@
+#!/bin/bash
+
+#BASH SCRIPT TO AUTOMATICALLY SET UP BENZENE MD SIMULATIONS OVER A GIVEN RANGE OF CHARGES
+#By: Eric Dybeck 03/31/2014
+#param C - Charges (supplied as a list in quotation marks separated by spaces)
+#param n - polymorph number (all 3 will be used if none is given)
+#param M - Molecule name
+#param T - Temperature in K
+#param P - Pressure in bar
+#param N - Number of benzene molecules
+#param I - Number of independent benzene molecules (the remainder will be averaged)
+#param e - Number of steps in the equilibration step
+#param p - Number of steps in the production step
+#param i - Integrator
+#param t - Thermostat
+#param b - Barostat
+#param a - number of cores (threads) to run on
+#param r - vdw/coulomb cutoff distance (in angstroms)
+#param u - potential to be used in the simulation
+#param h - optional string hinge to add to the job
+#param E - specify the Thermodynamic Ensemble that will be used
+#param o - number of production outputs
+
+#=============================================================================================
+# SETUP DEFAULT VALUES AND READ IN PARAMETERS FROM USER
+#=============================================================================================
+
+SETRUN_ARGS="$@"
+#Charges="0.0500 0.1150 0.1500 0.2000 0.2500"
+#Charges="0.0550 0.0700 0.0850 0.1000 0.1150 0.1300 0.1450 0.1600 0.1750 0.1900" 
+Charges="0.1150"
+polymorph_num="p1 p2 p3"
+TEMP=200
+PRESSURE=1
+MOLECULE="benzene"
+MOLECULES=72
+INDEPENDENT=4
+equil_steps=100000
+prod_steps=40000000
+PRODOUTPUTS=2000
+integrator="sd"
+thermostat="nose-hoover"
+barostat="Parrinello-Rahman"
+cores=1
+k_max=1000
+Lambda=0
+CUTOFF="8"
+POTENTIAL="oplsaa"
+hinge="DefaultHinge"
+ENSEMBLE="NPT"
+
+#options passed in from the users
+while getopts "C:n:M:T:P:N:I:e:p:i:t:b:a:k:r:u:h:E:o:" opt; do
+        case $opt in
+	C )
+                Charges=$OPTARG
+                ;;
+        n )
+                polymorph_num=$OPTARG
+                ;;
+      	M )
+                MOLECULE=$OPTARG
+                ;; 
+	T )
+		TEMP=$OPTARG
+		;;
+        P )
+                PRESSURE=$OPTARG
+                ;;
+        N )
+                MOLECULES=$OPTARG
+                ;;
+	I )
+                INDEPENDENT=$OPTARG
+                ;;
+        e )
+                equil_steps=$OPTARG
+                ;;
+        p )
+                prod_steps=$OPTARG
+                ;;
+        i )
+                integrator=$OPTARG
+                ;;
+        t )
+                thermostat=$OPTARG
+                ;;
+        b )
+                barostat=$OPTARG
+                ;;
+	a )
+                cores=$OPTARG
+                ;;
+	k )
+                k_max=$OPTARG
+                ;;
+	r )
+                CUTOFF=$OPTARG
+                ;;
+	u )
+                POTENTIAL=$OPTARG
+                ;;
+        h )
+                hinge=$OPTARG
+                ;;
+	o )
+                PRODOUTPUTS=$OPTARG
+		;;
+        esac
+done
+
+#=============================================================================================
+# ENSURE THAT INPUTS HAVE BEEN PROPERLY ENTERED
+#=============================================================================================
+
+#TEMPERATURE
+if [ $TEMP == -1 ]; then
+	echo "Invalid Temperature: $Temp"
+	exit 1
+fi
+
+#POLYMORPH NUMBER
+if [ $polymorph_num != "p1" ] && [ $polymorph_num != "p2" ] && [ $polymorph_num != "p3" ] && [ $polymorph_num != "p1 p2" ] && [ $polymorph_num != "p1 p3" ] && [ $polymorph_num != "p2 p3" ] && [ $polymorph_num != "p1 p2 p3" ]; then
+        echo "Unrecognized polymorph Number: $polymorph_num"
+        exit 1
+fi
+
+#MOLECULE
+moleculelist=("benzene glycin formam acetac hxacan imidazole")
+valid="false"
+for molecule in $moleculelist; do
+    if [ "$MOLECULE" == "$molecule" ]; then
+        valid="true"
+    fi
+done
+if [ "$valid" == "false" ]; then
+        echo "Unsupported molecule: $MOLECULE"
+        echo "Supported molecules: $moleculelist"
+        exit 1
+fi
+
+#NUMBER OF MOLECULES (currently only 72, 108, 256 is accepted)
+if [ $MOLECULES != 256 ] && [ $MOLECULES != 108 ] && [ $MOLECULES != 72 ]; then
+        echo "Unsupported number of molecules: $MOLECULES"
+        exit 1
+fi
+
+#NUMBER OF INDEPENDENT MOLECULES (currently only 4, 8, 16, 32, 72, 108, 256 is accepted)
+if [ $INDEPENDENT != 256 ] && [ $INDEPENDENT != 108 ] && [ $INDEPENDENT != 72 ] && [ $INDEPENDENT != 32 ] && [ $INDEPENDENT != 16 ] && [ $INDEPENDENT != 8 ] && [ $INDEPENDENT != 4 ] && [ $INDEPENDENT != 2 ]; then
+        echo "Unsupported number of independent molecules: $INDEPENDENT"
+        exit 1
+elif [ "$MOLECULES" -lt "$INDEPENDENT" ]; then
+        echo "Number of total molecules is less than the number of independent molecules!"
+        echo "Total Molecules: $MOLECULES"
+        echo "Independent Molecules: $INDEPENDENT"
+        exit 1
+fi
+
+#NUMBER OF EQUILIBRATION TIMESTEPS
+#if [ N != 256 ]
+#        echo "Unsupported number of molecules: $MOLECULES"
+#        exit 1
+#fi
+
+#NUMBER OF PRODUCTION TIMESTEPS
+#if [ MOLECULES != 256 ]
+#        echo "Unsupported number of molecules: $MOLECULES"
+#        exit 1
+#fi
+
+#INTEGRATOR
+if [ "$integrator" != "md" ] && [ "$integrator" != "md-vv" ] && [ "$integrator" != "sd" ]; then
+	echo "Unrecognized integrator: $integrator"
+        exit 1
+fi
+
+#SPRING CONSTANT
+if [ $k_max -lt 0 ]; then
+        echo "Invalid spring constant: $k_max"
+        exit 1
+fi
+
+#CUTOFF RADIUS
+if [ "$CUTOFF" -lt "0" ]; then
+        echo "Invalid Cutoff Radius: $CUTOFF"
+        exit 1
+fi
+
+#POTENTIAL
+potentiallist=("oplsaa gromos designedg oplsaatodesignedg designeda oplsaatodesigneda amoeba09 drude")
+valid="false"
+for pot in $potentiallist; do
+    if [ "$POTENTIAL" == "$pot" ]; then
+        valid="true"
+    fi
+done
+if [ "$valid" == "false" ]; then
+        echo "Unsupported potential: $POTENTIAL"
+        echo "Supported potentials: $potentiallist"
+        exit 1
+fi
+
+#ENSEMBLE
+if [ "$ENSEMBLE" != "NVE" ] && [ "$ENSEMBLE" != "NVT" ] && [ "$ENSEMBLE" != "NPT" ]; then
+        echo "Invalid Thermodynamic Ensemble: $ENSEMBLE"
+        echo "Supported Ensembles: NVE, NVT, NPT"
+        exit 1
+fi
+
+#HINGE
+if [ "$hinge" == "DefaultHinge" ]; then
+    hinge="c"
+else
+    hinge="c_$hinge"
+fi
+
+#=============================================================================================
+# SETUP CHARGES
+#=============================================================================================
+
+#Loop through each supplied charge and create a benzene job
+for charge in $Charges; do
+	for poly in $polymorph_num; do
+		setup_molecule -n $poly -T $TEMP -P $PRESSURE -M $MOLECULE -N $MOLECULES -I $INDEPENDENT -e $equil_steps -p $prod_steps -E $ENSEMBLE -i $integrator -t $thermostat -b $barostat -a $cores -c $charge -k $k_max -r $CUTOFF -u $POTENTIAL -h $hinge -o $PRODOUTPUTS 
+	done
+done
+

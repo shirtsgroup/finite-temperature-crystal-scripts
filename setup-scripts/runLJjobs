@@ -1,0 +1,34 @@
+#!/bin/bash
+
+#BASH SCRIPT TO TRANSFER JOBS TO THE FIR CLUSTER
+#param h - move jobs that contain this string
+#param i - ignore jobs that contain this string
+
+SETRUN_ARGS="$@"
+hinge="DefaultHinge"
+ignore_string="DefaultIgnore"
+
+#options passed in from the users
+while getopts "h:i:" opt; do
+        case $opt in
+        h )
+                hinge=$OPTARG
+                ;;
+        i )
+                ignore_string=$OPTARG
+                ;;
+	esac
+done
+
+#Move jobs that contain the hinge but not the ignore string
+
+#Move all jobs
+if [ "$hinge" == "DefaultHinge" ] && [ $ignore_string == "DefaultIgnore" ]; then
+	for direct in $(ls -l | egrep '^d' | awk '{print $9}'); do
+		cd $direct
+		lmp_serial -in in.LJ
+		cd ..
+	done
+else
+	echo $hinge
+fi

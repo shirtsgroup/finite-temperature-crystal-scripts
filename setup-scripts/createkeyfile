@@ -1,0 +1,79 @@
+#!/bin/bash
+#BASH SCRIPT TO CREATE A KEY FILE FOR A GIVEN PDB OR XYZ FILE
+#param f - The name of the input pdb file
+
+#=============================================================================================
+while getopts "f:u:o:s:I:m:" opt; do
+        case $opt in
+        f )
+                file=$OPTARG
+                ;;
+	esac
+done
+
+
+
+#Determine the molecule based on the begining of the filename
+molecule=${file%%_*}
+
+#Determine the potential based on the middle of the filename
+if [[ $file == *"OPLS"* ]]; then
+    potential="oplsaa"
+else
+    potential="amoeba09"
+fi
+
+keyfile=$(echo $file | cut -d '.' --complement -f2-)
+keyfile="${keyfile}.key"
+cp keytemplate.key $keyfile
+
+sed -i "s/MOLMOLMOLMOL/${molecule}/g" $keyfile
+sed -i "s/amoeba09.prm/${potential}.prm/g" $keyfile
+
+#if [ "${molecule}" == "glycin" ]; then
+#    sed -i "s/amoeba09.prm/amoebapro13.prm/g" $keyfile
+#fi
+
+#If this file is a pdb file
+if [ ${file: -4} == ".pdb" ]; then
+    #Grab the box lengths from the pdb file
+    X=$(sed -n '4p' $file | awk '{print $2}')
+    #X=$(echo "scale=8;x=10*$X; if(x<1) print 0; x" | bc | sed -r 's/^(-?)\./\10./')
+    sed -i "s/XXXX/$X/g" $keyfile
+    Y=$(sed -n '4p' $file | awk '{print $3}')
+    #Y=$(echo "scale=8;x=10*$Y; if(x<1) print 0; x" | bc | sed -r 's/^(-?)\./\10./')
+    sed -i "s/YYYY/$Y/g" $keyfile
+    Z=$(sed -n '4p' $file | awk '{print $4}')
+    #Z=$(echo "scale=8;x=10*$Z; if(x<1) print 0; x" | bc | sed -r 's/^(-?)\./\10./')
+    sed -i "s/ZZZZ/$Z/g" $keyfile
+    #Grab the box angles from the pdb file
+    alpha=$(sed -n '4p' $file | awk '{print $5}')
+    sed -i "s/AAAA/$alpha/g" $keyfile
+    beta=$(sed -n '4p' $file | awk '{print $6}')
+    sed -i "s/BBBB/$beta/g" $keyfile
+    gamma=$(sed -n '4p' $file | awk '{print $7}')
+    sed -i "s/GGGG/$gamma/g" $keyfile
+elif [ ${file: -4} == ".xyz" ]; then
+    #Grab the box lengths from the xyz file
+    X=$(sed -n '2p' $file | awk '{print $1}')
+    #X=$(echo "scale=8;x=10*$X; if(x<1) print 0; x" | bc | sed -r 's/^(-?)\./\10./')
+    sed -i "s/XXXX/$X/g" $keyfile
+    Y=$(sed -n '2p' $file | awk '{print $2}')
+    #Y=$(echo "scale=8;x=10*$Y; if(x<1) print 0; x" | bc | sed -r 's/^(-?)\./\10./')
+    sed -i "s/YYYY/$Y/g" $keyfile
+    Z=$(sed -n '2p' $file | awk '{print $3}')
+    #Z=$(echo "scale=8;x=10*$Z; if(x<1) print 0; x" | bc | sed -r 's/^(-?)\./\10./')
+    sed -i "s/ZZZZ/$Z/g" $keyfile
+    #Grab the box angles from the pdb file
+    alpha=$(sed -n '2p' $file | awk '{print $4}')
+    sed -i "s/AAAA/$alpha/g" $keyfile
+    beta=$(sed -n '2p' $file | awk '{print $5}')
+    sed -i "s/BBBB/$beta/g" $keyfile
+    gamma=$(sed -n '2p' $file | awk '{print $6}')
+    sed -i "s/GGGG/$gamma/g" $keyfile
+else
+    echo "Input file must be either xyz or pdb"
+    rm $keyfile
+    exit 1
+fi
+
