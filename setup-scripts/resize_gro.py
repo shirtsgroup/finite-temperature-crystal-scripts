@@ -337,4 +337,5 @@ def outputGroFile(outname,new_xyz_position,newboxvect,fname):
     outfile.close()
 
 
+
 #changeBoxVector(fname,molecule,volume=final_volume,boxvect=boxvect)
