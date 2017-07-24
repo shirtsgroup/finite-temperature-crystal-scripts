@@ -42,8 +42,11 @@
 #parameters. Finally, local and cluster submission scripts are copied over to allow
 #the job to be run.
 
+# Path the template files. Submissions scripts (local and cluster) as well as crystal templates.
+export TEMPLATEPATH="/PATH/TO/RUNFILES"
 
-export TEMPLATEPATH="../runfiles"
+# Gromacs specific paths
+export GRO_genrestr="gmx genrestr"
 
 #=============================================================================================
 # SETUP DEFAULT VALUES AND READ IN PARAMETERS FROM USER
@@ -629,9 +632,9 @@ if [ "$SIMULATION" == "gromacs" ]; then
                         vol=$(echo "$VOLUME*0.01" | bc)
                         echo "Resizing to $vol..."
                         if [ "$polymorph_num" == "p3" ]; then
-                                python ${PYTHONSCRIPTPATH}/resize_gro_individual.py -f ${JOBPATH}/${GNAME}.gro -V $vol -M ${MOLNAME} -n 12 -u 2
+                                python resize_gro_individual.py -f ${JOBPATH}/${GNAME}.gro -V $vol -M ${MOLNAME} -n 12 -u 2
                         else
-                                python ${PYTHONSCRIPTPATH}/resize_gro_individual.py -f ${JOBPATH}/${GNAME}.gro -V $vol -M ${MOLNAME} -n 12 -u 4
+                                python resize_gro_individual.py -f ${JOBPATH}/${GNAME}.gro -V $vol -M ${MOLNAME} -n 12 -u 4
                         fi
                 fi
         fi
@@ -815,7 +818,7 @@ if [ "$SIMULATION" == "gromacs" ]; then
 	
 	#Conduct any interpolations in the itp file
 	if [ "$POTENTIAL" == "oplsaatofakeg" ] || [ "$POTENTIAL" == "oplsaatofakea" ]; then
-	    python ${SCRIPT_LOC}/interpolate_itp.py -f ${JOBPATH}/molecule.itp -d $DELTA 
+	    python interpolate_itp.py -f ${JOBPATH}/molecule.itp -d $DELTA 
 	fi
 
 	cp ${TEMPLATEPATH}/parameters.txt ${JOBPATH}/parameters.txt
@@ -855,7 +858,7 @@ if [ "$SIMULATION" == "gromacs" ]; then
 	#cp ${TEMPLATEPATH}/molecule.itp ${JOBPATH}/molecule.itp
 
 	#CREATE THE POSITION RESTRAINT ITP FILE
-	echo "0 0" | genrestr_d -f ${JOBPATH}/${GNAME}.gro -o ${JOBPATH}/posre.itp -fc $k_max $k_max $k_max -quiet >> /dev/null 
+	echo "0 0" | ${GRO_genrestr} -f ${JOBPATH}/${GNAME}.gro -o ${JOBPATH}/posre.itp -fc $k_max $k_max $k_max -quiet >> /dev/null 
 	
 	##Now lop off all but the first apermol + 4 lines
 	atoms=$(wc -l ${JOBPATH}/${GNAME}.gro | awk '{print $1}')
@@ -1096,7 +1099,7 @@ elif [ "$SIMULATION" == "tinker" ]; then
 		addatomtypesindividual -p oplsaa -x ${JOBPATH}/molecule.xyz -M $MOLECULE
         elif [ "$POTENTIAL" == "amoeba09todesa" ]; then
 		cp ${TEMPLATEPATH}/amoeba09todesa.prm ${JOBPATH}/param.prm
-		python ${SCRIPT_LOC}/interpolate_itp.py -f ${JOBPATH}/param.prm -d $DELTA
+		python interpolate_itp.py -f ${JOBPATH}/param.prm -d $DELTA
        		sed -i "s/PARAMETERS.*/PARAMETERS param.prm/g" ${JOBPATH}/keyfile.key
 		addatomtypesindividual -p amoeba09 -x ${JOBPATH}/molecule.xyz -M $MOLECULE
 	#elif [ "$POTENTIAL" == "amoeba09restraint" ]; then
