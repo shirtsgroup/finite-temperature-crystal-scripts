@@ -4,6 +4,9 @@
 #param o - The name of the output.xvg file
 #param n - The number to pipe in to g_energy
 
+# Exporting gromacs commands
+export GRO_energy="gmx energy"
+
 SETRUN_ARGS="$@"
 inputfile="PROD.edr"
 inputfile2="EQ.edr"
@@ -26,16 +29,16 @@ while getopts "f:o:n:" opt; do
 done
 
 #Extract all relevant thermodynamic information using g_energy
-echo Total-Energy | g_energy_d -f $inputfile2 -o "equil_energy.xvg"
-echo Potential | g_energy_d -f $inputfile2 -o "equil_potenergy.xvg"
+echo Total-Energy | ${GRO_energy} -f $inputfile2 -o "equil_energy.xvg"
+echo Potential | ${GRO_energy} -f $inputfile2 -o "equil_potenergy.xvg"
 
-echo Pressure | g_energy_d -f $inputfile2 -o "equil_pressure.xvg"
-echo Volume | g_energy_d -f $inputfile2 -o "equil_volume.xvg"
-echo Total-Energy | g_energy_d -f $inputfile -o "energy.xvg" | grep Energy > avgenergy.xvg
-echo Potential | g_energy_d -f $inputfile -o "potenergy.xvg" | grep Potential > avgpotenergy.xvg
-echo Pressure | g_energy_d -f $inputfile -o "pressure.xvg" | grep Pressure > avgpressure.xvg
-echo Volume | g_energy_d -f $inputfile -o "volume.xvg" | grep Volume > avgvolume.xvg
-echo -e "Potential\nKinetic\nTotal\nTemperature\nVolume\nPressure" | g_energy_d -f $inputfile -o fullenergy.xvg
+echo Pressure | ${GRO_energy} -f $inputfile2 -o "equil_pressure.xvg"
+echo Volume | ${GRO_energy} -f $inputfile2 -o "equil_volume.xvg"
+echo Total-Energy | ${GRO_energy} -f $inputfile -o "energy.xvg" | grep Energy > avgenergy.xvg
+echo Potential | ${GRO_energy} -f $inputfile -o "potenergy.xvg" | grep Potential > avgpotenergy.xvg
+echo Pressure | ${GRO_energy} -f $inputfile -o "pressure.xvg" | grep Pressure > avgpressure.xvg
+echo Volume | ${GRO_energy} -f $inputfile -o "volume.xvg" | grep Volume > avgvolume.xvg
+echo -e "Potential\nKinetic\nTotal\nTemperature\nVolume\nPressure" | ${GRO_energy} -f $inputfile -o fullenergy.xvg
 
 #Also, create a gro file which has all of the configurations in it.
 #echo "0 0" | trjconv_d -s benzene_restraint.gro -f benzene_PROD.trr -o benzene_Traj.gro -pbc nojump -ndec 8

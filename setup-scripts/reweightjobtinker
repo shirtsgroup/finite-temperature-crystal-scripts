@@ -7,6 +7,18 @@
 #param s - Which software did we simulate in? (gromacs/tinker)
 #param I - How many independent benzenes are in the gro files? (Gromacs only)
 
+# Path to template files
+export RUNFILES_LOC="/home/ecd4bd/runfiles"
+
+# Path to Tinker parameters
+export Tinker_params="/home/nabraha2/tinker/params"
+
+# Gromacs commands
+export GRO_grompp="gmx grompp"
+export GRO_mdrun="gmx mdrun"
+export GRO_energy="gmx energy"
+export GRO_trjconv="gmx trjconv"
+
 SETRUN_ARGS="$@"
 inputfile="PROD"
 potentials="amoeba09"
@@ -25,10 +37,6 @@ simulation="gromacs"
 DSPACING="0"
 EXPONENT=1
 mode="full"
-
-export SCRIPT_LOC="/home/ecd4bd/scripts"
-export TINKER_LOC="/h3/n1/shirtsgroup/tinker-7"
-export RUNFILES_LOC="/home/ecd4bd/runfiles"
 
 #=============================================================================================
 # READ IN USER INPUTS
@@ -166,7 +174,7 @@ if [ "$simulation" == "gromacs" ]; then
 		mkdir TinkerXYZ
 		
 		#Convert the trr trajectory into a gro file using trjconv
-		echo "0 0" | trjconv_d -s pre_EQ.gro -f ${inputfile}.trr -o Traj.gro -pbc nojump -ndec 8
+		echo "0 0" | ${GRO_trjconv} -s pre_EQ.gro -f ${inputfile}.trr -o Traj.gro -pbc nojump -ndec 8
 
 		##Map the trajectory if necessary
 		#${SCRIPT_LOC}/kabschmany3.py -A benzene_restraint.gro -B B_0K.gro -C benzene_Traj.gro
@@ -174,7 +182,7 @@ if [ "$simulation" == "gromacs" ]; then
 		#mv run.mapped.gro benzene_Traj.gro 
 		
 		#Convert the trajectory into a set of full precision gro files using trjconv
-		echo 0 | trjconv_d -s pre_EQ.gro -f Traj.gro -o TinkerXYZ/frame.gro -sep -pbc nojump -ndec 8
+		echo 0 | ${GRO_trjconv} -s pre_EQ.gro -f Traj.gro -o TinkerXYZ/frame.gro -sep -pbc nojump -ndec 8
 
 		cd TinkerXYZ
 
@@ -199,7 +207,7 @@ if [ "$simulation" == "gromacs" ]; then
                 for file in $(ls *.gro); do
                         echo "Converting ${file} to pdb..."
 			filename=$(echo $file | cut -d '.' --complement -f2-)
-                        echo 0 | trjconv_d -f $file -s $file -o "${filename}.pdb" -pbc whole -ndec 8 > /dev/null
+                        echo 0 | ${GRO_trjconv} -f $file -s $file -o "${filename}.pdb" -pbc whole -ndec 8 > /dev/null
                 done
 
 		#Convert each pdb file into a tinker XYZ file
@@ -207,7 +215,7 @@ if [ "$simulation" == "gromacs" ]; then
 		for file in $(ls *.pdb); do 
 			echo "Converting ${file} to xyz..."
 			sed -i "/ATOM/{s/ $string /    0 /}" $file 
-			pdbxyz $file ${TINKER_LOC}/params/${paramfile_amoeba09} > /dev/null
+			pdbxyz $file ${TINKER_params}/${paramfile_amoeba09} > /dev/null
 		done
 
 
@@ -216,7 +224,7 @@ if [ "$simulation" == "gromacs" ]; then
 			echo "Upgrading ${file} to full precision..."
 			filename=$(echo $file | cut -d '.' --complement -f2-)
 			upgradexyz -g "${filename}.gro" -x $file
-			python ${SCRIPT_LOC}/upgradexyz.py -x $file -n 10
+			python upgradexyz.py -x $file -n 10
 		done
 
 		#Add the box vectors to the second line of the xyz file if it is not in the gas phase
@@ -240,9 +248,9 @@ if [ "$simulation" == "gromacs" ]; then
 
 		#Create one master key file
 		if [ "$(less ../topology.top | grep -A 1 molecules | tail -1 | awk '{print $2}')" == "1" ]; then
-                            cp /home/ecd4bd/runfiles/gas.key keyfile.key
+                            cp ${RUNFILES_LOC}/gas.key keyfile.key
                     else
-                            cp /home/ecd4bd/runfiles/${molecule}.key keyfile.key
+                            cp ${RUNFILES_LOC}/${molecule}.key keyfile.key
 		fi
 
 		
@@ -285,7 +293,7 @@ if [ "$simulation" == "gromacs" ]; then
 		if [[ -s ../index.ndx ]]; then
                 	for file in $(ls *.gro); do
                         	echo "Cutting extra molecules from: $file"
-                        	python ${SCRIPT_LOC}/cut_dependent.py -f $file -n ../index.ndx
+                        	python cut_dependent.py -f $file -n ../index.ndx
                 	done
 		fi
 
@@ -366,8 +374,8 @@ for potential in $potentials; do
 		    cp ../keyfile.key keyfile.key
 		fi
                 cp ${RUNFILES_LOC}/${potential}.prm param_reweighting.prm
-		python ${SCRIPT_LOC}/interpolate_itp.py -f keyfile.key -d $delta
-                python ${SCRIPT_LOC}/interpolate_itp.py -f param_reweighting.prm -d $delta
+		python interpolate_itp.py -f keyfile.key -d $delta
+                python interpolate_itp.py -f param_reweighting.prm -d $delta
 		sed -i "s/PARAMETERS.*/PARAMETERS param_reweighting.prm/g" keyfile.key
                 delta_hinge="_${delta_hinge}"
             fi
@@ -394,7 +402,7 @@ for potential in $potentials; do
 		    timestep=$(echo "x=$frame*$dt; if(x==0) print \"0.0\"; if(x<1 && x>0) print 0; x" | bc)
 		    echo "Calculating the energy of ${fname}..."
 		    if [ "$frame" == "1" ]; then
-			${TINKER_LOC}/bin/analyze $fname -k keyfile.key e
+			analyze $fname -k keyfile.key e
 		    fi
 		    echo "$(/h3/n1/shirtsgroup/tinker/bin/analyze $fname -k keyfile.key  e)" > tempenergy.txt
 		    volume=$(/h3/n1/shirtsgroup/tinker/bin/analyze $fname -k keyfile.key G | grep "Volume" | awk '{print $3}')

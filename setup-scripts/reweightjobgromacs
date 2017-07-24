@@ -8,6 +8,23 @@
 #param r - Cutoff distances to check for convergence
 #param s - Which software package did we simulate in? (gromacs/tinker)
 
+
+# Path to template files
+export RUNFILES_LOC="/home/ecd4bd/runfiles"
+
+# Path to Tinker parameters
+export Tinker_params="/home/nabraha2/tinker/params"
+
+# Gromacs commands
+export GRO_grompp="gmx grompp"
+export GRO_mdrun="gmx mdrun"
+export GRO_energy="gmx energy"
+export GRO_trjconv="gmx trjconv"
+
+
+#export DRUDE_LOC="/h3/n1/shirtsgroup/gromacs_drude/install/bin"
+
+
 SETRUN_ARGS="$@"
 #SET THE DEFAULT INPUT PARAMETER VALUES
 inputfile="PROD"
@@ -21,27 +38,9 @@ outputfile="energy.xvg"
 simulation="gromacs"
 mode="full"
 molecule="benzene"
-export GRO_LOC="/h3/n1/shirtsgroup/gromacs_forceavg3/install/bin"
-#export GRO_LOC="/h3/n1/shirtsgroup/gromacs_drude2/install_SSE2/bin"
-export DRUDE_LOC="/h3/n1/shirtsgroup/gromacs_drude/install/bin"
-export Tinker_LOC="/h3/n1/shirtsgroup/tinker-7"
-export SCRIPT_LOC="/home/ecd4bd/scripts"
-export RUNFILES_LOC="/home/ecd4bd/runfiles"
-#charges=("0.0115 0.0230 0.0575 0.0690 0.0805 0.0920 0.1035 0.1150 0.1265 0.1380 0.1495 0.1725 0.2300 0.3450 0.4600 0.5750 1.1500")
-#chargenames=("C00115 C00230 C00575 C00690 C00805 C00920 C01035 C01150 C01265 C01380 C01495 C01725 C02300 C03450 C04600 C05750 C11500")
-#charges=("0.0690 0.0920 0.1150 0.1380 0.1725")
-#chargenames=("C00690 C00920 C01150 C01380 C01725")
-#charges=("0.0100 0.0200 0.0300 0.0400 0.0500 0.0600 0.0700 0.0800 0.0900 0.1000 0.1100 0.1150 0.1500 0.2000 0.2500 0.3000 0.3500 0.4000")
-#chargenames=("C00100 C00200 C00300 C00400 C00500 C00600 C00700 C00800 C00900 C01000 C01100 C01150 C01500 C02000 C02500 C03000 C03500 C04000")
-#charges=("0.0500 0.1150 0.1500 0.2000 0.2500")
-#chargenames=("C00500 C01150 C01500 C02000 C02500")
-#charges=("0.0550 0.0700 0.0850 0.1000 0.1150 0.1300 0.1450 0.1600 0.1750 0.1900")
-#chargenames=("C00550 C00700 C00850 C01000 C01150 C01300 C01450 C01600 C01750 C01900")
 charges=("0.1150")
 chargenames=("C01150")
 cutoffs="None"
-#sigmaCs=("C99 C100 C101 C102")
-#sigmaHs=("H97 H98 H99 H100")
 sigmaCs=("C100")
 sigmaHs=("H100")
 dt="1"
@@ -194,13 +193,13 @@ if [ "$simulation" == "tinker" ]; then
 		#Convert each tinker xyz file into a pdb file
                 for frame in $(seq 1 $frames); do
                         echo "Converting frame${frame}.xyz to pdb..."
-                        ${Tinker_LOC}/bin/xyzpdb frame${frame}.xyz ${Tinker_LOC}/params/${paramfile_amoeba} > /dev/null
+                        xyzpdb frame${frame}.xyz ${Tinker_params}/${paramfile_amoeba} > /dev/null
                 done
 		
 		#Convert each pdb file into a gro file
                 for frame in $(seq 1 $frames); do
                         echo "Converting frame${frame}.pdb to gro..."
-                        echo 0 | ${GRO_LOC}/trjconv_d -f frame${frame}.pdb -s frame${frame}.pdb -o "frame${frame}.gro" -pbc whole -ndec 8 -quiet > /dev/null
+                        echo 0 | ${GRO_trjconv} -f frame${frame}.pdb -s frame${frame}.pdb -o "frame${frame}.gro" -pbc whole -ndec 8 -quiet > /dev/null
                 done
 
 		#Add the box vector to the bottom of the .gro file
@@ -208,7 +207,7 @@ if [ "$simulation" == "tinker" ]; then
 		for frame in $(seq 1 $frames); do
                         echo "Adding box vectors to frame${frame}.gro..."
 			filename=$(echo $file | cut -d '.' --complement -f2-)
-			python /home/ecd4bd/scripts/addboxvectors.py -g frame${frame}.gro -x frame${frame}.xyz -s 0.1
+			python addboxvectors.py -g frame${frame}.gro -x frame${frame}.xyz -s 0.1
 			#x=$(less "${filename}.xyz" | head -2 | tail -1 | awk '{print $1}')
 			#y=$(less "${filename}.xyz" | head -2 | tail -1 | awk '{print $2}')
 			#z=$(less "${filename}.xyz" | head -2 | tail -1 | awk '{print $3}')
@@ -229,7 +228,7 @@ if [ "$simulation" == "tinker" ]; then
                 for frame in $(seq 1 $frames); do
                        echo "Upgrading frame${frame}.gro to full precision..."
                        upgradegro -x "frame${frame}.xyz" -g frame${frame}.gro
-                       python /home/ecd4bd/scripts/upgradegro.py -g frame${frame}.gro -n 0.1
+                       python upgradegro.py -g frame${frame}.gro -n 0.1
                 done
 
 		##Reshape the GRO file to match the box vectors in Designed-Amoeba
@@ -255,7 +254,7 @@ if [ "$simulation" == "tinker" ]; then
 			Y=$(less ../job_specs.txt | grep Y-EXPANSION | awk '{print $2}')
 			Z=$(less ../job_specs.txt | grep Z-EXPANSION | awk '{print $2}')
 			#Check if this is polymorph 2 (in a very kluge way)
-			python ${SCRIPT_LOC}/unitcell_to_supercell.py -g frame${frame}.gro -o frame${frame}.gro -l $X -w $Y -z $Z
+			python unitcell_to_supercell.py -g frame${frame}.gro -o frame${frame}.gro -l $X -w $Y -z $Z
                     done
 
 		fi
@@ -263,7 +262,7 @@ if [ "$simulation" == "tinker" ]; then
 		#Now remove the spurious COM motion from each frame
                 for frame in $(seq 1 $frames); do
                     echo "Removing COM displacement from frame${frame}.gro..."
-                    python ${SCRIPT_LOC}/removeCOM.py -f frame${frame}.gro
+                    python removeCOM.py -f frame${frame}.gro
                 done
 
 
@@ -318,13 +317,13 @@ elif [ "$simulation" == "drude" ]; then
                 mkdir DrudeGRO
 
                 #Convert the trajectory into a set of full precision gro files using trjconv
-                echo 0 | ${DRUDE_LOC}/trjconv_d -f ${inputfile}.trr -s ${inputfile}.tpr -o DrudeGRO/frame.gro -sep -pbc whole -ndec 8
+                echo 0 | ${DRUDE_LOC}/${GRO_trjconv} -f ${inputfile}.trr -s ${inputfile}.tpr -o DrudeGRO/frame.gro -sep -pbc whole -ndec 8
 
 		
 		#Remove the drude particles from each frame
 		cd DrudeGRO
 		for file in *.gro; do
-		    python ${SCRIPT_LOC}/remove_drude.py -g $file
+		    python remove_drude.py -g $file
 		done 
 		cd ..
         fi
@@ -388,7 +387,7 @@ for potential in $potentials; do
                 delta_hinge=""
             else
 		cp ${RUNFILES_LOC}/${molecule}_${potential}.itp ${potential}.itp
-                python ${SCRIPT_LOC}/interpolate_itp.py -f ${potential}.itp -d $delta
+                python interpolate_itp.py -f ${potential}.itp -d $delta
                 delta_hinge="_${delta_hinge}"
             fi
 	    for cutoff in $cutoffs; do #Loop over all cutoffs
@@ -414,8 +413,8 @@ for potential in $potentials; do
 		    #sed -i "s/${oldcharge}     1.008/${charge}     1.008/g" ${potential}.itp
 		    #sed -i "s/${oldsigmaC}/opls_${sigmaC}/g" benzene_oplsaafakeg.itp
 		    #sed -i "s/${oldsigmaH}/opls_${sigmaH}/g" benzene_oplsaafakeg.itp
-		    ${GRO_LOC}/grompp_d -f production_reweighting.mdp -c EQ.gro -p reweighting_topology.top -o reweighting.tpr -maxwarn 10
-		    ${GRO_LOC}/mdrun_d  -v -rerun PROD.trr -s reweighting.tpr -deffnm $potname -e ${potential}energy.edr
+		    ${GRO_grompp} -f production_reweighting.mdp -c EQ.gro -p reweighting_topology.top -o reweighting.tpr -maxwarn 10
+		    ${GRO_mdrun}  -v -rerun PROD.trr -s reweighting.tpr -deffnm $potname -e ${potential}energy.edr
     
 		    rm ${potname}.trr
 		    rm reweighting.tpr
@@ -423,7 +422,7 @@ for potential in $potentials; do
 		    rm '#mdout.mdp.1#'
     
 		    #Output the potential energy to a file
-		    echo -e "Potential\n1 2 3 4 5 7 8 6 9 10 0" | ${GRO_LOC}/g_energy_d -f ${potential}energy.edr -o "${potname}_energy.xvg"
+		    echo -e "Potential\n1 2 3 4 5 7 8 6 9 10 0" | ${GRO_energy} -f ${potential}energy.edr -o "${potname}_energy.xvg"
     
 		    oldcharge=$charge
 		    oldsigmaC="opls_${sigmaC}"
@@ -439,7 +438,7 @@ for potential in $potentials; do
                 delta_hinge=""
             else
                 cp ${RUNFILES_LOC}/${potential}.itp ${potential}.itp
-                python ${SCRIPT_LOC}/interpolate_itp.py -f ${potential}.itp -d $delta
+                python interpolate_itp.py -f ${potential}.itp -d $delta
                 delta_hinge="_${delta_hinge}"
             fi
 	    for charge in $charges; do
@@ -454,9 +453,9 @@ for potential in $potentials; do
 	        #Rerun on Traj.gro
 	    	
 		echo "Calculating trajectory energy..."
-	    	${GRO_LOC}/grompp_d -f production_reweighting.mdp -c Traj.gro -p reweighting_topology.top -o reweighting.tpr -maxwarn 10
-	    	${GRO_LOC}/mdrun_d  -v -rerun Traj.gro -s reweighting.tpr -deffnm ${potname} -e ${potential}energy.edr
-	    	echo -e "Potential\n1 2 3 4 5 7 8 6 9 10 0" | ${GRO_LOC}/g_energy_d -f ${potential}energy.edr -o "${potname}_energy.xvg"
+	    	${GRO_grompp} -f production_reweighting.mdp -c Traj.gro -p reweighting_topology.top -o reweighting.tpr -maxwarn 10
+	    	${GRO_mdrun}  -v -rerun Traj.gro -s reweighting.tpr -deffnm ${potname} -e ${potential}energy.edr
+	    	echo -e "Potential\n1 2 3 4 5 7 8 6 9 10 0" | ${GRO_energy} -f ${potential}energy.edr -o "${potname}_energy.xvg"
 	    	rm ${potname}.trr
 	    	#rm ${potname}.log
 	    	#rm ${potential}energy.edr
@@ -485,10 +484,10 @@ for potential in $potentials; do
 	    fname="frame${frame}_nodrude.gro"
 	    while [ -f $fname ]; do
 		echo "Calculating ${fname} energy..."
-		${GRO_LOC}/grompp_d -f ../benzene_production_reweighting.mdp -c $fname -p ../reweighting_topology.top -o ../reweighting.tpr -maxwarn 10
-		${GRO_LOC}/mdrun_d  -v -rerun ${fname} -s ../reweighting.tpr -deffnm ${potname} -e ${potential}energy.edr
+		${GRO_grompp} -f ../benzene_production_reweighting.mdp -c $fname -p ../reweighting_topology.top -o ../reweighting.tpr -maxwarn 10
+		${GRO_mdrun} -v -rerun ${fname} -s ../reweighting.tpr -deffnm ${potname} -e ${potential}energy.edr
 		#echo Potential | ${GRO_LOC}/g_energy_d -f ${potential}energy.edr -o "${potential}energy.xvg"
-		echo -e "Potential\n1 2 3 4 5 7 8 6 9 10 0" | ${GRO_LOC}/g_energy_d -f ${potential}energy.edr -o "${potential}energy.xvg"
+		echo -e "Potential\n1 2 3 4 5 7 8 6 9 10 0" | ${GRO_energy} -f ${potential}energy.edr -o "${potential}energy.xvg"
 		energy=$(less ${potential}energy.xvg | tail -1 | awk '{print $2}')
 		if [ $(less ../benzene.xyz | head -1 | awk '{print $1}') == "12" ]; then
 		    echo "Gas Phase!"

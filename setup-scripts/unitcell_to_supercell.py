@@ -205,8 +205,8 @@ cpcommand = 'cp ' + fname + ' ' + fname_ind
 os.system(cpcommand)
 print 'also wrote final gro file to: ' + fname_ind
 
-os.system('python ~/crystals/NMA/scripts/removeCOM.py -f ' + fname)
-os.system('python ~/crystals/NMA/scripts/removeCOM.py -f ' + fname_ind)
+os.system('python removeCOM.py -f ' + fname)
+os.system('python removeCOM.py -f ' + fname_ind)
 
 
 #Write to the index file
