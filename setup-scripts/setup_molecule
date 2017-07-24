@@ -48,6 +48,10 @@ export TEMPLATEPATH="/PATH/TO/RUNFILES"
 # Gromacs specific paths
 export GRO_genrestr="gmx genrestr"
 
+# Path where everything will get setup
+export JOBPATH="../jobs/${JOBNAME}"
+
+
 #=============================================================================================
 # SETUP DEFAULT VALUES AND READ IN PARAMETERS FROM USER
 #=============================================================================================
@@ -579,10 +583,8 @@ if [ "$SIMULATION" == "gromacs" ]; then
 else
     export JOBNAME="${MOLNAME}_${SimNAME}_${PotNAME}_${polymorph_num}_${MOLNUM}_${TEMPNAME}K${PNAME}${DNAME}${hinge}"
 fi
-export JOBPATH="../jobs/${JOBNAME}"
 export GNAME="pre_EQ"
 export TNAME="topology"
-export PYTHONSCRIPTPATH="../scripts"
 
 #make the directory if it does not already exist
 echo "Making Directory: ${JOBPATH} ..."
