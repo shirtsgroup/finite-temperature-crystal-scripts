@@ -45,12 +45,12 @@ Gamma = float(tokens[5])
 V1x = float(A) * scaling_factor
 V1y = 0.0
 V1z = 0.0
-V2x = B * np.cos(Gamma * np.pi / 180) * scaling_factor
-V2y = B * np.sin(Gamma * np.pi / 180) * scaling_factor
+V2x = B * np.cos(np.radians(Gamma)) * scaling_factor
+V2y = B * np.sin(np.radians(Gamma)) * scaling_factor
 V2z = 0.0
-V3x = C*np.cos(Beta * np.pi / 180) * scaling_factor
-V3y = C*np.cos(Alpha * np.pi / 180) * np.sin(Gamma * np.pi / 180) * scaling_factor
-V3z = float(C ** 2 - V3x ** 2 - V3y ** 2) ** 0.5 * scaling_factor
+V3x = C * np.cos(np.radians(Beta)) * scaling_factor
+V3y = C * np.cos(np.radians(Alpha)) * np.sin(np.radians(Gamma)) * scaling_factor
+V3z = np.sqrt(C ** 2 - V3x ** 2 - V3y ** 2) * scaling_factor
 
 # Write the last line to the .gro file
 if Alpha == 90.0 and Beta == 90.0 and Gamma == 90.0:
