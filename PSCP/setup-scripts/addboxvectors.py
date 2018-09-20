@@ -1,4 +1,4 @@
-#/usr/bin/python
+# /usr/bin/python
 # PYTHON SCRIPT TO ADD THE CORRECT BOX VECTORS TO A GRO FILE GIVEN A TINKER XYZ FILE
 # param x - The name of the .gro file
 # param n - The scaling factor to apply to each xyz coordinate
