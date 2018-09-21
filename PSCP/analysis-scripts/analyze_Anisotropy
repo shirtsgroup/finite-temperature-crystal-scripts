@@ -1,26 +1,26 @@
 #!/bin/bash
 
-#BASH SCRIPT TO AUTOMATICALLY ANALYZE ANISOTROPY OVER A GIVEN RANGE 
-#By: Eric Dybeck 01/12/2017
-#param C - Charges (supplied as a list in quotation marks separated by spaces)
-#param n - polymorph number (all 3 will be used if none is given)
-#param M - Molecule name
-#param T - Temperature(s) in K
-#param P - Pressure in bar
-#param N - Number of molecules
-#param I - Number of independent molecules (the remainder will be averaged)
-#param e - Number of steps in the equilibration step
-#param p - Number of steps in the production step
-#param i - Integrator
-#param t - Thermostat
-#param b - Barostat
-#param a - number of cores (threads) to run on
-#param r - vdw/coulomb cutoff distance (in angstroms)
-#param u - potential to be used in the simulation
-#param z - specify which simulation package we will use (gromacs or tinker)
-#param h - optional string hinge to add to the job
-#param E - specify the Thermodynamic Ensemble that will be used
-#param o - number of production outputs
+# BASH SCRIPT TO AUTOMATICALLY ANALYZE ANISOTROPY OVER A GIVEN RANGE 
+# By: Eric Dybeck 01/12/2017
+# param C - Charges (supplied as a list in quotation marks separated by spaces)
+# param n - polymorph number (all 3 will be used if none is given)
+# param M - Molecule name
+# param T - Temperature(s) in K
+# param P - Pressure in bar
+# param N - Number of molecules
+# param I - Number of independent molecules (the remainder will be averaged)
+# param e - Number of steps in the equilibration step
+# param p - Number of steps in the production step
+# param i - Integrator
+# param t - Thermostat
+# param b - Barostat
+# param a - number of cores (threads) to run on
+# param r - vdw/coulomb cutoff distance (in angstroms)
+# param u - potential to be used in the simulation
+# param z - specify which simulation package we will use (gromacs or tinker)
+# param h - optional string hinge to add to the job
+# param E - specify the Thermodynamic Ensemble that will be used
+# param o - number of production outputs
 
 #=============================================================================================
 # SETUP DEFAULT VALUES AND READ IN PARAMETERS FROM USER
