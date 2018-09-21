@@ -7,9 +7,9 @@ import numpy as np
 from optparse import OptionParser
 import os
 
-#=============================================================================================
+# =============================================================================================
 # READ IN USER INPUTS
-#=============================================================================================
+# =============================================================================================
 parser = OptionParser()
 parser.add_option('-g', dest='grofile', help='Input Gromacs file (.gro)', default='frame.gro')
 parser.add_option('-x', dest='xyzfile', help='Input Tinker file (.xyz)', default='frame.xyz')

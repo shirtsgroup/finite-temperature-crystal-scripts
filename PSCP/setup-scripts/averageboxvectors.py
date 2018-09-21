@@ -5,9 +5,9 @@ import numpy as np
 from optparse import OptionParser
 import subprocess
 
-#=============================================================================================
+# =============================================================================================
 # READ IN USER INPUTS
-#=============================================================================================
+# =============================================================================================
 parser = OptionParser()
 parser.add_option('-f', dest='xvgfile', help='Input xvg file')
 parser.add_option('-g', dest='defaultgro', help='Default box vector used to match the sign', default='none')

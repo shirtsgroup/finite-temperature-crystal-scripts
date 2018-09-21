@@ -7,9 +7,8 @@
 # Copyright Michael R. Shirts, University of Virginia, 2014
 #
 
-import numpy # numerical array library
-from optparse import OptionParser # for parsing command-line options
-import pdb
+import numpy as np
+from optparse import OptionParser
 
 #=============================================================================================
 # INPUT VARIABLES
@@ -110,7 +109,7 @@ def changeBoxVector(fname="pre_EQ.gro",molecule='benzene',volume=0.0,boxvect='0 
     #Grab the old crystal basis and generate the new crystal basis
     old_Basis = vectorToBasis(lines[len(lines)-1].split())
     if volume > 0.0:
-        initial_volume = float(numpy.linalg.det(old_Basis))
+        initial_volume = float(np.linalg.det(old_Basis))
         scaling_param = (final_volume/initial_volume)**(1.0/3.0)
         new_Basis = scaling_param*old_Basis
     else:
@@ -118,7 +117,7 @@ def changeBoxVector(fname="pre_EQ.gro",molecule='benzene',volume=0.0,boxvect='0 
     newboxvect = basisToVector(new_Basis)
 
     #Create the transformation operator between basis sets
-    transformation_Basis=numpy.transpose(numpy.dot(new_Basis,numpy.linalg.inv(old_Basis)))
+    transformation_Basis=np.transpose(np.dot(new_Basis, np.linalg.inv(old_Basis)))
 
     #Generate the new atom locations
     new_xyz_position = generateNewAtomLocations(old_xyz_position,transformation_Basis,nam)
@@ -186,7 +185,7 @@ def generateAtomLocations(fname,nam):
     # acoordA and acoordB are the atom coordinates for polymorphs A and B
     line = 2
     mol = 0
-    old_xyz_position = numpy.zeros((nm,3,nam))	#Original xyz positions of all the atoms
+    old_xyz_position = np.zeros((nm,3,nam))	#Original xyz positions of all the atoms
     
     while mol < nm:
         acounter = 0
@@ -204,7 +203,7 @@ def generateAtomLocations(fname,nam):
 #=============================================================================================
 def vectorToBasis(vector):
     
-    basis = numpy.zeros([3,3],float)        #Matrix to transform internal crystal coordinates into xyz coordinates
+    basis = np.zeros([3,3],float)        #Matrix to transform internal crystal coordinates into xyz coordinates
    
     for i,num in enumerate(vector):
         if i == 0:
@@ -232,9 +231,9 @@ def vectorToBasis(vector):
 # CONVERT A BASIS MATRIX INTO A BOX VECTOR
 #=============================================================================================
 def basisToVector(basis):
-    vector = numpy.array([basis[0,0], basis[1,1], basis[2,2], basis[0,1], basis[0,2], basis[1,0], basis[1,2], basis[2,0], basis[2,1]])
+    vector = np.array([basis[0,0], basis[1,1], basis[2,2], basis[0,1], basis[0,2], basis[1,0], basis[1,2], basis[2,0], basis[2,1]])
     if all(j == 0 for j in vector[3:9]):
-	vector = numpy.array(vector[0:3])
+	vector = np.array(vector[0:3])
 
     return vector
 
@@ -243,16 +242,16 @@ def basisToVector(basis):
 #=============================================================================================
 def generateNewAtomLocations(old_xyz_position, transformation_basis,nam):
     #Calculate the centroid of each molecule
-    w = numpy.ones((nam,1))*(1.0/nam)
+    w = np.ones((nam,1))*(1.0/nam)
     nm = len(old_xyz_position[:,0,0])
-    centroid_xyz = numpy.zeros((nm,3,1))
+    centroid_xyz = np.zeros((nm,3,1))
     for mol in range(nm):
-        centroid_xyz[mol,:,:] = numpy.dot(old_xyz_position[mol,:,:], w)
+        centroid_xyz[mol,:,:] = np.dot(old_xyz_position[mol,:,:], w)
 
     mol = 0
     new_xyz_position=old_xyz_position.copy()
     while mol < nm:
-        new_xyz_position[mol,:,:] = (old_xyz_position[mol,:,:]-centroid_xyz[mol,:,:])+numpy.dot(transformation_basis,centroid_xyz[mol,:,:])
+        new_xyz_position[mol,:,:] = (old_xyz_position[mol,:,:]-centroid_xyz[mol,:,:])+np.dot(transformation_basis,centroid_xyz[mol,:,:])
         mol += 1
 
     return new_xyz_position

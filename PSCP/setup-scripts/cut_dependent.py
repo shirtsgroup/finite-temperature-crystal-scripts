@@ -1,25 +1,27 @@
-#/usr/bin/python
-#PYTHON SCRIPT TO CUT THE DEPENDENT BENZENES FROM A GRO FILE
-#param f - The name of the .gro file
-#param I - The number of independent benzenes
+# /usr/bin/python
+# PYTHON SCRIPT TO CUT THE DEPENDENT BENZENES FROM A GRO FILE
+# param f - The name of the .gro file
+# param I - The number of independent benzenes
 
-import numpy # numerical array library
-from optparse import OptionParser # for parsing command-line options
+import numpy
+from optparse import OptionParser
 import os
 import subprocess
 import pdb
 
-#=============================================================================================
+# =============================================================================================
 # READ IN USER INPUTS
-#=============================================================================================
+# =============================================================================================
 parser = OptionParser()
-parser.add_option('-f', dest = 'grofile', help = 'Input gro file', default='frame.gro')
-parser.add_option('-n', dest = 'index' , help = 'index file', default='index.ndx')
+parser.add_option('-f', dest='grofile', help='Input gro file', default='frame.gro')
+parser.add_option('-n', dest='index', help='index file', default='index.ndx')
 (options, args) = parser.parse_args()
-#Create the space buffer
-spaces = [];
-Independent_atoms=[];
-Farthest_copies=[];
+
+# Create the space buffer
+spaces = []
+Independent_atoms = []
+Farthest_copies = []
+
 #rjustvect = numpy.ones(10,int);
 #rjustvect = ['8', '7', '5', '15', '15', '15', '6', '6', '6']
 
