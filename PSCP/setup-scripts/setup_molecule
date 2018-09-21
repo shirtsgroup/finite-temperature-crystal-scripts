@@ -1,56 +1,54 @@
 #!/bin/bash
 
-#BASH SCRIPT TO SET UP AN MD SIMULATION BASED ON USER SPECIFICATIONS
-#By: Eric Dybeck 12/22/2015
-#param n - polymorph number in the form 'p1'
-#param T - Temperature in K
-#param P - Pressure in bar
-#param M - Molecule name
-#param N - Number of total molecules
-#param I - Number of independent molecules (the remainder will be averaged)
-#param e - Number of steps in the equilibration step
-#param p - Number of steps in the production step
-#param i - Integrator
-#param t - Thermostat
-#param b - Barostat
-#param a - number of cores (threads) to run on
-#param k - minimum harmonic restraint constant
-#param K - maximum harmonic restraint constant
-#param D - drude oscillator spring constant (%)
-#param L - lambda state for the harmonic restraint
-#param U - unrestrained lambda value (%)
-#param R - restrained lambda value (%)
-#param s - spacing between the lambdas
-#param f - functional form (exponent) of the spacing between the lambdas
-#param G - Gamma state for the removal of intermolecular interactions
-#param g - spacing between the gammas
-#param d - Percentage for alchemically interpolating the original itp file (%)
-#param V - desired box volume (in cubic nm)
-#param r - vdw/coulomb cutoff distance (in angstroms)
-#param u - potential to be used in the simulation
-#param c - charge assigned to the carbon and hydrogen 
-#param C - Sigma value for Carbon (% of actual)
-#param H - Sigma value for Hydrogen (% of actual) 
-#param z - specify which simulation package we will use (gromacs or tinker)
-#param h - optional string hinge to add to the job
-#param E - specify the Thermodynamic Ensemble that will be used
-#param o - number of production outputs
+# BASH SCRIPT TO SET UP AN MD SIMULATION BASED ON USER SPECIFICATIONS
+# By: Eric Dybeck 12/22/2015
+# param n - polymorph number in the form 'p1'
+# param T - Temperature in K
+# param P - Pressure in bar
+# param M - Molecule name
+# param N - Number of total molecules
+# param I - Number of independent molecules (the remainder will be averaged)
+# param e - Number of steps in the equilibration step
+# param p - Number of steps in the production step
+# param i - Integrator
+# param t - Thermostat
+# param b - Barostat
+# param a - number of cores (threads) to run on
+# param k - minimum harmonic restraint constant
+# param K - maximum harmonic restraint constant
+# param D - drude oscillator spring constant (%)
+# param L - lambda state for the harmonic restraint
+# param U - unrestrained lambda value (%)
+# param R - restrained lambda value (%)
+# param s - spacing between the lambdas
+# param f - functional form (exponent) of the spacing between the lambdas
+# param G - Gamma state for the removal of intermolecular interactions
+# param g - spacing between the gammas
+# param d - Percentage for alchemically interpolating the original itp file (%)
+# param V - desired box volume (in cubic nm)
+# param r - vdw/coulomb cutoff distance (in angstroms)
+# param u - potential to be used in the simulation
+# param c - charge assigned to the carbon and hydrogen 
+# param C - Sigma value for Carbon (% of actual)
+# param H - Sigma value for Hydrogen (% of actual) 
+# param z - specify which simulation package we will use (gromacs or tinker)
+# param h - optional string hinge to add to the job
+# param E - specify the Thermodynamic Ensemble that will be used
+# param o - number of production outputs
 
-#Give these parameters, the script creates a directory in the jobs folder and copies
-#over the relevant .mdp, .gro and topology files to carry out the job. In addition
-#the .mdp files are manipulated away from the defaults based on the user specified
-#parameters. Finally, local and cluster submission scripts are copied over to allow
-#the job to be run.
+# Give these parameters, the script creates a directory in the jobs folder and copies
+# over the relevant .mdp, .gro and topology files to carry out the job. In addition
+# the .mdp files are manipulated away from the defaults based on the user specified
+# parameters. Finally, local and cluster submission scripts are copied over to allow
+# the job to be run.
 
 # Path the template files. Submissions scripts (local and cluster) as well as crystal templates.
-export TEMPLATEPATH="/PATH/TO/RUNFILES"
+export TEMPLATEPATH="/home/nabraham/crystals/NMA/runfiles"
 
 # Gromacs specific paths
 export GRO_genrestr="gmx genrestr"
 
-# Path where everything will get setup
-export JOBPATH="../jobs/${JOBNAME}"
-
+# JOBPATH is exported halfway through script. Default is to create directory in working directory.
 
 #=============================================================================================
 # SETUP DEFAULT VALUES AND READ IN PARAMETERS FROM USER
@@ -101,7 +99,6 @@ SigmaC="100"
 SigmaH="100"
 hinge="DefaultHinge"
 
-export SCRIPT_LOC="/home/ecd4bd/crystals/NMA/scripts"
 
 #options passed in from the users
 while getopts "n:T:P:M:N:I:e:p:o:i:t:b:a:k:K:D:L:U:R:s:f:A:B:G:g:d:V:r:u:c:C:H:z:E:h:" opt; do
@@ -586,9 +583,13 @@ fi
 export GNAME="pre_EQ"
 export TNAME="topology"
 
+# Path where everything will get setup
+export JOBPATH="./${JOBNAME}"
+
 #make the directory if it does not already exist
 echo "Making Directory: ${JOBPATH} ..."
 mkdir ${JOBPATH}
+
 
 #OUTPUT FREQUENCY
 equil_output_frequency=$(echo "${equil_steps}/${EQOUTPUTS}" | bc)

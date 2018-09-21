@@ -1,18 +1,17 @@
 #!/bin/bash
 
-#BASH SCRIPT TO AUTOMATICALLY SET UP THE MDP FILES TO TAKE ON MULTIPLE LAMBDA VALUES
-#By: Eric Dybeck 09/12/2014
-
-#param L - lambda state for the harmonic restraint
-#param W - weakest lambda value (%)
-#param S - strongest lambda value (%)
-#param s - spacing between the lambdas
-#param A - Maximum gamma value (%)
-#param B - Minimum gamma value (%)
-#param G - Gamma state for the harmonic restraint
-#param g - spacing between the Gammas
-#param f - functional form (exponent) of the spacing between the lambdas
-#parap d - path to the mdp files
+# BASH SCRIPT TO AUTOMATICALLY SET UP THE MDP FILES TO TAKE ON MULTIPLE LAMBDA VALUES
+# By: Eric Dybeck 09/12/2014
+# param L - lambda state for the harmonic restraint
+# param W - weakest lambda value (%)
+# param S - strongest lambda value (%)
+# param s - spacing between the lambdas
+# param A - Maximum gamma value (%)
+# param B - Minimum gamma value (%)
+# param G - Gamma state for the harmonic restraint
+# param g - spacing between the Gammas
+# param f - functional form (exponent) of the spacing between the lambdas
+# parap d - path to the mdp files
 
 SETRUN_ARGS="$@"
 #Default Values

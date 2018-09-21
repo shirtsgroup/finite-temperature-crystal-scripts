@@ -1,8 +1,8 @@
 #!/bin/bash
 
-#BASH SCRIPT TO ADD FULL PRECISION TO A GRO FILE GIVEN A TINKER XYZ FILE
-#param g - The name of the .gro file
-#param x - The name of the .xyz file
+# BASH SCRIPT TO ADD FULL PRECISION TO A GRO FILE GIVEN A TINKER XYZ FILE
+# param g - The name of the .gro file
+# param x - The name of the .xyz file
 
 SETRUN_ARGS="$@"
 grofile="frame.gro"
