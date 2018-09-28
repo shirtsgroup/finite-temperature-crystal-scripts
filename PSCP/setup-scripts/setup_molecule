@@ -1,54 +1,56 @@
 #!/bin/bash
 
-# BASH SCRIPT TO SET UP AN MD SIMULATION BASED ON USER SPECIFICATIONS
-# By: Eric Dybeck 12/22/2015
-# param n - polymorph number in the form 'p1'
-# param T - Temperature in K
-# param P - Pressure in bar
-# param M - Molecule name
-# param N - Number of total molecules
-# param I - Number of independent molecules (the remainder will be averaged)
-# param e - Number of steps in the equilibration step
-# param p - Number of steps in the production step
-# param i - Integrator
-# param t - Thermostat
-# param b - Barostat
-# param a - number of cores (threads) to run on
-# param k - minimum harmonic restraint constant
-# param K - maximum harmonic restraint constant
-# param D - drude oscillator spring constant (%)
-# param L - lambda state for the harmonic restraint
-# param U - unrestrained lambda value (%)
-# param R - restrained lambda value (%)
-# param s - spacing between the lambdas
-# param f - functional form (exponent) of the spacing between the lambdas
-# param G - Gamma state for the removal of intermolecular interactions
-# param g - spacing between the gammas
-# param d - Percentage for alchemically interpolating the original itp file (%)
-# param V - desired box volume (in cubic nm)
-# param r - vdw/coulomb cutoff distance (in angstroms)
-# param u - potential to be used in the simulation
-# param c - charge assigned to the carbon and hydrogen 
-# param C - Sigma value for Carbon (% of actual)
-# param H - Sigma value for Hydrogen (% of actual) 
-# param z - specify which simulation package we will use (gromacs or tinker)
-# param h - optional string hinge to add to the job
-# param E - specify the Thermodynamic Ensemble that will be used
-# param o - number of production outputs
+#BASH SCRIPT TO SET UP AN MD SIMULATION BASED ON USER SPECIFICATIONS
+#By: Eric Dybeck 12/22/2015
+#Edits on 06/16/2017 by Nate Abraham
 
-# Give these parameters, the script creates a directory in the jobs folder and copies
-# over the relevant .mdp, .gro and topology files to carry out the job. In addition
-# the .mdp files are manipulated away from the defaults based on the user specified
-# parameters. Finally, local and cluster submission scripts are copied over to allow
-# the job to be run.
+#=============================================================================================
+# USER SPECIFIED LOCATIONS
+#=============================================================================================
+#Exporting location to template coordinate and parameter files
+export TEMPLATEPATH="/home/nabraham/crystals/NMA/runfiles" #/PATH/TO/TEMPLATE/LOCATION"
 
-# Path the template files. Submissions scripts (local and cluster) as well as crystal templates.
-export TEMPLATEPATH="/home/nabraham/crystals/NMA/runfiles"
+#param n - polymorph number in the form 'p1'
+#param T - Temperature in K
+#param P - Pressure in bar
+#param M - Molecule name
+#param N - Number of total molecules
+#param I - Number of independent molecules (the remainder will be averaged)
+#param e - Number of steps in the equilibration step
+#param p - Number of steps in the production step
+#param i - Integrator
+#param t - Thermostat
+#param b - Barostat
+#param a - number of cores (threads) to run on
+#param k - minimum harmonic restraint constant
+#param K - maximum harmonic restraint constant
+#param D - drude oscillator spring constant (%)
+#param L - lambda state for the harmonic restraint
+#param U - unrestrained lambda value (%)
+#param R - restrained lambda value (%)
+#param s - spacing between the lambdas
+#param f - functional form (exponent) of the spacing between the lambdas
+#param G - Gamma state for the removal of intermolecular interactions
+#param g - spacing between the gammas
+#param d - Percentage for alchemically interpolating the original itp file (%)
+#param V - desired box volume (in cubic nm)
+#param r - vdw/coulomb cutoff distance (in angstroms)
+#param u - potential to be used in the simulation
+#param c - charge assigned to the carbon and hydrogen 
+#param C - Sigma value for Carbon (% of actual)
+#param H - Sigma value for Hydrogen (% of actual) 
+#param z - specify which simulation package we will use (gromacs or tinker)
+#param h - optional string hinge to add to the job
+#param E - specify the Thermodynamic Ensemble that will be used
+#param o - number of production outputs
 
-# Gromacs specific paths
-export GRO_genrestr="gmx genrestr"
+#Give these parameters, the script creates a directory in the jobs folder and copies
+#over the relevant .mdp, .gro and topology files to carry out the job. In addition
+#the .mdp files are manipulated away from the defaults based on the user specified
+#parameters. Finally, local and cluster submission scripts are copied over to allow
+#the job to be run.
 
-# JOBPATH is exported halfway through script. Default is to create directory in working directory.
+
 
 #=============================================================================================
 # SETUP DEFAULT VALUES AND READ IN PARAMETERS FROM USER
@@ -229,9 +231,6 @@ if [ "$PRESSURE" -lt "0" ]; then
 fi
 
 ##POLYMORPH NUMBER
-#if [ $polymorph_num != "p1" ] && [ $polymorph_num != "p2" ] && [ $polymorph_num != "p3" ] && [ $polymorph_num != "gas" ]; then
-#	echo "Unrecognized polymorph Number: $polymorph_num"
-#	exit 1
 if [ "$polymorph_num" == "gas" ]; then
 	integrator="sd"
 	CUTOFF="20"	
@@ -262,7 +261,6 @@ elif [ "$SIMULATION" == "tinker" ] && [ "$xyzfiles" == "" ]; then
     echo "Polymorph: $polymorph_num"
     echo "Number: $INDEPENDENT"
     exit 1
-
 fi
 
 #THERMOSTAT
@@ -364,7 +362,7 @@ if [ "$CUTOFF" -lt "0" ]; then
 fi
 
 #POTENTIAL
-potentiallist=("oplsaa gromos designedg oplsaatodesignedg designeda oplsaatodesigneda amoeba09 DMA PCA amoeba09todesa amoeba09restraint amoeba09interactions amoeba09multinp amoeba09mononp amoeba09monoopls amoeba09opls day drude")
+potentiallist=("oplsaa gromos designedg oplsaatodesignedg designeda oplsaatodesigneda amoeba09 DMA PCA amoeba09todesa amoeba09restraint amoeba09interactions amoeba09multinp amoeba09mononp amoeba09monoopls amoeba09opls day drude oplsaal")
 valid="false"
 for pot in $potentiallist; do
     if [ "$POTENTIAL" == "$pot" ]; then
@@ -508,6 +506,8 @@ elif [ "$POTENTIAL" == "day" ]; then
 	PotNAME="DAY"
 elif [ "$POTENTIAL" == "drude" ]; then
 	PotNAME="DRUDE"
+elif [ "$POTENTIAL" == "oplsaal" ]; then
+	PotNAME="OPLSL"
 fi
 
 #Format the charge and Sigma value names
@@ -580,16 +580,13 @@ if [ "$SIMULATION" == "gromacs" ]; then
 else
     export JOBNAME="${MOLNAME}_${SimNAME}_${PotNAME}_${polymorph_num}_${MOLNUM}_${TEMPNAME}K${PNAME}${DNAME}${hinge}"
 fi
+export JOBPATH="./${JOBNAME}"
 export GNAME="pre_EQ"
 export TNAME="topology"
-
-# Path where everything will get setup
-export JOBPATH="./${JOBNAME}"
 
 #make the directory if it does not already exist
 echo "Making Directory: ${JOBPATH} ..."
 mkdir ${JOBPATH}
-
 
 #OUTPUT FREQUENCY
 equil_output_frequency=$(echo "${equil_steps}/${EQOUTPUTS}" | bc)
@@ -600,21 +597,10 @@ anneal_output_frequency=$(echo "${anneal_steps}/${ANNEALOUTPUTS}" | bc)
 anneal_trr_output_frequency=$(echo "${anneal_steps}/${ANNEALTRROUTPUTS}" | bc)
 
 if [ "$SIMULATION" == "gromacs" ]; then
-
 	#COPY OVER THE INITIAL GRO FILE
         echo "Copying .gro file..."
-        #echo "${TEMPLATEPATH}/${MOLNAME}_${polymorph_num}_${MOLNUM}_${PRESSURE}bar_${PotNAME}${hinge}.gro ${JOBPATH}/${GNAME}.gro"
         if [ ${polymorph_num}  == "gas" ]; then
 		cp ${TEMPLATEPATH}/${MOLNAME}_gas_1.gro ${JOBPATH}/${GNAME}.gro
-        #If this is an initial equilibration job, use the original polymorph structure
-        #elif [ "$hinge" == "_NPT1" ]; then
-        #        if [ -f "${TEMPLATEPATH}/${MOLNAME}_${polymorph_num}_${MOLNUM}_000K_${PotNAME}.gro" ]; then
-        #                cp ${TEMPLATEPATH}/${MOLNAME}_${polymorph_num}_${MOLNUM}_000K_${PotNAME}.gro ${JOBPATH}/${GNAME}.gro
-        #                grofile="${TEMPLATEPATH}/${MOLNAME}_${polymorph_num}_${MOLNUM}_000K_${PotNAME}"
-        #        else
-        #                cp ${TEMPLATEPATH}/${MOLNAME}_${polymorph_num}_${MOLNUM}.gro ${JOBPATH}/${GNAME}.gro
-        #                grofile="${TEMPLATEPATH}/${MOLNAME}_${polymorph_num}_${MOLNUM}"
-        #        fi
         else
                 if [ -f "${TEMPLATEPATH}/${MOLNAME}_${polymorph_num}_${MOLNUM}_${TEMPNAME}K_${PRESSURE}bar_${PotNAME}.gro" ]; then
                         cp ${TEMPLATEPATH}/${MOLNAME}_${polymorph_num}_${MOLNUM}_${TEMPNAME}K_${PRESSURE}bar_${PotNAME}.gro ${JOBPATH}/${GNAME}.gro
@@ -713,20 +699,8 @@ if [ "$SIMULATION" == "gromacs" ]; then
 	    sed -i "s/ref_p.*/ref_p                    = ${PRESSURE} ${PRESSURE} ${PRESSURE} 0.0 0.0 0.0/g" ${JOBPATH}/anneal.mdp
 	    #If we are simply interested in getting to the average volume at a new pressure, use a fast time constant
 	    if [ "$barostat" == "berendsen" ]; then
-		#case $polymorph_num in
-		#p1 )
 		    sed -i "s/tau_p.*/tau_p                    = 1.0/g" ${JOBPATH}/equilibration.mdp
                     sed -i "s/tau_p.*/tau_p                    = 10.0/g" ${JOBPATH}/production.mdp
-		    #;;
-		#p2 )
-		#    sed -i "s/tau_p.*/tau_p                    = 1.0/g" ${JOBPATH}/equilibration.mdp
-                #    sed -i "s/tau_p.*/tau_p                    = 10.0/g" ${JOBPATH}/production.mdp
-		#    ;;
-		#p3 )
-		#    sed -i "s/tau_p.*/tau_p                    = 1.0/g" ${JOBPATH}/equilibration.mdp
-                #    sed -i "s/tau_p.*/tau_p                    = 10.0/g" ${JOBPATH}/production.mdp 
-		#    ;;
-		#esac
 	    fi
 	    #If this polymorph is not rectangular, change the compressibility to allow Beta to change
 	    string=$(less ${JOBPATH}/${GNAME}.gro | tail -1 | awk '{print $9}')
@@ -829,6 +803,9 @@ if [ "$SIMULATION" == "gromacs" ]; then
 	if [ "$POTENTIAL" == "oplsaa" ]; then
 	    sed -i "s/CCCCC/0.140/g" ${JOBPATH}/parameters.txt
 	    sed -i "s/HHHHH/0.108/g" ${JOBPATH}/parameters.txt
+	elif [ "$POTENTIAL" == "oplsaal" ]; then
+	    sed -i "s/CCCCC/0.140/g" ${JOBPATH}/parameters.txt
+            sed -i "s/HHHHH/0.108/g" ${JOBPATH}/parameters.txt
 	elif [ "$POTENTIAL" == "gromos" ]; then
 	    sed -i "s/CCCCC/0.139/g" ${JOBPATH}/parameters.txt
             sed -i "s/HHHHH/0.109/g" ${JOBPATH}/parameters.txt
@@ -855,13 +832,9 @@ if [ "$SIMULATION" == "gromacs" ]; then
 	   sed -i "s/0.115     1.008/${CHARGE}     1.008/g" ${JOBPATH}/molecule.itp
 	fi
 	sed -i "s/CCCHARGE/$CHARGE/g" ${JOBPATH}/parameters.txt
-	#sed -i "s/opls_145/opls_C${SigmaC}/g" ${JOBPATH}/molecule.itp
-        #sed -i "s/opls_146/opls_H${SigmaH}/g" ${JOBPATH}/molecule.itp
-
-	#cp ${TEMPLATEPATH}/molecule.itp ${JOBPATH}/molecule.itp
 
 	#CREATE THE POSITION RESTRAINT ITP FILE
-	echo "0 0" | ${GRO_genrestr} -f ${JOBPATH}/${GNAME}.gro -o ${JOBPATH}/posre.itp -fc $k_max $k_max $k_max -quiet >> /dev/null 
+	echo "0 0" | gmx genrestr -f ${JOBPATH}/${GNAME}.gro -o ${JOBPATH}/posre.itp -fc $k_max $k_max $k_max -quiet >> /dev/null 
 	
 	##Now lop off all but the first apermol + 4 lines
 	atoms=$(wc -l ${JOBPATH}/${GNAME}.gro | awk '{print $1}')
@@ -934,132 +907,92 @@ if [ "$SIMULATION" == "gromacs" ]; then
                 sed -i 's/oplsaa.ff/${MOLNAME}_designedd.ff/g' ${JOBPATH}/${TNAME}.top
 	elif [ "$POTENTIAL" == "drude" ]; then
                 sed -i 's/oplsaa.ff/drude.ff/g' ${JOBPATH}/${TNAME}.top
-		#sed -i "s/benzene $MOLECULES/benzene $(($MOLECULES/2+$MOLECULES))/g" ${JOBPATH}/${TNAME}.top
+	elif [ "$POTENTIAL" == "oplsaal" ]; then
+                sed -i 's/oplsaa.ff/oplsaa.ff/g' ${JOBPATH}/${TNAME}.top	
 	fi
 
-
-	#Copy over local and cluster submission scripts
-	echo "Copying local and cluster submission scripts..."
-	cp ${TEMPLATEPATH}/submit_local.sh ${JOBPATH}/submit_local.sh
-	cp ${TEMPLATEPATH}/submit_localitc.sh ${JOBPATH}/submit_localitc.sh
-	cp ${TEMPLATEPATH}/submit_localatlas.sh ${JOBPATH}/submit_localatlas.sh
-	cp ${TEMPLATEPATH}/submit_cluster.slurm ${JOBPATH}/submit_cluster.slurm
-	cp ${TEMPLATEPATH}/submit_cluster_bridges.slurm ${JOBPATH}/submit_cluster_bridges.slurm
-	cp ${TEMPLATEPATH}/submit_cluster_atlas.sh ${JOBPATH}/submit_cluster_atlas.sh
-	sed -i "s/DIRDIRDIRDIR/${JOBNAME}/g" ${JOBPATH}/submit_cluster.slurm
-	cp ${TEMPLATEPATH}/submit_minimization_local.sh ${JOBPATH}/submit_minimization_local.sh
-	cp ${TEMPLATEPATH}/submit_minimization.sh ${JOBPATH}/submit_minimization.sh
-	cp ${TEMPLATEPATH}/submit_relaxation.sh ${JOBPATH}/submit_relaxation.sh
-	cp ${TEMPLATEPATH}/relax_molecule.sh ${JOBPATH}/relax_molecule.sh
+        #Copy over local and cluster submission scripts
+        echo "Copying local and cluster submission scripts..."
+        CODEPATH=$(dirname $0)
+        cp ${TEMPLATEPATH}/submit_minimization_local.sh ${JOBPATH}/submit_minimization_local.sh
+        cp ${TEMPLATEPATH}/submit_minimization.sh ${JOBPATH}/submit_minimization.sh
+        cp ${TEMPLATEPATH}/submit_relaxation.sh ${JOBPATH}/submit_relaxation.sh
+        cp ${CODEPATH}/submit_local.sh ${JOBPATH}/
+        cp ${CODEPATH}/submit_cluster.slurm ${JOBPATH}/
+     
 
 	#if the number of equilibration steps is 0, skip the equilibration
+        equilibration=true
         if [ "$equil_steps" == "0" ]; then
-                sed -i "/EQUILIBRATION/,+5d" ${JOBPATH}/submit_local.sh
-                sed -i "/EQUILIBRATION/,+5d" ${JOBPATH}/submit_localitc.sh
-                sed -i "/EQUILIBRATION/,+5d" ${JOBPATH}/submit_cluster.slurm
-		sed -i "/EQUILIBRATION/,+5d" ${JOBPATH}/submit_cluster_bridges.slurm
-		sed -i "/EQUILIBRATION/,+5d" ${JOBPATH}/submit_cluster_atlas.sh
-                cp ${JOBPATH}/pre_EQ.gro ${JOBPATH}/EQ.gro
+                equilibration=false
                 echo "Skipping Equilibration..."
         fi	
 	
 	#If there is no force-averaging, remove the index file command
+        indexing=false
 	if [ "$MOLECULES" == "$INDEPENDENT" ]; then
-	    sed -i "s/-n index.ndx//g" ${JOBPATH}/submit_local.sh
-	    sed -i "s/-n index.ndx//g" ${JOBPATH}/submit_localitc.sh
-	    sed -i "s/-n index.ndx//g" ${JOBPATH}/submit_localatlas.sh
-	    sed -i "s/-n index.ndx//g" ${JOBPATH}/submit_cluster.slurm
-	    sed -i "s/-n index.ndx//g" ${JOBPATH}/submit_cluster_bridges.slurm
-	    sed -i "s/-n index.ndx//g" ${JOBPATH}/submit_cluster_atlas.sh
-	    sed -i "s/-n index.ndx//g" ${JOBPATH}/relax_molecule.sh
+            indexing=true
 	    sed -i "s/-n index.ndx//g" ${JOBPATH}/submit_minimization_local.sh
 	    sed -i "s/-n index.ndx//g" ${JOBPATH}/submit_minimization.sh
 	fi
 	
-	#If we are not using the drude oscillator potential, remove the drude settings from the mdp file
-	if [ "$POTENTIAL" != "drude" ]; then
-	    sed -i "/DRUDE-SPECIFIC SETTINGS/,+6d" ${JOBPATH}/equilibration.mdp
-	    sed -i "/DRUDE-SPECIFIC SETTINGS/,+6d" ${JOBPATH}/production.mdp
-	    sed -i "/DRUDE-SPECIFIC SETTINGS/,+6d" ${JOBPATH}/anneal.mdp
-	else
-	    sed -i "s/gromacs_forceavg2/gromacs_drude/g" ${JOBPATH}/submit_local.sh
-            sed -i "s/gromacs_forceavg2/gromacs_drude/g" ${JOBPATH}/submit_localitc.sh
-            sed -i "s/gromacs_forceavg2/gromacs_drude/g" ${JOBPATH}/submit_cluster.slurm
-	    sed -i "s/gromacs_forceavg2/gromacs_drude/g" ${JOBPATH}/submit_cluster_bridges.slurm
-	    sed -i "s/gromacs_forceavg2/gromacs_drude/g" ${JOBPATH}/submit_cluster_atlas.sh
-            sed -i "s/gromacs_forceavg2/gromacs_drude/g" ${JOBPATH}/submit_minimization.sh
-	fi
-
-	#IF WE ARE REWEIGHTING BETWEEN POTENTIALS, SWITCH THE RESTRAINT-LAMBDAS TO DEP-LAMBDAS IN THE MDP FILE	
-	if [ "$POTENTIAL" == "oplsaatofakeg" ] || [ "$POTENTIAL" == "oplsaatofakea" ]; then
-	    sed -i "s/restraint_lambdas        =/fep-lambdas              =/g" ${JOBPATH}/equilibration.mdp
-            sed -i "s/restraint_lambdas        =/fep-lambdas              =/g" ${JOBPATH}/production.mdp
-	fi
+#        #If we are not using the drude oscillator potential, remove the drude settings from the mdp file
+#        if [ "$POTENTIAL" != "drude" ]; then
+#                sed -i "/DRUDE-SPECIFIC SETTINGS/,+6d" ${JOBPATH}/equilibration.mdp
+#                sed -i "/DRUDE-SPECIFIC SETTINGS/,+6d" ${JOBPATH}/production.mdp
+#                sed -i "/DRUDE-SPECIFIC SETTINGS/,+6d" ${JOBPATH}/anneal.mdp
+#        else
+#                sed -i "s/gromacs_forceavg2/gromacs_drude/g" ${JOBPATH}/submit_local.sh
+#                sed -i "s/gromacs_forceavg2/gromacs_drude/g" ${JOBPATH}/submit_localitc.sh
+#                sed -i "s/gromacs_forceavg2/gromacs_drude/g" ${JOBPATH}/submit_cluster.slurm
+#                sed -i "s/gromacs_forceavg2/gromacs_drude/g" ${JOBPATH}/submit_cluster_bridges.slurm
+#                sed -i "s/gromacs_forceavg2/gromacs_drude/g" ${JOBPATH}/submit_cluster_atlas.sh
+#                sed -i "s/gromacs_forceavg2/gromacs_drude/g" ${JOBPATH}/submit_minimization.sh
+#        fi
+#
+#        #IF WE ARE REWEIGHTING BETWEEN POTENTIALS, SWITCH THE RESTRAINT-LAMBDAS TO DEP-LAMBDAS IN THE MDP FILE	
+#        if [ "$POTENTIAL" == "oplsaatofakeg" ] || [ "$POTENTIAL" == "oplsaatofakea" ]; then
+#            sed -i "s/restraint_lambdas        =/fep-lambdas              =/g" ${JOBPATH}/equilibration.mdp
+#            sed -i "s/restraint_lambdas        =/fep-lambdas              =/g" ${JOBPATH}/production.mdp
+#        fi
 	
-	#IF THIS IS THE PSCP, DONT REWEIGHT, ENERGY MINIMIZE, OR PICK THE AVERAGE CONFIGURATION
-	if [[ "$hinge" == *_L* ]] || [[ "$hinge" == *_G* ]]; then
-            sed -i "/RELAX THE BENZENES/,+1d" ${JOBPATH}/submit_localitc.sh
-            sed -i "/REWEIGHT THE JOB/,+4d" ${JOBPATH}/submit_localitc.sh
-	    sed -i "/RELAX THE BENZENES/,+1d" ${JOBPATH}/submit_cluster.slurm
-	    sed -i "/REWEIGHT THE JOB/,+4d" ${JOBPATH}/submit_cluster.slurm
-	    sed -i "/REWEIGHT THE JOB/,+4d" ${JOBPATH}/submit_cluster_bridges.slurm
-	    sed -i "/REWEIGHT THE JOB/,+4d" ${JOBPATH}/submit_cluster_atlas.sh
-	fi
+        # IF THIS IS THE PSCP, DONT REWEIGHT, ENERGY MINIMIZE, OR PICK THE AVERAGE CONFIGURATION
+        reweight=true
+        if [[ "$hinge" == *_L* ]] || [[ "$hinge" == *_G* ]]; then
+                reweight=false
+        fi
 	
-	#SET THE APPROPRIATE POST-SIMULATION REWEIGHTING	
-	if [ "$POTENTIAL" == "oplsaa" ]; then
-            sed -i "s/reweightjobgromacs.*/reweightjobgromacs -s gromacs -u \"oplsaa\"/g" ${JOBPATH}/submit_cluster.slurm
-            sed -i "/reweightjobdrude.*/d" ${JOBPATH}/submit_cluster.slurm
-	    sed -i "/reweightjobtinker.*/d" ${JOBPATH}/submit_cluster.slurm
-	    sed -i "s/reweightjobgromacs.*/reweightjobgromacs -s gromacs -u \"oplsaa\"/g" ${JOBPATH}/submit_cluster_atlas.sh
-            sed -i "/reweightjobdrude.*/d" ${JOBPATH}/submit_cluster_atlas.sh
-            sed -i "/reweightjobtinker.*/d" ${JOBPATH}/submit_cluster_atlas.sh
-	    sed -i "s/reweightjobgromacs.*/reweightjobgromacs -s gromacs -u \"oplsaa\"/g" ${JOBPATH}/submit_cluster_bridges.slurm
-            sed -i "/reweightjobdrude.*/d" ${JOBPATH}/submit_cluster_bridges.slurm
-            sed -i "/reweightjobtinker.*/d" ${JOBPATH}/submit_cluster_bridges.slurm
-	elif [ "$POTENTIAL" == "designeda" ] || [ "$POTENTIAL" == "oplsaatodesigneda" ]; then
-	    sed -i "s/reweightjobgromacs.*/reweightjobgromacs -s gromacs -u \"designeda\"/g" ${JOBPATH}/submit_cluster.slurm
-	    sed -i "s/reweightjobtinker.*/reweightjobtinker -s gromacs -u \"amoeba09todesa\" -d 10/g" ${JOBPATH}/submit_cluster.slurm
-	    sed -i "/reweightjobdrude.*/d" ${JOBPATH}/submit_cluster.slurm
-	    sed -i "s/reweightjobgromacs.*/reweightjobgromacs -s gromacs -u \"designeda\"/g" ${JOBPATH}/submit_cluster_atlas.sh
-            sed -i "s/reweightjobtinker.*/reweightjobtinker -s gromacs -u \"amoeba09todesa\" -d 10/g" ${JOBPATH}/submit_cluster_atlas.sh
-            sed -i "/reweightjobdrude.*/d" ${JOBPATH}/submit_cluster_atlas.sh
-	    sed -i "s/reweightjobgromacs.*/reweightjobgromacs -s gromacs -u \"designeda\"/g" ${JOBPATH}/submit_cluster_bridges.slurm
-            sed -i "s/reweightjobtinker.*/reweightjobtinker -s gromacs -u \"amoeba09todesa\" -d 10/g" ${JOBPATH}/submit_cluster_bridges.slurm
-            sed -i "/reweightjobdrude.*/d" ${JOBPATH}/submit_cluster_bridges.slurm
-	elif [ "$POTENTIAL" == "designedd" ] || [ "$POTENTIAL" == "drude" ]; then
-	    sed -i "s/reweightjobgromacs.*/reweightjobgromacs -s gromacs -u \"designedd\"/g" ${JOBPATH}/submit_cluster.slurm
-	    sed -i "/reweightjobtinker -s gromacs/d" ${JOBPATH}/submit_cluster.slurm
-	    if [ "$POTENTIAL" == "drude" ]; then
-		sed -i "s/reweightjobdrude -s gromacs/reweightjobdrude -s drude/g" ${JOBPATH}/submit_cluster.slurm
-	    fi
-	elif [ "$POTENTIAL" == "gromos" ] || [ "$POTENTIAL" == "designedg" ]; then
-            sed -i "s/reweightjobgromacs.*/reweightjobgromacs -s gromacs -u \"gromos54a7 oplsaa designedg\"/g" ${JOBPATH}/submit_cluster.slurm
-	    sed -i "/reweightjobdrude.*/d" ${JOBPATH}/submit_cluster.slurm
-	    sed -i "/convertjobtinker.*/d" ${JOBPATH}/submit_cluster.slurm
-	else
-	    sed -i "/convertjobtinker/d" ${JOBPATH}/submit_cluster.slurm
-	fi
-
-	#IF THIS IS NOT THE OPLS POTENTIAL, DONT FREEZE THE CONFIGURATONS INTO INDIVIDUAL LATTICE MINIMA
-	if [ "$POTENTIAL" != "oplsaa" ]; then
-	    sed -i "/FREEZE THE JOB/,+1d" ${JOBPATH}/submit_cluster.slurm
-	    sed -i "/FREEZE THE JOB/,+1d" ${JOBPATH}/submit_cluster_atlas.sh
-	    sed -i "/FREEZE THE JOB/,+1d" ${JOBPATH}/submit_cluster_bridges.slurm
-	fi
-
-	#Set the number of threads
-	sed -i "s/-nt 1/-nt ${cores}/g" ${JOBPATH}/submit_local.sh
-	sed -i "s/-nt 1/-nt ${cores}/g" ${JOBPATH}/submit_localitc.sh
-	sed -i "s/-nt 1/-nt ${cores}/g" ${JOBPATH}/submit_cluster.slurm
-	sed -i "s/-nt 1/-nt ${cores}/g" ${JOBPATH}/submit_cluster_bridges.slurm
-	sed -i "s/-nt 1/-nt ${cores}/g" ${JOBPATH}/submit_cluster_atlas.sh
-	sed -i "s/OMP_NUM_THREADS=.*/OMP_NUM_THREADS=${cores}/g" ${JOBPATH}/submit_cluster.slurm
-	sed -i "s/OMP_NUM_THREADS=.*/OMP_NUM_THREADS=${cores}/g" ${JOBPATH}/submit_cluster_atlas.sh
-	sed -i "s/OMP_NUM_THREADS=.*/OMP_NUM_THREADS=${cores}/g" ${JOBPATH}/submit_cluster_bridges.slurm
-	sed -i "s/ntasks=1/ntasks=${cores}/g" ${JOBPATH}/submit_cluster.slurm
-	sed -i "s/ntasks=1/ntasks=${cores}/g" ${JOBPATH}/submit_cluster_bridges.slurm
-	sed -i "s/ppn=1/ppn=${cores}/g" ${JOBPATH}/submit_cluster_atlas.sh
+        # SET THE APPROPRIATE POST-SIMULATION REWEIGHTING	
+        if [ "$POTENTIAL" == "oplsaa" ]; then
+            potential_to_pass="oplsaa"
+        elif [ "$POTENTIAL" == "designeda" ] || [ "$POTENTIAL" == "oplsaatodesigneda" ]; then
+            potential_to_pass="designeda"
+        elif [ "$POTENTIAL" == "designedd" ] || [ "$POTENTIAL" == "drude" ]; then
+            potential_to_pass="designedd"
+            if [ "$POTENTIAL" == "drude" ]; then
+                    echo "WARNING: DRUDE NO LONGER SET UP"
+            fi
+        elif [ "$POTENTIAL" == "gromos" ] || [ "$POTENTIAL" == "designedg" ]; then
+            potential_to_pass="gromos54a7 oplsaa designedg"
+        else
+            sed -i "/convertjobtinker/d" ${JOBPATH}/submit_cluster.slurm
+        fi
+#        #IF THIS IS NOT THE OPLS POTENTIAL, DONT FREEZE THE CONFIGURATONS INTO INDIVIDUAL LATTICE MINIMA
+#        if [ "$POTENTIAL" != "oplsaa" ]; then
+#                sed -i "/FREEZE THE JOB/,+1d" ${JOBPATH}/submit_cluster.slurm
+#                sed -i "/FREEZE THE JOB/,+1d" ${JOBPATH}/submit_cluster_atlas.sh
+#                sed -i "/FREEZE THE JOB/,+1d" ${JOBPATH}/submit_cluster_bridges.slurm
+#        fi
+        sed -i "s/rrrr/${reweight}/g" ${JOBPATH}/submit_local.sh
+        sed -i "s/eeee/${equilibration}/g" ${JOBPATH}/submit_local.sh
+        sed -i "s/iiii/${indexing}/g" ${JOBPATH}/submit_local.sh
+        sed -i "s/uuuu/${potential_to_pass}/g" ${JOBPATH}/submit_local.sh
+        sed -i "s/rrrr/${reweight}/g" ${JOBPATH}/submit_cluster.slurm
+        sed -i "s/eeee/${equilibration}/g" ${JOBPATH}/submit_cluster.slurm
+        sed -i "s/iiii/${indexing}/g" ${JOBPATH}/submit_cluster.slurm
+        sed -i "s/uuuu/${potential_to_pass}/g" ${JOBPATH}/submit_cluster.slurm
+        sed -i "s/aaaa/${cores}/g" ${JOBPATH}/submit_cluster.slurm
+        
 
 elif [ "$SIMULATION" == "tinker" ]; then	
 
@@ -1096,15 +1029,15 @@ elif [ "$SIMULATION" == "tinker" ]; then
 	#Modify the key and parameter file to match the potential
 	if [ "$POTENTIAL" == "oplsaa"  ] || [ "$POTENTIAL" == "day" ]; then
 		sed -i "s/amoeba09.prm/oplsaa.prm/g" ${JOBPATH}/keyfile.key
-		addatomtypesindividual -p oplsaa -x ${JOBPATH}/molecule.xyz -M $MOLECULE
+		${SCRIPT_LOC}/addatomtypesindividual -p oplsaa -x ${JOBPATH}/molecule.xyz -M $MOLECULE
 	elif [ "$POTENTIAL" == "oplsaafake" ]; then
 		sed -i "s/amoeba09.prm/oplsaafake.prm/g" ${JOBPATH}/keyfile.key
-		addatomtypesindividual -p oplsaa -x ${JOBPATH}/molecule.xyz -M $MOLECULE
+		${SCRIPT_LOC}/addatomtypesindividual -p oplsaa -x ${JOBPATH}/molecule.xyz -M $MOLECULE
         elif [ "$POTENTIAL" == "amoeba09todesa" ]; then
 		cp ${TEMPLATEPATH}/amoeba09todesa.prm ${JOBPATH}/param.prm
-		python interpolate_itp.py -f ${JOBPATH}/param.prm -d $DELTA
+		python ${SCRIPT_LOC}/interpolate_itp.py -f ${JOBPATH}/param.prm -d $DELTA
        		sed -i "s/PARAMETERS.*/PARAMETERS param.prm/g" ${JOBPATH}/keyfile.key
-		addatomtypesindividual -p amoeba09 -x ${JOBPATH}/molecule.xyz -M $MOLECULE
+		${SCRIPT_LOC}/addatomtypesindividual -p amoeba09 -x ${JOBPATH}/molecule.xyz -M $MOLECULE
 	#elif [ "$POTENTIAL" == "amoeba09restraint" ]; then
 	#	cp ${TEMPLATEPATH}/amoeba09.prm ${JOBPATH}/param.prm
 	#	sed -i "s/PARAMETERS.*/PARAMETERS param.prm/g" ${JOBPATH}/keyfile.key
@@ -1122,7 +1055,7 @@ elif [ "$SIMULATION" == "tinker" ]; then
         #        addatomtypesindividual -p amoeba09 -x ${JOBPATH}/molecule.xyz -M $MOLECULE
 	else
 		sed -i "s/\/params.*/\/params\/${POTENTIAL}.prm/g" ${JOBPATH}/keyfile.key
-		addatomtypesindividual -p amoeba09 -x ${JOBPATH}/molecule.xyz -M $MOLECULE
+		${SCRIPT_LOC}/addatomtypesindividual -p amoeba09 -x ${JOBPATH}/molecule.xyz -M $MOLECULE
 		#cp ${JOBPATH}/keyfile.key ${JOBPATH}/relax.key
 		#sed -i "s/PARAMETERS.*/PARAMETERS relax.prm/g" ${JOBPATH}/relax.key
 		#cp ${TEMPLATEPATH}/amoeba09interactions.prm ${JOBPATH}/relax.prm
@@ -1241,4 +1174,5 @@ for file in $(ls ${JOBPATH}); do
 done
 
 echo "Done!"
+
 
