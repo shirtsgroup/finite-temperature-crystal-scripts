@@ -1,0 +1,118 @@
+#!/bin/bash
+
+# =============================================================================================
+# SETUP DEFAULT VALUES AND READ IN PARAMETERS FROM USER
+# =============================================================================================
+SETRUN_ARGS="$@"
+cores=1
+reweight=true
+equilibration=true
+indexing=false
+potential="oplsaa"
+
+while getopts "a:r:E:i:u:" opt; do
+        case $opt in
+        a )
+                cores=$OPTARG
+                ;;
+        r )
+                reweight=$OPTARG
+                ;;
+        E )
+                equilibration=$OPTARG
+                ;;
+        i )
+                indexing=$OPTARG
+                ;;
+        u )
+                potential=$OPTARG
+                ;;
+        esac
+done
+
+# =============================================================================================
+# EXPORTING GROMACS COMMANDS
+# =============================================================================================
+export GRO_grompp="gmx grompp"
+export GRO_mdrun="gmx mdrun"
+export GRO_energy="gmx energy"
+export GRO_trjconv="gmx trjconv"
+
+sleep 1
+
+# =============================================================================================
+# RUNNING THE SIMULATION
+# =============================================================================================
+#Change the job status to 'SUBMITTED'
+echo "SUBMITTED" > jobstatus.txt
+
+if [ $equilibration == true ]; then
+        # EQUILIBRATION
+        if [ $indexing == true ]; then
+                # For force-averaging
+                ${GRO_grompp} -f equilibration.mdp -c pre_EQ.gro -r restraint.gro -p topology.top -o EQ.tpr -n index.ndx  -maxwarn 10
+        else
+                ${GRO_grompp} -f equilibration.mdp -c pre_EQ.gro -r restraint.gro -p topology.top -o EQ.tpr  -maxwarn 10
+        fi
+        ${GRO_mdrun} -nt $cores -v -deffnm EQ -dhdl dhdl_EQ
+        
+        sleep 1
+        
+        # EXTRACT THE FINAL FRAME FROM THE OUTPUT XTC FILE AND USE IT AS THE FINAL EQUILIBRATION FRAME
+        echo "Total-Energy" | ${GRO_energy} -f EQ.edr -o time.xvg
+        finaltime=$(tail -1 time.xvg | awk '{print $1}')
+        rm EQ.gro
+        echo 0 | ${GRO_trjconv} -f EQ.xtc -s EQ.tpr -o EQ.gro -pbc whole -ndec 12 -dump $finaltime
+fi
+
+sleep 1
+
+# PRODUCTION
+${GRO_grompp} -f production.mdp -c EQ.gro -r restraint.gro -p topology.top -o PROD.tpr  -maxwarn 10
+${GRO_mdrun} -nt $cores -v -deffnm PROD -dhdl dhdl_PROD
+
+sleep 1
+
+# EXTRACT THE FINAL FRAME FROM THE OUTPUT TRR FILE AND USE IT AS THE FINAL PRODUCTION FRAME
+echo "Total-Energy" | ${GRO_energy} -f PROD.edr -o time.xvg
+finaltime=$(tail -1 time.xvg | awk '{print $1}')
+rm PROD.gro
+echo 0 | ${GRO_trjconv} -f PROD.trr -s PROD.tpr -o PROD.gro -pbc whole -ndec 12 -dump $finaltime
+
+sleep 1
+
+# Determine the code path
+CODEPATH=$(dirname $0)
+
+# CALCULATE THE CONFIGURATION ENERGIES AND ENSEMBLE AVERAGES
+${CODEPATH}/run-scripts/crunchjobenergy
+
+sleep 1
+
+# RELAX THE MOLECULE AND ENERGY MINIMIZE THE INTRAMOLECULAR INTERACTIONS TO CREATE THE RESTRAINT FILES
+${CODEPATH}/run-scripts/relax_molecule -i ${indexing}
+
+if [ $reweight == true ]; then
+        # REWEIGHT THE JOB INTO THE OTHER POTENTIALS IF THERE ARE NO RESTRAINTS
+        ${CODEPATH}/run-scripts/reweightjobgromacs -s gromacs -u $potential
+        if [ $potential == "designeda" ]; then
+                ${CODEPATH}/run-scripts/reweightjobtinker -s gromacs -u "amoeba09todesa" -d 10
+        fi
+        rm -rf TinkerXYZ
+fi
+
+#FREEZE THE JOB INTO A SET OF LATTICE MINIMA
+#run-scripts/freezejobgromacs
+#run-scripts/freezejobtinker 
+
+#DELETE THE LOGFILE IF THE JOB FINISHED CORRECTLY
+if [ -f PROD.log ] && [ "$(tail -1 PROD.log | awk '{print $1}')" == "Finished" ]; then
+    rm logfile
+fi
+
+echo "FINISHED" > jobstatus.txt
+# print end time
+echo
+echo "Job Ended at `date`"
+echo "###################################################################"
+
