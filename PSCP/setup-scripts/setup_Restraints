@@ -124,6 +124,7 @@ done
 # ENSURE THAT INPUTS HAVE BEEN PROPERLY ENTERED
 #=============================================================================================
 
+
 #TEMPERATURE
 if [ $TEMP == -1 ]; then
 	echo "Invalid Temperature: $Temp"

@@ -1,3 +1,4 @@
+from __future__ import print_function
 # !/usr/bin/python
 #
 # Interpolate an itp file
@@ -37,7 +38,7 @@ frac = float(options.frac)
 # Ensure that all inputs are correct
 # =============================================================================================
 if frac < 0.0 or frac > 1.0:
-    print "Fraction (" + str(frac) + ") must be between 0.0 and 1.0!"
+    print("Fraction (" + str(frac) + ") must be between 0.0 and 1.0!")
     sys.exit()
 
 # =============================================================================================
@@ -48,7 +49,7 @@ infile = open(fname, 'r')
 lines = infile.readlines()
 infile.close()
 
-print "INTERPOLATING..."
+print("INTERPOLATING...")
 for line in lines:
     tokens = line.split()
     if 'INTERPOLATE' not in tokens:
