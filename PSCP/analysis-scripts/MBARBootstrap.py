@@ -1,3 +1,4 @@
+from __future__ import print_function
 
 #
 # Conducts bootstrap sampling on a u_kln Matrix using MBAR
@@ -58,14 +59,14 @@ def runMBARBootstrap(u_kln_orig, N_k, beta_k, N, indexVect, datafile, stdfile, n
     # ENSURE THE INPUTS ARE CORRECT
     #=============================================================================================
     if len(numpy.shape(N_k))==1 and len(N_k) != len(u_kln[:,0,0]):
-	print "Number of states in the U_kln matrix: " + str(len(u_kln[:,0,0])) + " and in the N_k matrix: " + str(len(N_k)) + " are not the same!"
+	print("Number of states in the U_kln matrix: " + str(len(u_kln[:,0,0])) + " and in the N_k matrix: " + str(len(N_k)) + " are not the same!")
 	sys.exit()
     elif int(len(indexVect[:,0]) != int(2)):
-	print "indexVect shape: " + str(numpy.shape(indexVect)) + " is not valid"
+	print("indexVect shape: " + str(numpy.shape(indexVect)) + " is not valid")
 	sys.exit()
 
     if len(numpy.shape(N_k)) != 1 and len(N_k[:,1]) != len(indexVect[0,:]):
-	print "N_k shape: " + str(numpy.shape(N_k)) + " and indexVect shape: " + str(numpy.shape(indexVect)) + " is not valid"
+	print("N_k shape: " + str(numpy.shape(N_k)) + " and indexVect shape: " + str(numpy.shape(indexVect)) + " is not valid")
 
 
     #Read in any previously generated data in the data file
@@ -75,7 +76,7 @@ def runMBARBootstrap(u_kln_orig, N_k, beta_k, N, indexVect, datafile, stdfile, n
 	infile = open(fnameData, 'r')
 	lines = infile.readlines()
 	infile.close()
-	print "loading " + fnameData
+	print("loading " + fnameData)
 	for line in lines:
 	    token=line.split()
 	    if token[0] == '#':
@@ -91,7 +92,7 @@ def runMBARBootstrap(u_kln_orig, N_k, beta_k, N, indexVect, datafile, stdfile, n
 	infile = open(fnameStd, 'r')
 	lines = infile.readlines()
 	infile.close()
-	print "loading " + fnameStd
+	print("loading " + fnameStd)
 	for line in lines:
 	    token=line.split()
 	    if token[0] == '#':
@@ -109,7 +110,7 @@ def runMBARBootstrap(u_kln_orig, N_k, beta_k, N, indexVect, datafile, stdfile, n
 
     #Now run the iterative bootstrapping algorithm on this dataset
     for j in range (previous_lines,iteration_max):
-	print "BOOTSTRAP ITERATION: " + str(j+1)
+	print("BOOTSTRAP ITERATION: " + str(j+1))
 
 	if len(numpy.shape(N_k))==1:
 	    N_ks=1
@@ -133,7 +134,7 @@ def runMBARBootstrap(u_kln_orig, N_k, beta_k, N, indexVect, datafile, stdfile, n
 		    u_kln[k,:,n] = u_kln_save[k,:,randomnum]
 	
 	    # Initialize MBAR.
-	    print "Running MBAR..."
+	    print("Running MBAR...")
 
 	    # generate the weights
 	    if j>previous_lines:
@@ -216,7 +217,7 @@ def runMBARBootstrap(u_kln_orig, N_k, beta_k, N, indexVect, datafile, stdfile, n
 def ExtractBootstrap(fname):
 
     if not os.path.isfile(fname):
-        print "File: " + fname + " not found!"
+        print("File: " + fname + " not found!")
 	os.exit()
     
     infile = open(fname, 'r')
@@ -243,7 +244,7 @@ def ExtractBootstrap(fname):
 def ExtractBootstrapLine(fname, linenum):
 
     if not os.path.isfile(fname):
-        print "File: " + fname + " not found!"
+        print("File: " + fname + " not found!")
         os.exit()
 
     infile = open(fname, 'r')

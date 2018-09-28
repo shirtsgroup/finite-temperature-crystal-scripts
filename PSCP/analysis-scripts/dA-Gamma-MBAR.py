@@ -1,3 +1,4 @@
+from __future__ import print_function
 #
 # Computing the free energy difference of an organic crystal polymorph at different gamma values
 # 
@@ -71,16 +72,16 @@ if (options.plot):
 # =============================================================================================
 # TEMPERATURE
 if Temp < 0:
-    print "Invalid Temperature: " + str(Temp)
+    print("Invalid Temperature: " + str(Temp))
     sys.exit()
 
 # GAMMA
 if (MINGAMMA == -1) and (MAXGAMMA == -1) and (GSPACING == -1) and (exponent == 1):
-    print "Using default values!"
+    print("Using default values!")
     # The Gamma points sampled
     Gammas = ['000L', '010L', '020L', '030L', '040L', '050L', '060L', '070L', '080L', '090L', '100L']
 elif MINGAMMA < 0 or MAXGAMMA < 0 or GSPACING < 0 or MINGAMMA > MAXGAMMA:
-    print "Invalid Gamma Specifications"
+    print("Invalid Gamma Specifications")
     sys.exit()
 else:
     RawGamma = MINGAMMA
@@ -108,7 +109,7 @@ else:
 
 # LAMBDA
 if LAMBDA < 0 or LAMBDA > 100:
-    print "Invalid Lambda Point: " + str(LAMBDA)
+    print("Invalid Lambda Point: " + str(LAMBDA))
     sys.exit()
 
 # POLYMORPH
@@ -122,8 +123,8 @@ for i, token in enumerate(polymorphs):
 # POTENTIAL
 if potential != "oplsaa" and potential != "gromos" and potential != "designeda" and potential != "oplsaafakeg" and \
                 potential != "oplsaafakea":
-    print "Invalid Potential"
-    print "Supported potentials: oplsaa gromos designeda oplsaafakeg oplsaafakea"
+    print("Invalid Potential")
+    print("Supported potentials: oplsaa gromos designeda oplsaafakeg oplsaafakea")
     sys.exit()
 
 # =============================================================================================
@@ -209,8 +210,8 @@ omitT = []  # Temperatures to be omitted from the analysis
 
 # Parameters
 T_k = Temp * np.ones(len(Gammas), float)  # Convert temperatures to floats
-print T_k
-print Gammas
+print(T_k)
+print(Gammas)
 #seeds = [201]; #The random seed used (not included at the moment)
 g_k = np.zeros([len(Gammas)], float)
 K = len(Gammas)  # How many states?
@@ -275,11 +276,11 @@ for i, poly in enumerate(polymorph):
                 infile = open(fname, 'r')
                 lines = infile.readlines()
                 infile.close()
-                print "loading " + fname
+                print("loading " + fname)
                 infile = open(dhdlname, 'r')
                 lines_dhdl = infile.readlines()
                 infile.close()
-                print "loading " + dhdlname
+                print("loading " + dhdlname)
                 ignorecounter = 0
                 for counter, line in enumerate(lines):
                     tokens_energy = line.split()
@@ -360,39 +361,39 @@ for i, poly in enumerate(polymorph):
             N_k[k] = len(indices)
             u_kln[k,:,0:N_k[k]] = u_kln_save[k,:,indices].transpose()  # not sure why we have to transpose
     """ 
-    print "Number of retained samples"
-    print N_k
-    print "Number of retained samples from each seed"
-    print N_k_s
+    print("Number of retained samples")
+    print(N_k)
+    print("Number of retained samples from each seed")
+    print(N_k_s)
 
     # =============================================================================================
     # COMPUTE FREE ENERGY DIFFERENCE USING MBAR
     # =============================================================================================
     
     # Initialize MBAR.
-    print "Running MBAR..."
+    print("Running MBAR...")
 
     # generate the weights of each of the umbrella set
     #mbar = pymbar.MBAR(u_kln, N_k, verbose = True, method = 'adaptive', use_optimized=False)
     mbar = pymbar.MBAR(u_kln, N_k, verbose=True, subsampling_protocol=[{'method': 'L-BFGS-B'}])
 
-    print "MBAR Converged..."
+    print("MBAR Converged...")
     # testing
     
     for k in range(Kbig):
         w = np.exp(mbar.Log_W_nk[:, k])
-        print "max weight in state %d is %12.7f" % (k, np.max(w))
+        print("max weight in state %d is %12.7f" % (k, np.max(w)))
         # using Kish (1965) formula.
         # effective # of samples =  (\sum_{i=1}^N w_i)^2 / \sum_{i=1}^N w_i^2
         #                        =  (\sum_{i=1}^N w_i^2)^-1
         neff = 1 / np.sum(w ** 2)
-        print "Effective number of sample in state %d is %10.3f" % (k, neff)
-        print "Efficiency for state %d is %d/%d = %10.4f" % (k, neff, len(w), neff / len(w))
+        print("Effective number of sample in state %d is %10.3f" % (k, neff))
+        print("Efficiency for state %d is %d/%d = %10.4f" % (k, neff, len(w), neff / len(w)))
 
     # extract self-consistent weights and uncertainties
     (df_i, ddf_i, theta_i) = mbar.getFreeEnergyDifferences()
 
-    print "Free Energies Optained..."
+    print("Free Energies Optained...")
 
     # convert PMF to kcal/mol and normalize by the number of molecules
     df_i /= (beta_k[0] * float(Independent))
@@ -412,7 +413,7 @@ for i, poly in enumerate(polymorph):
             for s in range(len(hinges)):
                 #g_k[k] = timeseries.statisticalInefficiency(u_kln[k,k,0:N_k[k]])
                 g_k[k] = timeseries.statisticalInefficiency(dhdl_kn[k, n_old: (n_old + N_k_s[k, s])])
-                print "Correlation time for sampled state %d is %10.3f" % (k, g_k[k])
+                print("Correlation time for sampled state %d is %10.3f" % (k, g_k[k]))
                 # subsample the data to get statistically uncorrelated data
                 indices = np.array(timeseries.subsampleCorrelatedData(u_kln[k, k, n_old:(n_old + N_k_s[k, s])],
                                                                       g=g_k[k]))  # subsample
@@ -421,22 +422,22 @@ for i, poly in enumerate(polymorph):
                 u_kln[k, :, N_k[k]: (N_k[k] + len(indices))] = u_kln_save[k, :, (indices + n_old)].transpose()
                 N_k[k] = N_k[k] + len(indices)
                 n_old += N_k_s[k, s]
-    print "Number of retained samples"
-    print N_k
-    print "Number of retained samples from each seed"
-    print N_k_s
+    print("Number of retained samples")
+    print(N_k)
+    print("Number of retained samples from each seed")
+    print(N_k_s)
 
     # generate the weights of each of the umbrella set
     #mbar = pymbar.MBAR(u_kln, N_k, verbose = True, method = 'adaptive', use_optimized=False)
     mbar = pymbar.MBAR(u_kln, N_k, verbose=True, subsampling_protocol=[{'method': 'L-BFGS-B'}])
 
-    print "MBAR Converged..."
+    print("MBAR Converged...")
     # testing
 
     # extract self-consistent weights and uncertainties
     (df_u, ddf_u, theta_i) = mbar.getFreeEnergyDifferences()
 
-    print "Free Energies Optained..."
+    print("Free Energies Optained...")
 
     #convert PMF to kcal/mol and normalize by the number of molecules
     df_u /= (beta_k[0] * float(Independent))
@@ -445,9 +446,9 @@ for i, poly in enumerate(polymorph):
     ddA[i, :] = ddf_u[0]
     
     # Write out free energy differences
-    print "Free Energy Difference (in units of kcal/mol)"
+    print("Free Energy Difference (in units of kcal/mol)")
     for k in range(Kbig):
-        print "%8.3f %8.3f" % (-df_i[k, 0], ddf_u[k, 0])
+        print("%8.3f %8.3f" % (-df_i[k, 0], ddf_u[k, 0]))
       
      
     ##Calculate the uncertainties using bootstrapping
@@ -472,7 +473,7 @@ for i, poly in enumerate(polymorph):
 # PRINT THE FINAL DATA
 # =============================================================================================
 for i, poly in enumerate(polymorph):
-    print poly + ": " + "%8.3f %8.3f" % (dA[i, Kbig - 1], ddA[i, Kbig - 1])
+    print(poly + ": " + "%8.3f %8.3f" % (dA[i, Kbig - 1], ddA[i, Kbig - 1]))
 
 
 # =============================================================================================

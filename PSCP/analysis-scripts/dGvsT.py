@@ -4,6 +4,7 @@
 # 
 # Copyright Michael R. Shirts, University of Virginia, 2014
 #
+from __future__ import print_function
 import numpy as np
 import pymbar # multistate Bennett acceptance ratio
 from pymbar import timeseries # timeseries analysis
@@ -420,7 +421,7 @@ if (options.plot):
 # =============================================================================================
 # Pressure
 if Pressure < 0:
-    print "Invalid Pressure: " + str(Pressure)
+    print("Invalid Pressure: " + str(Pressure))
     sys.exit()
 
 # SIMULATION
@@ -429,13 +430,13 @@ if options.simulation == 'gromacs':
 elif options.simulation == 'tinker':
     simulation_short = 'TIN'
 else:
-    print "Invalid Simulation Package: " + str(options.simulation)
+    print("Invalid Simulation Package: " + str(options.simulation))
     sys.exit()
 
 # ENSEMBLE
 if ensemble != "NVE" and ensemble != "NVT" and ensemble != "NPT":
-    print "Invalid Ensemble"
-    print "Supported Ensembles: NVE NVT NPT"
+    print("Invalid Ensemble")
+    print("Supported Ensembles: NVE NVT NPT")
     sys.exit()
 
 # =============================================================================================
@@ -600,25 +601,25 @@ for p, polymorph in enumerate(Polymorphs):
                 #pdb.set_trace()
                 #u_kln[k,l:(l+len(Temperatures)),:N] += Pressures.reshape(len(Temperatures),1)*V_pkn[p,t,:N].reshape(1,N)* Bar_to_Pa * nm_to_M**3 * 0.001 * Na
 
-    print "Start1"
+    print("Start1")
     # Convert all units to kcal
     u_pklnT[p, :, :, :] *= kJ_to_kcal
     u_kln *= kJ_to_kcal
     
-    print "Start2"
+    print("Start2")
     # If this was already in kcal or already fully independent, revert
     for j in range(len(Potentials)):
         if Potentials[j][:6] == "amoeba":
             u_pklnT[p, :, j * len(Temperatures):(j + 1) * len(Temperatures), :, :] /= kJ_to_kcal
             u_kln[:, j * len(Temperatures):(j + 1) * len(Temperatures), :] /= kJ_to_kcal
     
-    print "Start3"
+    print("Start3")
     # Remove dependent molecules
     for j in range(len(Potentials)):
         if Potentials[j][:6] != "amoeba":
             u_pklnT[p, :, j * len(Temperatures):(j + 1) * len(Temperatures), :, :] *= float(Independent) / Molecules
             u_kln[:, j * len(Temperatures):(j + 1) * len(Temperatures), :] *= float(Independent) / Molecules
-    print "Start4"
+    print("Start4")
 
     # Now average together the energies and volumes at each state
     for t in range(len(Temperatures)):
@@ -627,17 +628,17 @@ for p, polymorph in enumerate(Polymorphs):
         V_avg[p, t] = np.average(V_pkn[p, t, :N_k[t]]) / float(Independent)
         ddV_avg[p, t] = np.std(V_pkn[p, t, :N_k[t]]) / N_k[t] ** 0.5 / float(Independent)
 
-    print "Start5"
+    print("Start5")
     # convert to nondimensional units from kcal/mol
     for k, beta in enumerate(beta_k):
         u_kln[:, k, :] *= beta
 
     u_kln_save = u_kln.copy()
     N_k_save = N_k.copy()
-    print "End!"
+    print("End!")
 
-    print "Number of retained samples"
-    print N_k
+    print("Number of retained samples")
+    print(N_k)
 
     # Now create the full N_k matrix including the roll-backs as well as the free energy container
     # N_k_matrix[i,k] is the total number of snapshots from alchemical state k using in spacing i
@@ -656,25 +657,25 @@ for p, polymorph in enumerate(Polymorphs):
    	if i==0 and len(Potentials)==1: 
 	    continue
         # Initialize MBAR.
-        print "Running MBAR..."
+        print("Running MBAR...")
         # generate the weights of each of the umbrella set
         #mbar = pymbar.MBAR(u_kln, N_k, verbose = True, method = 'adaptive', use_optimized=False)
         mbar = pymbar.MBAR(u_kln, N_k_matrix[i,:], verbose = True)
-        print "MBAR Converged..."
+        print("MBAR Converged...")
     
         # extract self-consistent weights and uncertainties
         (df_i, ddf_i, theta_i) = mbar.getFreeEnergyDifferences()
 	# extract entropy
 	[Delta_f_ij, dDelta_f_ij, Delta_u_ij, dDelta_u_ij, Delta_s_ij, dDelta_s_ij] = mbar.computeEntropyAndEnthalpy()
     
-        print "Free Energies Optained..."
+        print("Free Energies Optained...")
     
         #Store the dimensionless results in the dA container
         dA[p,i,:] = df_i[refk]
 	dH_mbar[p,i,:] = Delta_u_ij[0]
 	dS_mbar[p,i,:] = Delta_s_ij[0]
 	ddS_mbar[p,i,:] = dDelta_s_ij[0]
-	print dA
+	print(dA)
     
     #=============================================================================================
     # COMPUTE UNCERTAINTY USING MBAR
@@ -687,24 +688,24 @@ for p, polymorph in enumerate(Polymorphs):
         for k in range(K):
     	    #subsample correlated data - for now, use energy from current state
     	    if N_k_matrix[i,k]>0:
-    	        print N_k_matrix[i,k]
+    	        print(N_k_matrix[i,k])
     	        #print str(i) + ' ' + str(k)
     	        #print u_kln_save[k,k,0:100]
     	        g_k[k] = timeseries.statisticalInefficiency(u_kln_save[k,k,0:100])
-    	        print "Correlation time for phase (%s), sampled state %d is %10.3f" % (phase,k,g_k[k])
+    	        print("Correlation time for phase (%s), sampled state %d is %10.3f" % (phase,k,g_k[k]))
     	        # subsample the data to get statistically uncorrelated data
     	        indices = np.array(timeseries.subsampleCorrelatedData(u_kln_save[k, k, 0:N_k_matrix[i,k]], g=g_k[k]))  # subsample
     	        N_k_matrix[i,k] = len(indices)
     	        u_kln[k,:,0:N_k_matrix[i,k]] = u_kln_save[k,:,indices].transpose()  # not sure why we have to transpose
         
-        print "Number of retained samples"
-        print N_k
+        print("Number of retained samples")
+        print(N_k)
     
-        print "Running MBAR..."
+        print("Running MBAR...")
     
         # generate the weights of each state
         mbar = pymbar.MBAR(u_kln, N_k_matrix[i,:], verbose = True)
-        print "MBAR Converged..." 
+        print("MBAR Converged...") 
 
         # extract self-consistent weights and uncertainties
         (df_u, ddf_u, theta_u) = mbar.getFreeEnergyDifferences()
@@ -718,7 +719,7 @@ for p, polymorph in enumerate(Polymorphs):
         weights_in_gromos = np.zeros(K,float)
         for k in range(K):
     	    w = np.exp(mbar.Log_W_nk[:,k])
-    	    print "max weight in state %d is %12.7f" % (k,np.max(w))
+    	    print("max weight in state %d is %12.7f" % (k,np.max(w)))
     	    # using Kish (1965) formula.
     	    # effective # of samples =  (\sum_{i=1}^N w_i)^2 / \sum_{i=1}^N w_i^2
     	    #                        =  (\sum_{i=1}^N w_i^2)^-1
@@ -726,19 +727,19 @@ for p, polymorph in enumerate(Polymorphs):
     	    #Store the effective number of samples in the target potential with no sampling
     	    if i==0 and k==0:
     	        neff_target=neff
-    	    print "Effective number of sample in state %d is %10.3f" % (k,neff)
-    	    print "Efficiency for state %d is %d/%d = %10.4f" % (k,neff,len(w),neff/len(w))
+    	    print("Effective number of sample in state %d is %10.3f" % (k,neff))
+    	    print("Efficiency for state %d is %d/%d = %10.4f" % (k,neff,len(w),neff/len(w)))
     	    Efficiency[k] = neff/len(w) #Store the efficiency
     	    w_0 = np.exp(mbar.Log_W_nk[:,0]) #Weights in gromos
     	    initial_configs = np.sum(N_k[0:k])
     	    final_configs = np.sum(N_k[0:k+1])
-    	    print "Total weight in gromos " + str(np.sum(w_0[initial_configs:final_configs]))
+    	    print("Total weight in gromos " + str(np.sum(w_0[initial_configs:final_configs])))
     	    weights_in_gromos[k] = np.sum(w_0[initial_configs:final_configs])
     
         # Write out free energy differences
-        print "Free Energy Difference (in units of kcal/mol)"
+        print("Free Energy Difference (in units of kcal/mol)")
         for k in range(K):
-    	    print "%8.3f %8.3f" % (-df_i[k,0], ddf_u[k,0])   
+    	    print("%8.3f %8.3f" % (-df_i[k,0], ddf_u[k,0]))   
     
         #Store the dimensionless results in the ddA container
         ddA[p,i,:] = ddf_u[refk]
@@ -766,8 +767,8 @@ for p, polymorph in enumerate(Polymorphs):
 #os.exit()
 #Check the overlap it necessary
 if len(Temperatures)==2:
-    print "Overlap:"
-    print O_pij
+    print("Overlap:")
+    print(O_pij)
     pdb.set_trace()
 
 #=============================================================================================
@@ -857,9 +858,9 @@ for i in range(spacing+1):
 	    dS[p,i,t] = (dU[p,t]-dU[0,t]-dG[p,i,t])/float(T)
 	    ddS[p,i,t] = (ddU[p,t]**2 + ddU[p,t]**2 + ddG[p,i,t]**2)**0.5/float(T)
 
-print "Polymorph Free Energy:"
+print("Polymorph Free Energy:")
 for p in range(len(Polymorphs)):
-    print "%8.3f %8.3f" % (dG[p,spacing,len(Temperatures)-1], ddG[p,spacing,len(Temperatures)-1])
+    print("%8.3f %8.3f" % (dG[p,spacing,len(Temperatures)-1], ddG[p,spacing,len(Temperatures)-1]))
 
 
 ##Now print the y-intersept using both the 10K point and the 20K point
