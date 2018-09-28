@@ -1,0 +1,80 @@
+#!/bin/bash
+#SCRIPT TO CREATE A NEW CELL BY EXPANDING THE ORIGINAL GRO FILE TO THE AVERAGE BOX VECTOR OF THE PRODUCTION TRAJECTORY
+
+# =============================================================================================
+# SETUP DEFAULT VALUES AND READ IN PARAMETERS FROM USER
+# =============================================================================================
+SETRUN_ARGS="$@"
+indexing=false
+
+while getopts "i:" opt; do
+        case $opt in
+        i )
+                indexing=$OPTARG
+                ;;
+        esac
+done
+
+# =============================================================================================
+# EXPORTING GROMACS COMMANDS
+# =============================================================================================
+export GRO_grompp="gmx grompp"
+export GRO_mdrun="gmx mdrun"
+export GRO_energy="gmx energy"
+export GRO_trjconv="gmx trjconv"
+
+export THREADINFO="-nt 1 "
+
+#DETERMINE THE AVERAGE BOX VECTOR
+CODEPATH=$(dirname $0)
+
+if [ "$(less pre_EQ.gro | tail -1 | awk '{print $4}')" == "" ]; then
+    echo -e "Box-X\nBox-Y\nBox-Z\n0" | ${GRO_energy} -f PROD.edr -o boxvect.xvg
+    python ${CODEPATH}/averageboxvectors.py -f boxvect.xvg -g pre_EQ.gro
+    BoxX=$(less avgboxvect.xvg | awk '{print $1}')
+    BoxY=$(less avgboxvect.xvg | awk '{print $2}')
+    BoxZ=$(less avgboxvect.xvg | awk '{print $3}')
+    Boxvect="$BoxX   $BoxY   $BoxZ"
+else
+    echo -e "Box-XX\nBox-YY\nBox-ZZ\nBox-YX\nBox-ZX\nBox-ZY\n0" | ${GRO_energy} -f PROD.edr -o boxvect.xvg
+    python ${CODEPATH}/averageboxvectors.py -f boxvect.xvg -g pre_EQ.gro
+    BoxXX=$(less avgboxvect.xvg | awk '{print $1}')
+    BoxYY=$(less avgboxvect.xvg | awk '{print $2}')
+    BoxZZ=$(less avgboxvect.xvg | awk '{print $3}')
+    BoxYX=$(less avgboxvect.xvg | awk '{print $4}')
+    BoxZX=$(less avgboxvect.xvg | awk '{print $5}')
+    BoxZY=$(less avgboxvect.xvg | awk '{print $6}')
+    Boxvect="$BoxXX   $BoxYY   $BoxZZ    0.000000    0.000000   $BoxYX   0.000000    $BoxZX   $BoxZY"
+fi
+
+#RESIZE THE ORIGINAL GRO FILE TO THE AVERAGE BOX VECTOR
+cp pre_EQ.gro avgconfig.gro
+python ${CODEPATH}/resize_gro.py -f avgconfig.gro -v "$Boxvect"
+
+#ENERGY MINIMIZE THE NEW CONFIGURATION
+if [ $indexing == true ]; then
+        ${GRO_grompp} -f minimization.mdp -c avgconfig.gro -o MIN.tpr -p topology.top -n index.ndx -maxwarn 10
+else
+        ${GRO_grompp} -f minimization.mdp -c avgconfig.gro -o MIN.tpr -p topology.top -maxwarn 10
+fi
+${GRO_mdrun} ${THREADINFO} -v -deffnm MIN
+
+
+#EXTRACT THE FINAL FRAME FROM THE OUTPUT TRR FILE AND USE IT AS THE FINAL ENERGY MINIMIZATION FRAME
+echo "Potential" | ${GRO_energy} -f MIN.edr -o time.xvg
+finaltime=$(tail -1 time.xvg | awk '{print $1}')
+rm MIN.gro
+echo 0 | ${GRO_trjconv} -f MIN.trr -s MIN.tpr -o MIN.gro -pbc whole -ndec 12
+
+#RELAX THE MOLECULE BY MINIMIZING THE INTRAMOLECULAR INTERACTIONS TO CREATE THE RESTRAINT FILES
+if [ $indexing == true ]; then
+        ${GRO_grompp} -f relaxation.mdp -c MIN.gro -o RELAX.tpr -p topology.top -n index.ndx -maxwarn 10
+else
+        ${GRO_grompp} -f relaxation.mdp -c MIN.gro -o RELAX.tpr -p topology.top -maxwarn 10
+fi
+${GRO_mdrun} ${THREADINFO} -v -deffnm RELAX
+
+rm RELAX.gro
+
+echo 0 | ${GRO_trjconv} -f RELAX.trr -s RELAX.tpr -o RELAX.gro -pbc whole -ndec 12
+echo "Potential" | ${GRO_energy} -f RELAX.edr -o relax_energy.xvg
