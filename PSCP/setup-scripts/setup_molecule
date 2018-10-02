@@ -929,18 +929,18 @@ if [ "$SIMULATION" == "gromacs" ]; then
         fi	
 	
 	#If there is no force-averaging, remove the index file command
-        indexing=false
+        indexing=true
 	if [ "$MOLECULES" == "$INDEPENDENT" ]; then
-            indexing=true
+            indexing=false
 	    sed -i "s/-n index.ndx//g" ${JOBPATH}/submit_minimization_local.sh
 	    sed -i "s/-n index.ndx//g" ${JOBPATH}/submit_minimization.sh
 	fi
 	
-#        #If we are not using the drude oscillator potential, remove the drude settings from the mdp file
-#        if [ "$POTENTIAL" != "drude" ]; then
-#                sed -i "/DRUDE-SPECIFIC SETTINGS/,+6d" ${JOBPATH}/equilibration.mdp
-#                sed -i "/DRUDE-SPECIFIC SETTINGS/,+6d" ${JOBPATH}/production.mdp
-#                sed -i "/DRUDE-SPECIFIC SETTINGS/,+6d" ${JOBPATH}/anneal.mdp
+        #If we are not using the drude oscillator potential, remove the drude settings from the mdp file
+        if [ "$POTENTIAL" != "drude" ]; then
+                sed -i "/DRUDE-SPECIFIC SETTINGS/,+6d" ${JOBPATH}/equilibration.mdp
+                sed -i "/DRUDE-SPECIFIC SETTINGS/,+6d" ${JOBPATH}/production.mdp
+                sed -i "/DRUDE-SPECIFIC SETTINGS/,+6d" ${JOBPATH}/anneal.mdp
 #        else
 #                sed -i "s/gromacs_forceavg2/gromacs_drude/g" ${JOBPATH}/submit_local.sh
 #                sed -i "s/gromacs_forceavg2/gromacs_drude/g" ${JOBPATH}/submit_localitc.sh
@@ -948,8 +948,8 @@ if [ "$SIMULATION" == "gromacs" ]; then
 #                sed -i "s/gromacs_forceavg2/gromacs_drude/g" ${JOBPATH}/submit_cluster_bridges.slurm
 #                sed -i "s/gromacs_forceavg2/gromacs_drude/g" ${JOBPATH}/submit_cluster_atlas.sh
 #                sed -i "s/gromacs_forceavg2/gromacs_drude/g" ${JOBPATH}/submit_minimization.sh
-#        fi
-#
+        fi
+
 #        #IF WE ARE REWEIGHTING BETWEEN POTENTIALS, SWITCH THE RESTRAINT-LAMBDAS TO DEP-LAMBDAS IN THE MDP FILE	
 #        if [ "$POTENTIAL" == "oplsaatofakeg" ] || [ "$POTENTIAL" == "oplsaatofakea" ]; then
 #            sed -i "s/restraint_lambdas        =/fep-lambdas              =/g" ${JOBPATH}/equilibration.mdp
