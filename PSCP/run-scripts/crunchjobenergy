@@ -1,8 +1,8 @@
 #!/bin/bash
-#BASH SCRIPT TO CONVERT THE JOB EDR FILE INTO XVG
-#param f - The name of the input edr file
-#param o - The name of the output.xvg file
-#param n - The number to pipe in to g_energy
+# BASH SCRIPT TO CONVERT THE JOB EDR FILE INTO XVG
+# param f - The name of the input edr file
+# param o - The name of the output.xvg file
+# param n - The number to pipe in to g_energy
 
 # Exporting gromacs commands
 export GRO_energy="gmx energy"

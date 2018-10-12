@@ -10,7 +10,7 @@
 
 
 # Path to template files
-export RUNFILES_LOC="/home/ecd4bd/runfiles"
+export RUNFILES_LOC="/home/nabraham/crystals/NMA/runfiles"
 
 # Path to Tinker parameters
 export Tinker_params="/home/nabraha2/tinker/params"
@@ -387,7 +387,7 @@ for potential in $potentials; do
                 delta_hinge=""
             else
 		cp ${RUNFILES_LOC}/${molecule}_${potential}.itp ${potential}.itp
-                python interpolate_itp.py -f ${potential}.itp -d $delta
+                python ../setup-scripts/interpolate_itp.py -f ${potential}.itp -d $delta
                 delta_hinge="_${delta_hinge}"
             fi
 	    for cutoff in $cutoffs; do #Loop over all cutoffs
@@ -438,7 +438,7 @@ for potential in $potentials; do
                 delta_hinge=""
             else
                 cp ${RUNFILES_LOC}/${potential}.itp ${potential}.itp
-                python interpolate_itp.py -f ${potential}.itp -d $delta
+                python ../setup-scripts/interpolate_itp.py -f ${potential}.itp -d $delta
                 delta_hinge="_${delta_hinge}"
             fi
 	    for charge in $charges; do

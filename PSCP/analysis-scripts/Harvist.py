@@ -36,6 +36,7 @@
 # 02110-1301, USA.
 # =============================================================================================
 
+from __future__ import print_function
 import numpy
 import numpy.random
 import scipy
@@ -182,7 +183,7 @@ def GrabTerms(energyfile,Terms='All',ignoreframes=0):
     infile = open(energyfile,'r')
     lines = infile.readlines()
     infile.close()
-    print "loading terms from " + energyfile
+    print("loading terms from " + energyfile)
 
     u_nT = numpy.zeros([50000,len(Term_names)])
     ignore_symbols = ['#', '@', '@TYPE', 'STEP', '#Time', 'TIME(ps)', '=====================']; #Lines to ignore when reading in energies

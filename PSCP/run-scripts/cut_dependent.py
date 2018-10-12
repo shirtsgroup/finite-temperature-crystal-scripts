@@ -1,25 +1,28 @@
-#/usr/bin/python
-#PYTHON SCRIPT TO CUT THE DEPENDENT BENZENES FROM A GRO FILE
-#param f - The name of the .gro file
-#param I - The number of independent benzenes
+from __future__ import print_function
+# /usr/bin/python
+# PYTHON SCRIPT TO CUT THE DEPENDENT BENZENES FROM A GRO FILE
+# param f - The name of the .gro file
+# param I - The number of independent benzenes
 
-import numpy # numerical array library
-from optparse import OptionParser # for parsing command-line options
+import numpy
+from optparse import OptionParser
 import os
 import subprocess
 import pdb
 
-#=============================================================================================
+# =============================================================================================
 # READ IN USER INPUTS
-#=============================================================================================
+# =============================================================================================
 parser = OptionParser()
-parser.add_option('-f', dest = 'grofile', help = 'Input gro file', default='frame.gro')
-parser.add_option('-n', dest = 'index' , help = 'index file', default='index.ndx')
+parser.add_option('-f', dest='grofile', help='Input gro file', default='frame.gro')
+parser.add_option('-n', dest='index', help='index file', default='index.ndx')
 (options, args) = parser.parse_args()
-#Create the space buffer
-spaces = [];
-Independent_atoms=[];
-Farthest_copies=[];
+
+# Create the space buffer
+spaces = []
+Independent_atoms = []
+Farthest_copies = []
+
 #rjustvect = numpy.ones(10,int);
 #rjustvect = ['8', '7', '5', '15', '15', '15', '6', '6', '6']
 
@@ -52,8 +55,8 @@ for i,line in enumerate(lines):
 	Independent_atoms.append(int(tokens[0]))
 	Farthest_copies.append(int(tokens[len(tokens)-1]))
 
-print Independent_atoms
-print Farthest_copies
+print(Independent_atoms)
+print(Farthest_copies)
 
 #Store the original box vectors
 infile = open(fname_gro, 'r')
@@ -117,7 +120,7 @@ for i,index in enumerate(Mirror_atoms):
 
 	#print v
 	v_crystal=[numpy.round(j,2) for j in v_crystal]
-	print v_crystal
+	print(v_crystal)
 	#print "X: " + str(X)
 	#pdb.set_trace()
 	#If the component is not zero and is smaller than the current smallest value, replace
@@ -142,7 +145,7 @@ if Zdist == 100:
 else:
    Zdist=numpy.round(1.0/Zdist,0)
 
-print "X: " + str(Xdist) + " Y: " + str(Ydist) + " Z: " + str(Zdist)
+print("X: " + str(Xdist) + " Y: " + str(Ydist) + " Z: " + str(Zdist))
 
 #Use linux to cut out the unnecessary lines
 cutline = Mirror_atoms[1]-Mirror_atoms[0]+3

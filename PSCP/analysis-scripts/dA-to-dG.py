@@ -1,3 +1,4 @@
+from __future__ import print_function
 #
 # Computing the Gibbs free energy difference between a set of polymorphs by integrating the helmholtz free energy at all volumes
 # 
@@ -90,14 +91,14 @@ if (options.plot):
 #=============================================================================================
 
 if Temp < 0:
-    print "Invalid Temperature: " + str(Temp)
+    print("Invalid Temperature: " + str(Temp))
     sys.exit()
 
 if (MinV == -1 ) and (MaxV == -1) and (dV == -1):
-    print "Using default values!"
+    print("Using default values!")
     Volumes = ['v100','v102','v104','v106','v108','v110','v112','v114','v116','v118','v120'] #The scaling parameters sampled
 elif MinV < 0 or MaxV < 0 or dV < 0 or MinV > MaxV:
-    print "Invalid Volume Specifications"
+    print("Invalid Volume Specifications")
     sys.exit()
 else:
     Volume = MinV
@@ -139,13 +140,13 @@ elif (options.polymorphs == 'p3'):
     polymorph = ['Benzene III']
     polymorph_short = ['p3']
 else:
-    print "Polymorph Inputs Wrong"
+    print("Polymorph Inputs Wrong")
     sys.exit()
 
 #POTENTIAL
 if potential != "oplsaa" and potential != "gromos" and potential != "oplsaafakeg" and potential != "oplsaafakea":
-    print "Invalid Potential"
-    print "Supported potentials: oplsaa gromos oplsaafakeg oplsaafakea"
+    print("Invalid Potential")
+    print("Supported potentials: oplsaa gromos oplsaafakeg oplsaafakea")
     sys.exit()
 
 #=============================================================================================
@@ -242,7 +243,7 @@ for i,poly in enumerate(polymorph):
 	infile = open(fname, 'r')
 	lines = infile.readlines()
 	infile.close()
-	print "loading " + fname
+	print("loading " + fname)
 	ignorecounter=0
 	counter=0
         for line in lines:
@@ -259,7 +260,7 @@ for i,poly in enumerate(polymorph):
 	#Calculate the standard deviation of the pressure
 	ddP[i,k] = numpy.std(P_NVT[i,:counter])/(counter**0.5)
 	fname=dirname+ '_' + Volume_names[k]+hinge +'/'+gname
-        print "loading " + fname
+        print("loading " + fname)
 	V[k] = (float(Independent)/Molecules)*numpy.round(calculate_gro_volume.Volume(fname),3)
 
     ##Read in the actual volume distribution
@@ -331,12 +332,12 @@ for i in range(len(polymorph)):
 #G /= float(Independent)
 
 #Print the integrated free energy difference:
-print "Helmholtz Reference:"
-print (Aref-A_shift)/float(Independent)
-print "PV Correction:"
-print G-(Aref-A_shift)/float(Independent)
-print "Gibbs Free Energy:"
-print G
+print("Helmholtz Reference:")
+print((Aref-A_shift)/float(Independent))
+print("PV Correction:")
+print(G-(Aref-A_shift)/float(Independent))
+print("Gibbs Free Energy:")
+print(G)
 #=============================================================================================
 # PLOT THE FINAL DATA
 #=============================================================================================

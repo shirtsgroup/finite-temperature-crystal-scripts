@@ -1,11 +1,11 @@
 #!/bin/bash
-#BASH SCRIPT TO REWEIGHT AN MD SIMULATION IN A TINKER POTENTIAL
-#param f - The name of the input TRR file
-#param p - The name of the potentials to examine
-#param o - The name of the output.xvg file
-#param d - The number of intermediate interpolation states in the potential(s)
-#param s - Which software did we simulate in? (gromacs/tinker)
-#param I - How many independent benzenes are in the gro files? (Gromacs only)
+# BASH SCRIPT TO REWEIGHT AN MD SIMULATION IN A TINKER POTENTIAL
+# param f - The name of the input TRR file
+# param p - The name of the potentials to examine
+# param o - The name of the output.xvg file
+# param d - The number of intermediate interpolation states in the potential(s)
+# param s - Which software did we simulate in? (gromacs/tinker)
+# param I - How many independent benzenes are in the gro files? (Gromacs only)
 
 # Path to template files
 export RUNFILES_LOC="/home/ecd4bd/runfiles"

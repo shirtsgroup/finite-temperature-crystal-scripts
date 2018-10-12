@@ -1,27 +1,26 @@
 #!/bin/bash
 
-#BASH SCRIPT TO AUTOMATICALLY SET UP BENZENE MD SIMULATIONS TO TURN OFF INTERACTIONS
-#By: Eric Dybeck 09/12/2014
-#param n - polymorph number (all 3 will be used if none is given)
-#param M - Molecule name
-#param G - Gamma state for the harmonic restraint
-#param g - spacing between the Gammas
-#param A - Maximum gamma value (%)
-#param B - Minimum gamma value (%)
-#param T - Temperature in K
-#param P - Pressure in bar
-#param N - Number of benzene molecules
-#param I - Number of independent benzene molecules (the remainder will be averaged)
-#param e - Number of steps in the equilibration step
-#param p - Number of steps in the production step
-#param i - Integrator
-#param t - Thermostat
-#param b - Barostat
-#param a - number of cores (threads) to run on
-#param k - maximum harmonic restraint constant
-#param r - vdw/coulomb cutoff distance (in angstroms)
-#param u - potential to be used in the simulation
-#param h - optional string hinge to add to the job
+# BASH SCRIPT TO AUTOMATICALLY SET UP BENZENE MD SIMULATIONS TO TURN OFF INTERACTIONS
+# By: Eric Dybeck 09/12/2014
+# param n - polymorph number (all 3 will be used if none is given)
+# param M - Molecule name
+# ###param G - Gamma state for the harmonic restraint
+# param g - spacing between the Gammas
+# param A - Maximum gamma value (%)
+# param B - Minimum gamma value (%)
+# param T - Temperature in K
+# param P - Pressure in bar
+# param N - Number of benzene molecules
+# param I - Number of independent benzene molecules (the remainder will be averaged)
+# param e - Number of steps in the equilibration step
+# param p - Number of steps in the production step
+# param i - Integrator
+# param t - Thermostat
+# param a - number of cores (threads) to run on
+# param K - maximum harmonic restraint constant
+# param r - vdw/coulomb cutoff distance (in angstroms)
+# param u - potential to be used in the simulation
+# param h - optional string hinge to add to the job
 
 #=============================================================================================
 # SETUP DEFAULT VALUES AND READ IN PARAMETERS FROM USER
@@ -29,30 +28,28 @@
 
 SETRUN_ARGS="$@"
 polymorph_num="p1 p2 p3"
-MINGAMMA=0
+MOLECULE="benzene"
 MAXGAMMA=100
+MINGAMMA=0
 GSPACING=10
+EXPONENT=2
 LAMBDA=100
 TEMP=200
 PRESSURE=1
-MOLECULE="benzene"
 MOLECULES=72
-INDEPENDENT=4
+INDEPENDENT="same"
 equil_steps=100000
 prod_steps=1000000
 integrator="sd"
 thermostat="nose-hoover"
-barostat=-1
 cores=7
 k_max=1000
-Gamma=0
-EXPONENT=2
 CUTOFF="8"
 POTENTIAL="oplsaa"
 hinge="DefaultHinge"
 
 #options passed in from the users
-while getopts "n:M:A:B:g:f:L:T:P:N:I:e:p:i:t:b:a:K:r:u:h:" opt; do
+while getopts "n:M:A:B:g:f:L:T:P:N:I:e:p:i:t:a:K:r:u:h:" opt; do
         case $opt in
         n )
                 polymorph_num=$OPTARG
@@ -98,9 +95,6 @@ while getopts "n:M:A:B:g:f:L:T:P:N:I:e:p:i:t:b:a:K:r:u:h:" opt; do
                 ;;
         t )
                 thermostat=$OPTARG
-                ;;
-        b )
-                barostat=$OPTARG
                 ;;
 	a )
                 cores=$OPTARG
@@ -193,3 +187,4 @@ done
 for poly in $polymorph_num; do
 	setup_molecule -n $poly -T $TEMP -P $PRESSURE -M $MOLECULE -N $MOLECULES -I $INDEPENDENT -e $equil_steps -p $prod_steps -i $integrator -t $thermostat -U $LAMBDA -R $LAMBDA -L $LAMBDA -f $EXPONENT -a $cores -E NVT -K $k_max -A $MAXGAMMA -B $MINGAMMA -g $GSPACING -G $MAXGAMMA -r $CUTOFF -u $POTENTIAL -h $hinge
 done
+

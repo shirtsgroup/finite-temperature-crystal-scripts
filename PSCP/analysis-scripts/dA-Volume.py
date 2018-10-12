@@ -1,3 +1,4 @@
+from __future__ import print_function
 #
 # Computing the free energy difference of an organic crystal polymorph at different volumes
 # 
@@ -60,14 +61,14 @@ if (options.plot):
 #=============================================================================================
 
 if Temp < 0:
-    print "Invalid Temperature: " + str(Temp)
+    print("Invalid Temperature: " + str(Temp))
     sys.exit()
 
 if (MinV == -1 ) and (MaxV == -1) and (dV == -1):
-    print "Using default values!"
+    print("Using default values!")
     Volumes = ['v100','v102','v104','v106','v108','v110','v112','v114','v116','v118','v120'] #The scaling parameters sampled
 elif MinV < 0 or MaxV < 0 or dV < 0 or MinV > MaxV:
-    print "Invalid Volume Specifications"
+    print("Invalid Volume Specifications")
     sys.exit()
 else:
     Volume = MinV
@@ -109,13 +110,13 @@ elif (options.polymorphs == 'p3'):
     polymorph = ['Polymorph3']
     polymorph_short = ['p3']
 else:
-    print "Polymorph Inputs Wrong"
+    print("Polymorph Inputs Wrong")
     sys.exit()
 
 #POTENTIAL
 if potential != "oplsaa" and potential != "gromos" and potential != "oplsaafakeg" and potential != "oplsaafakea":
-    print "Invalid Potential"
-    print "Supported potentials: oplsaa gromos oplsaafakeg oplsaafakea"
+    print("Invalid Potential")
+    print("Supported potentials: oplsaa gromos oplsaafakeg oplsaafakea")
     sys.exit()
 
 #=============================================================================================
@@ -197,7 +198,7 @@ for i,poly in enumerate(polymorph):
 	infile = open(fname, 'r')
 	lines = infile.readlines()
 	infile.close()
-	print "loading " + fname
+	print("loading " + fname)
 	ignorecounter=0
 	counter=0
         for line in lines:
@@ -211,7 +212,7 @@ for i,poly in enumerate(polymorph):
 	    P[i,k] = P[i,k] * (float(counter)/(counter+1)) +  float(tokens_pressure[1])*(float(1)/(counter+1)) #Moving average of the pressure
 	    counter+=1
         fname=dirname+'/'+gname
-	print "loading " + fname
+	print("loading " + fname)
 	V[k] = numpy.round(calculate_gro_volume.Volume(fname),3)
 
         
@@ -226,12 +227,12 @@ for i,poly in enumerate(polymorph):
     Na = 6.022*10**23	#Avogadros numbers    
 
     if len(V)%2 != 1:
-	print "Intermediate points must be an even number for simpsons rule to work!"
+	print("Intermediate points must be an even number for simpsons rule to work!")
 	sys.exit()
     if dV1 != dV2:
-	print "Intermediate points must be evenly spaced for simpsons rule to work!"
-	print "V1: " + str(dV1)
-        print "V2: " + str(dV2)
+	print("Intermediate points must be evenly spaced for simpsons rule to work!")
+	print("V1: " + str(dV1))
+        print("V2: " + str(dV2))
         sys.exit()
     simp = numpy.zeros((K-1)/2,float)
     V_xaxis = numpy.zeros((K+1)/2,float)
@@ -245,7 +246,7 @@ for i,poly in enumerate(polymorph):
 	ddA[i,k+1] = 0 #How do we calculate error bars with the simpson rule? Reweighting to get derivative?
         V_xaxis[k+1]=V[2*k+2]
 
-    print "Free Energies Optained..."
+    print("Free Energies Optained...")
     
     #=============================================================================================
     # PLOT THE FINAL DATA
@@ -294,10 +295,10 @@ if (options.plot) and options.polymorphs == 'all':
     #plt.title('All Polymorphs')
     plt.xlabel(xlabel)
     plt.ylabel(ylabel)
-    print 'Xaxis:'
-    print V
-    print 'YAxis:'
-    print P[i,:]
+    print('Xaxis:')
+    print(V)
+    print('YAxis:')
+    print(P[i,:])
     ax.plot(V,P[0,:], color='b', label='Polymorph 1')
     ax.plot(V,P[0,:], color='g', label='Polymorph 2')
     ax.plot(V,P[0,:], color='r', label='Polymorph 3')
@@ -315,10 +316,10 @@ if (options.plot) and options.polymorphs == 'all':
     plt.xlabel(xlabel)
     plt.ylabel(ylabel)
     Xaxis = V_xaxis
-    print 'Xaxis:'
-    print Xaxis
-    print 'YAxis:'
-    print dA
+    print('Xaxis:')
+    print(Xaxis)
+    print('YAxis:')
+    print(dA)
     plt.plot(Xaxis,dA[0,:],'b',Xaxis,dA[1,:],'g',Xaxis,dA[2,:],'r')
     #filename = 'All_' + str(Molecules) + '_' + str(int(Temp)) + 'K_'+Gname+'_dAvsV.png'
     plt.show()

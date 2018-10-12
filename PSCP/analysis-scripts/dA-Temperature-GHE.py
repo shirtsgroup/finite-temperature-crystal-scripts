@@ -1,3 +1,4 @@
+from __future__ import print_function
 #
 # Computing the free energy difference of an organic crystal polymorph at different temperatures using
 # the constant volume variant of the Gibbs-Helmholtz Equation
@@ -44,11 +45,11 @@ if (options.plot):
 #=============================================================================================
 #TEMPERATURE
 if (MinT == -1 ) and (MaxT == -1) and (dT == -1):
-    print "Using default values!"
+    print("Using default values!")
     T_k = [100, 200, 300, 400, 500, 600, 700, 800, 900, 1000] #The temperatures sampled
     temperature_name = ['100K', '200K', '300K', '400K', '500K', '600K', '700K', '800K', '900K', '1000K']
 elif MinT < 0 or MaxT < 0 or dT < 0 or MinT > MaxT:
-    print "Invalid Temperature Specifications"
+    print("Invalid Temperature Specifications")
     sys.exit()
 else:
     temp = MinT
@@ -66,12 +67,12 @@ else:
 
 #LAMBDA
 if LAMBDA < 0 or LAMBDA > 100:
-    print "Invalid Lambda Point: " + str(LAMBDA)
+    print("Invalid Lambda Point: " + str(LAMBDA))
     sys.exit()
 
 #GAMMA
 if GAMMA < 0 or GAMMA > 100:
-    print "Invalid Gamma Point: " + str(GAMMA)
+    print("Invalid Gamma Point: " + str(GAMMA))
     sys.exit()
 
 #POLYMORPH
@@ -88,7 +89,7 @@ elif (options.polymorphs == 'p3'):
     polymorph = ['Polymorph3']
     polymorph_short = ['p3']
 else:
-    print "Polymorph Inputs Wrong"
+    print("Polymorph Inputs Wrong")
     sys.exit()
 
 #=============================================================================================
@@ -130,8 +131,8 @@ omitT = ['4','5','6','7','8','9','10','11'] #Temperatures to be omitted from the
 
 # Parameters
 T_k = T_k*numpy.ones(len(T_k),float) #Convert temperatures to floats 
-print T_k
-print temperature_name
+print(T_k)
+print(temperature_name)
 K = len(T_k)  # How many states?
 Kbig = K+0 # total number of states examined; none are unsampled
 N_max = 200000 # maximum number of snapshots/simulation (could make this automated) - doesn't matter, as long as it's long enough.
@@ -159,7 +160,7 @@ for i,poly in enumerate(polymorph):
             infile = open(fname, 'r')
             lines = infile.readlines()
             infile.close()
-            print "loading " + fname
+            print("loading " + fname)
             n = 0
             for line in lines:
 		linenum = linenum + 1
@@ -187,8 +188,8 @@ for i,poly in enumerate(polymorph):
             N_k[k] = len(indices)
             u_kln[k,:,0:N_k[k]] = u_kln_save[k,:,indices].transpose()  # not sure why we have to transpose
     """
-    print "Number of retained samples"
-    print N_k
+    print("Number of retained samples")
+    print(N_k)
 
     # convert to nondimensional units from kcal/mol (already done)
 
@@ -209,10 +210,10 @@ for i,poly in enumerate(polymorph):
     dT1 = T_k[1]-T_k[0]
     dT2 = T_k[2]-T_k[1]
     if len(T_k)%2 != 1:
-	print "Intermediate points must be an even number for simpsons rule to work!"
+	print("Intermediate points must be an even number for simpsons rule to work!")
 	sys.exit()
     if dT2 != dT1:
-	print "Intermediate points must be evenly spaced for simpsons rule to work!"
+	print("Intermediate points must be evenly spaced for simpsons rule to work!")
         sys.exit()
     simp = numpy.zeros((K-1)/2,float)
     T_xaxis = numpy.zeros((K+1)/2,float)
@@ -226,7 +227,7 @@ for i,poly in enumerate(polymorph):
 	ddA[i,k+1] = 0 #How do we calculate error bars with the simpson rule? Reweighting to get derivative?
         T_xaxis[k+1]=T_k[2*k+2]
 
-    print "Free Energies Optained..."
+    print("Free Energies Optained...")
 
     #=============================================================================================
     # PLOT THE FINAL DATA
@@ -240,10 +241,10 @@ for i,poly in enumerate(polymorph):
         plt.xlabel(xlabel)
         plt.ylabel(ylabel)
         Xaxis = T_xaxis
-        print 'Xaxis:'
-        print Xaxis
-        print 'YAxis:'
-        print dA[i,:]
+        print('Xaxis:')
+        print(Xaxis)
+        print('YAxis:')
+        print(dA[i,:])
         plt.plot(Xaxis,dA[i,:])
         filename = poly + '_' + str(Molecules) + '_dAvsT.png'
         plt.savefig(filename, bbox_inches='tight')
@@ -256,10 +257,10 @@ for i,poly in enumerate(polymorph):
         plt.xlabel(xlabel)
         plt.ylabel(ylabel)
         Xaxis = T_k
-        print 'Xaxis:'
-        print Xaxis
-        print 'YAxis:'
-        print avgenergy[i,:]
+        print('Xaxis:')
+        print(Xaxis)
+        print('YAxis:')
+        print(avgenergy[i,:])
         plt.plot(Xaxis,avgenergy[i,:])
         filename = poly + '_' + str(Molecules) + '_uvsT.png'
         plt.savefig(filename, bbox_inches='tight')
@@ -273,10 +274,10 @@ if (options.plot) and options.polymorphs == 'all':
     plt.xlabel(xlabel)
     plt.ylabel(ylabel)
     Xaxis = T_xaxis
-    print 'Xaxis:'
-    print Xaxis
-    print 'YAxis:'
-    print dA
+    print('Xaxis:')
+    print(Xaxis)
+    print('YAxis:')
+    print(dA)
     plt.plot(Xaxis,dA[0,:],'b',Xaxis,dA[1,:],'g',Xaxis,dA[2,:],'r')
     filename = 'ALL_' + str(Molecules) + '_dAvsT.png'
     plt.savefig(filename, bbox_inches='tight')
@@ -289,10 +290,10 @@ if (options.plot) and options.polymorphs == 'all':
     plt.xlabel(xlabel)
     plt.ylabel(ylabel)
     Xaxis = T_k
-    print 'Xaxis:'
-    print Xaxis
-    print 'YAxis:'
-    print avgenergy
+    print('Xaxis:')
+    print(Xaxis)
+    print('YAxis:')
+    print(avgenergy)
     plt.plot(Xaxis,avgenergy[0,:],'b',Xaxis,avgenergy[1,:],'g',Xaxis,avgenergy[2,:],'r')
     filename = 'ALL_' + str(Molecules) + '_uvsT.png'
     plt.savefig(filename, bbox_inches='tight')
