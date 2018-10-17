@@ -255,9 +255,8 @@ for i, poly in enumerate(polymorph):
             linenum_dhdl = 0
             # cycle through all the input total energy data
             #dirpath = '../finishedJobs/' + poly + '/benzene_GRO_' + PotNAME + '_' + polymorph_short[i] + '_' + Molname + Tname + ChargeHinge + '_' + Lname + '_' + Gamma_names[k] + '_' + Pname + hinge
-            dirpath = '/oldhome/ecd4bd/finishedJobs_archive/PSCP/' + Molecule + '/' + Molecule  + '_GRO_' + PotNAME + \
-                      '_' + polymorph_short[i] + '_' + Molname + Tname + ChargeHinge + '_' + Lname + '_' + \
-                      Gamma_names[k] + '_' + Pname + hinge
+            dirpath = Molecule  + '_GRO_' + PotNAME + '_' + polymorph_short[i] + '_' + Molname + Tname + ChargeHinge + \
+                      '_' + Lname + '_' + Gamma_names[k] + '_' + Pname + hinge
             #fname = '../finishedJobs/' + poly + '/benzene_GRO_' + PotNAME + '_' + polymorph_short[i] + '_' + Molname + Tname + ChargeHinge + '_' + Lname + '_' + Gamma_names[k] + '_' + Pname + hinge + '/potenergy.xvg'
             #dhdlname = '../finishedJobs/' + poly + '/benzene_GRO_' + PotNAME + '_' + polymorph_short[i] + '_' + Molname + Tname + ChargeHinge + '_' + Lname + '_' + Gamma_names[k] + '_' + Pname + hinge + '/benzene_dhdl_PROD.xvg'
             #fname = '/oldhome/ecd4bd/finishedJobs_archive/' + poly + '_PSCP72/benzene_GRO_' + PotNAME + '_' + polymorph_short[i] + '_' + Molname + Tname + ChargeHinge + '_' + Lname + '_' + Gamma_names[k] + '_' + Pname + hinge + '/potenergy.xvg'
