@@ -703,12 +703,18 @@ if [ "$SIMULATION" == "gromacs" ]; then
                     sed -i "s/tau_p.*/tau_p                    = 10.0/g" ${JOBPATH}/production.mdp
 	    fi
 	    #If this polymorph is not rectangular, change the compressibility to allow Beta to change
-	    string=$(less ${JOBPATH}/${GNAME}.gro | tail -1 | awk '{print $9}')
-	    if [ "$string" != "" ]; then
-	        sed -i "s/4.5e-5 4.5e-5 4.5e-5 0 0 0/4.5e-5 4.5e-5 4.5e-5 4.5e-5 4.5e-5 4.5e-5/g" ${JOBPATH}/equilibration.mdp
-	        sed -i "s/4.5e-5 4.5e-5 4.5e-5 0 0 0/4.5e-5 4.5e-5 4.5e-5 4.5e-5 4.5e-5 4.5e-5/g" ${JOBPATH}/production.mdp
-		sed -i "s/4.5e-5 4.5e-5 4.5e-5 0 0 0/4.5e-5 4.5e-5 4.5e-5 4.5e-5 4.5e-5 4.5e-5/g" ${JOBPATH}/anneal.mdp
-	    fi 
+	    #string=$(less ${JOBPATH}/${GNAME}.gro | tail -1 | awk '{print $9}')
+	    #if [ "$string" != "" ]; then
+	    #    sed -i "s/4.5e-5 4.5e-5 4.5e-5 0 0 0/4.5e-5 4.5e-5 4.5e-5 4.5e-5 4.5e-5 4.5e-5/g" ${JOBPATH}/equilibration.mdp
+	    #    sed -i "s/4.5e-5 4.5e-5 4.5e-5 0 0 0/4.5e-5 4.5e-5 4.5e-5 4.5e-5 4.5e-5 4.5e-5/g" ${JOBPATH}/production.mdp
+	    #    sed -i "s/4.5e-5 4.5e-5 4.5e-5 0 0 0/4.5e-5 4.5e-5 4.5e-5 4.5e-5 4.5e-5 4.5e-5/g" ${JOBPATH}/anneal.mdp
+	    #fi
+            # NSA: hardcoding this to permit fluctuations
+	    sed -i "s/4.5e-5 4.5e-5 4.5e-5 0 0 0/4.5e-5 4.5e-5 4.5e-5 4.5e-5 4.5e-5 4.5e-5/g" ${JOBPATH}/equilibration.mdp
+	    sed -i "s/4.5e-5 4.5e-5 4.5e-5 0 0 0/4.5e-5 4.5e-5 4.5e-5 4.5e-5 4.5e-5 4.5e-5/g" ${JOBPATH}/production.mdp
+	    sed -i "s/4.5e-5 4.5e-5 4.5e-5 0 0 0/4.5e-5 4.5e-5 4.5e-5 4.5e-5 4.5e-5 4.5e-5/g" ${JOBPATH}/anneal.mdp
+
+ 
 	    ##If this is an initial equilibration job, use anisotropic pressure equilibration
 	    #if [ "$hinge" == "_NPT1" ]; then
 	    #    sed -i "s/pcoupltype               = isotropic/;pcoupltype               = isotropic/g" ${JOBPATH}/equilibration.mdp
