@@ -81,7 +81,7 @@ echo 0 | ${GRO_trjconv} -f PROD.trr -s PROD.tpr -o PROD.gro -pbc whole -ndec 12 
 
 sleep 1
 
-# Determine the code path
+ Determine the code path
 CODEPATH=$(dirname $0)
 
 # CALCULATE THE CONFIGURATION ENERGIES AND ENSEMBLE AVERAGES
@@ -101,9 +101,6 @@ if [ $reweight == true ]; then
         rm -rf TinkerXYZ
 fi
 
-#FREEZE THE JOB INTO A SET OF LATTICE MINIMA
-#run-scripts/freezejobgromacs
-#run-scripts/freezejobtinker 
 
 #DELETE THE LOGFILE IF THE JOB FINISHED CORRECTLY
 if [ -f PROD.log ] && [ "$(tail -1 PROD.log | awk '{print $1}')" == "Finished" ]; then

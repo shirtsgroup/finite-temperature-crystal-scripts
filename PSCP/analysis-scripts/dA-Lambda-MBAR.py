@@ -304,9 +304,8 @@ for i, poly in enumerate(polymorph):
             linenum_dhdl = 0
             # cycle through all the input total energy data
             # dirpath='../finishedJobs/' + poly + '/benzene_GRO_' + PotNAME + '_' + polymorph_short[i] + '_' + Molname + Tname + ChargeHinge + '_' + Lambda_names[k] + '_' + Gname + '_' + Pname + hinge
-            dirpath = '/oldhome/ecd4bd/finishedJobs_archive/PSCP/' + Molecule + '/' + Molecule + '_GRO_' + PotNAME + \
-                      '_' + polymorph_short[i] + '_' + Molname + Tname + ChargeHinge + '_' + Lambda_names[k] + '_' + \
-                      Gname + '_' + Pname + hinge
+            dirpath = Molecule + '_GRO_' + PotNAME + '_' + polymorph_short[i] + '_' + Molname + Tname + ChargeHinge + \
+                      '_' + Lambda_names[k] + '_' + Gname + '_' + Pname + hinge
             fname = dirpath + '/potenergy.xvg'
             dhdlname = dirpath + '/dhdl_PROD.xvg'
             groname = dirpath + '/Traj.gro'
