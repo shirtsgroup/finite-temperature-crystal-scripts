@@ -10,7 +10,8 @@
 
 
 # Path to template files
-export RUNFILES_LOC="/home/nabraham/crystals/NMA/runfiles"
+#export RUNFILES_LOC="/home/nabraham/crystals/NMA/runfiles"
+export RUNFILES_LOC="/blaahhhhahsh"
 
 # Path to Tinker parameters
 export Tinker_params="/home/nabraha2/tinker/params"
@@ -344,7 +345,8 @@ fi
 for potential in $potentials; do
     #Copy over the appropriate itp file and topology file
     echo "Copying itp and topology file..."
-    cp ${RUNFILES_LOC}/${molecule}_${potential}.itp ${potential}.itp
+#    cp ${RUNFILES_LOC}/${molecule}_${potential}.itp ${potential}.itp
+    cp ../${molecule}_${potential}.itp ${potential}.itp
 
     if [ -f topology.top ]; then
         cp topology.top reweighting_topology.top
@@ -394,7 +396,8 @@ for potential in $potentials; do
 	    if [ "$delta_hinge" == "None" ]; then
                 delta_hinge=""
             else
-		cp ${RUNFILES_LOC}/${molecule}_${potential}.itp ${potential}.itp
+#		cp ${RUNFILES_LOC}/${molecule}_${potential}.itp ${potential}.itp
+		cp ../${molecule}_${potential}.itp ${potential}.itp
                 python ../setup-scripts/interpolate_itp.py -f ${potential}.itp -d $delta
                 delta_hinge="_${delta_hinge}"
             fi
