@@ -2,24 +2,23 @@
 
 # General input parameters
 gen_in:
-    polymorph_num: p1 p2 p3
-    molecule: benzene
+    polymorph_num: p1 p2
+    molecule: resora
     pressure: 1
     cores: 7
     cutoff: 8
     potential: oplsaa
-    hinge: DefaultHinge
+    hinge: 'DefaultHinge'
     integrator: sd
     thermostat: nose-hoover
-    number_of_molecules: 72
+    number_of_molecules: 64
     independent: same
-
 
 PSCP_in:
     PSCP_temperature: 200
 
     # Input parameters for setup_Interactions
-    run_interactions: True
+    run_interactions: False
     max_gamma: 100
     min_gamma: 0
     gamma_spacing: 10
@@ -27,9 +26,10 @@ PSCP_in:
     lambda: 100
     gamma_equil_steps: 100000
     gamma_prod_steps: 1000000
+    k_max: 1000
     
-    # Input parameters for setup_Restraints
-    run_restraints: True
+    # Input parameters for setop_Restraints
+    run_restraints: False
     min_lambda: 0
     max_lambda: 100
     lambda_spacing: 5
@@ -43,9 +43,9 @@ PSCP_in:
 temp_in:
     # Input parameters for setup_Temperature
     run_temperature: True
-    temperatures: "30 40 50 60 70 80 90 100 110 120 130 140 150 160 170 180 190 200 210 220 230 240 250 260 270 280 290 300"
     simulation_package: gromacs
-    Charge: 0.1150
+    temperatures: "50 100 200 300"
+    charge: 0.1150
     temp_equil_steps: 1000000
     temp_prod_steps: 10000000
     barostat: Parrinello-Rahman
@@ -53,3 +53,5 @@ temp_in:
     ensemble: NPT
     prodoutputs: 1000
 
+analysis_in:
+    potential_energy: -22.506 -22.784

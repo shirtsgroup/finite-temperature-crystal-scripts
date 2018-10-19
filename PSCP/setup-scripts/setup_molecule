@@ -698,10 +698,14 @@ if [ "$SIMULATION" == "gromacs" ]; then
 	    sed -i "s/ref_p.*/ref_p                    = ${PRESSURE} ${PRESSURE} ${PRESSURE} 0.0 0.0 0.0/g" ${JOBPATH}/production.mdp
 	    sed -i "s/ref_p.*/ref_p                    = ${PRESSURE} ${PRESSURE} ${PRESSURE} 0.0 0.0 0.0/g" ${JOBPATH}/anneal.mdp
 	    #If we are simply interested in getting to the average volume at a new pressure, use a fast time constant
-	    if [ "$barostat" == "berendsen" ]; then
-		    sed -i "s/tau_p.*/tau_p                    = 1.0/g" ${JOBPATH}/equilibration.mdp
-                    sed -i "s/tau_p.*/tau_p                    = 10.0/g" ${JOBPATH}/production.mdp
-	    fi
+	    #NSA: When run, this wasn't matching Eric's files. If using Perinello-Raman wtih NPT he had the equilibration using berendsen wtih tau_p = 1.0 and producution using Peranello-Rhaman and tau_p = 10.0
+	    #if [ "$barostat" == "berendsen" ]; then
+	    #    sed -i "s/tau_p.*/tau_p                    = 1.0/g" ${JOBPATH}/equilibration.mdp
+            #    sed -i "s/tau_p.*/tau_p                    = 10.0/g" ${JOBPATH}/production.mdp
+	    #fi
+	    sed -i "s/tau_p.*/tau_p                    = 1.0/g" ${JOBPATH}/equilibration.mdp
+            sed -i "s/tau_p.*/tau_p                    = 10.0/g" ${JOBPATH}/production.mdp
+	    
 	    #If this polymorph is not rectangular, change the compressibility to allow Beta to change
 	    #string=$(less ${JOBPATH}/${GNAME}.gro | tail -1 | awk '{print $9}')
 	    #if [ "$string" != "" ]; then
