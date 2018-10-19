@@ -802,6 +802,7 @@ if [ "$SIMULATION" == "gromacs" ]; then
 	#Copy over the molecule itp file and make the necessary modifications to the bond lengths, charges, and sigma values
 	echo "Copying itp file..."
 	cp ${TEMPLATEPATH}/${MOLNAME}_${POTENTIAL}.itp ${JOBPATH}/molecule.itp
+	cp ${TEMPLATEPATH}/${MOLNAME}_${POTENTIAL}.itp ./
 	
 	#Conduct any interpolations in the itp file
 	if [ "$POTENTIAL" == "oplsaatofakeg" ] || [ "$POTENTIAL" == "oplsaatofakea" ]; then
