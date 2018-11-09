@@ -26,7 +26,7 @@ PSCP_in:
     lambda: 100
     gamma_equil_steps: 100000
     gamma_prod_steps: 1000000
-    k_max: 1000
+    k_max: 1000000
     
     # Input parameters for setop_Restraints
     run_restraints: False
