@@ -8,7 +8,7 @@
 # USER SPECIFIED LOCATIONS
 #=============================================================================================
 #Exporting location to template coordinate and parameter files
-export TEMPLATEPATH="/home/nabraham/crystals/NMA/runfiles" #/PATH/TO/TEMPLATE/LOCATION"
+#export TEMPLATEPATH="/home/nabraham/crystals/NMA/runfiles" #/PATH/TO/TEMPLATE/LOCATION"
 
 #param n - polymorph number in the form 'p1'
 #param T - Temperature in K
@@ -103,8 +103,7 @@ hinge="DefaultHinge"
 JOBPATH="./"
 
 #options passed in from the users
-while getopts "n:T:P:M:N:I:e:p:o:i:t:b:a:k:K:D:L:U:R:s:f:A:B:G:g:d:V:r:u:c:C:H:z:E:h:J:" opt; do
-#while getopts "n:T:P:M:N:I:e:p:o:i:t:b:a:k:K:D:L:U:R:s:f:A:B:G:g:d:V:r:u:c:C:H:z:E:h:" opt; do
+while getopts "n:T:P:M:N:I:e:p:o:i:t:b:a:k:K:D:L:U:R:s:f:A:B:G:g:d:V:r:u:c:C:H:z:E:h:J:Z:" opt; do
         case $opt in
         n )
                 polymorph_num=$OPTARG
@@ -215,8 +214,13 @@ while getopts "n:T:P:M:N:I:e:p:o:i:t:b:a:k:K:D:L:U:R:s:f:A:B:G:g:d:V:r:u:c:C:H:z
 	J )
 		JOBPATH=$OPTARG
 		;;
+	Z )
+		TEMPLATEPATH=$OPTARG
+		;;
         esac
 done
+
+export $TEMPLATEPATH
 
 #=============================================================================================
 # ENSURE THAT INPUTS HAVE BEEN PROPERLY ENTERED

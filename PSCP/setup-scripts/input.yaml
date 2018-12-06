@@ -13,6 +13,7 @@ gen_in:
     thermostat: nose-hoover
     number_of_molecules: 64
     independent: same
+    template_path: /home/nabraham/crystals/NMA/runfiles
 
 PSCP_in:
     PSCP_temperature: 200
