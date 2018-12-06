@@ -23,7 +23,7 @@ font = {'family': 'normal',
 
 
 
-def old_systems_dictionary(potential):
+def old_systems_dictionary(potential, molecule):
     Polys = dict()  # Name of the polymorphs
     refTs = dict()  # Reference temperatures for the PSCP for each system
     refdGs = dict()  # Reference free energies for the PSCP for each system
@@ -194,12 +194,12 @@ def old_systems_dictionary(potential):
         absolutedUs['zzzpro'] = [-19.393, -19.135]#, -18.913]
     
         #Zzzpus
-        Polys['zzzpus']=['p6', 'p2', 'p1']#, 'p3', 'p7']
+        Polys['zzzpus']=['p6', 'p2'] #, 'p1']#, 'p3', 'p7']
         refTs['zzzpus']=200
-        refdGs['zzzpus']=[0.000, -1.713, -1.713]#, -1.713, -1.713]
-        refddGs['zzzpus']=[0.00, 0.028, 0.02]#, 0.02, 0.02]
-        refdUs['zzzpus'] = [0.000, -2.226, 1.4102]#, -2.249, -3.067]
-        absolutedUs['zzzpus'] = [-84.917, -87.143, -83.507]#, -87.166, -87.985]
+        refdGs['zzzpus']=[0.000, -1.713] #, -1.713]#, -1.713, -1.713]
+        refddGs['zzzpus']=[0.00, 0.028] #, 0.02]#, 0.02, 0.02]
+        refdUs['zzzpus'] = [0.000, -2.226] #, 1.4102]#, -2.249, -3.067]
+        absolutedUs['zzzpus'] = [-84.917, -87.143] #, -83.507]#, -87.166, -87.985]
     
         ##Melfit
         #Polys['melfit']=['p7', 'p6']#, 'p8']
@@ -1132,7 +1132,7 @@ if __name__ == '__main__':
     hinge = options.hinge
     phase = "solid"
     
-    Temperatures, Polymorphs, refT, refG, refddG, refdU, absolutedU = old_systems_dictionary(potential)
+    Polymorphs, refT, refdG, refddG, refdU, absolutedU = old_systems_dictionary(potential, molecule)
     dGvsT(plot_out=plot_out, Temperatures=Temperatures, Pressure=Pressure, Molecules=Molecules, molecule=molecule, 
           Independent=Independent, potential=potential, ignoreframes=ignoreframes, includeframes=includeframes, 
           simulation=simulation, directory=directory, ensemble=ensemble, spacing=spacing, hinge=hinge, phase=phase, 
