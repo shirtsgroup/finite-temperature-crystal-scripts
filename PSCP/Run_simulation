@@ -81,7 +81,7 @@ echo 0 | ${GRO_trjconv} -f PROD.trr -s PROD.tpr -o PROD.gro -pbc whole -ndec 12 
 
 sleep 1
 
- Determine the code path
+# Determine the code path
 CODEPATH=$(dirname $0)
 
 # CALCULATE THE CONFIGURATION ENERGIES AND ENSEMBLE AVERAGES

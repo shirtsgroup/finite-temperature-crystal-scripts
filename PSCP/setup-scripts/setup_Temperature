@@ -23,7 +23,7 @@
 # param o - number of production outputs
 
 # Path the template files. Submissions scripts (local and cluster) as well as crystal templates.
-export TEMPLATEPATH="/home/nabraham/crystals/NMA/runfiles"
+#export TEMPLATEPATH="/home/nabraham/crystals/NMA/runfiles"
 
 #=============================================================================================
 # SETUP DEFAULT VALUES AND READ IN PARAMETERS FROM USER
@@ -54,7 +54,7 @@ PRODOUTPUTS=1000
 #=============================================================================================
 # User inputs
 #=============================================================================================
-while getopts "C:n:M:T:P:N:I:e:p:i:t:b:a:k:r:u:z:h:E:o:" opt; do
+while getopts "C:n:M:T:P:N:I:e:p:i:t:b:a:k:r:u:z:h:E:o:Z:" opt; do
         case $opt in
 	C )
                 Charge=$OPTARG
@@ -116,13 +116,17 @@ while getopts "C:n:M:T:P:N:I:e:p:i:t:b:a:k:r:u:z:h:E:o:" opt; do
 	o )
                 PRODOUTPUTS=$OPTARG
 		;;
+	Z )
+                TEMPLATEPATH=$OPTARG
+		;;
         esac
 done
+
+export $TEMPLATEPATH
 
 #=============================================================================================
 # ENSURE THAT INPUTS HAVE BEEN PROPERLY ENTERED
 #=============================================================================================
-
 #INDEPENDENT MOLECULES
 if [ "$INDEPENDENT" == "same" ] || [ "$INDEPENDENT" == "$MOLECULES" ]; then
     INDEPENDENT=$MOLECULES
@@ -191,10 +195,14 @@ fi
 #=============================================================================================
 # Setup Temperatures
 #=============================================================================================
+CODEPATH=$(dirname $0)
 
-for temp in $TEMPERATURES; do
-	for poly in $polymorph_num; do
-		setup_molecule -n $poly -T $temp -P $PRESSURE -M $MOLECULE -N $MOLECULES -I $INDEPENDENT -e $equil_steps -p $prod_steps -E $ENSEMBLE -i $integrator -t $thermostat -b $barostat -a $cores -c $Charge -K $k_max -r $CUTOFF -u $POTENTIAL -z $SIMULATION -h $hinge -o $PRODOUTPUTS 
+for poly in $polymorph_num; do
+	mkdir "$poly/temperature"
+	num=0
+	for temp in $TEMPERATURES; do
+		${CODEPATH}/setup_molecule -n $poly -T $temp -P $PRESSURE -M $MOLECULE -N $MOLECULES -I $INDEPENDENT -e $equil_steps -p $prod_steps -E $ENSEMBLE -i $integrator -t $thermostat -b $barostat -a $cores -c $Charge -K $k_max -r $CUTOFF -u $POTENTIAL -z $SIMULATION -h $hinge -o $PRODOUTPUTS -T $temp -J "$poly/temperature/"$num -Z $TEMPLATEPATH
+		num=$((num + 1))
 	done
 done
 

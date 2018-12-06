@@ -8,7 +8,7 @@
 # USER SPECIFIED LOCATIONS
 #=============================================================================================
 #Exporting location to template coordinate and parameter files
-export TEMPLATEPATH="/home/nabraham/crystals/NMA/runfiles" #/PATH/TO/TEMPLATE/LOCATION"
+#export TEMPLATEPATH="/home/nabraham/crystals/NMA/runfiles" #/PATH/TO/TEMPLATE/LOCATION"
 
 #param n - polymorph number in the form 'p1'
 #param T - Temperature in K
@@ -72,7 +72,7 @@ thermostat="nose-hoover"
 barostat="Parrinello-Rahman"
 cores=1
 k_min=0
-k_max=1000
+k_max=1000000
 drude_k=100
 Lambda=0
 MINLAMBDA=0
@@ -100,10 +100,10 @@ CHARGE="0.1150"
 SigmaC="100"
 SigmaH="100"
 hinge="DefaultHinge"
-
+JOBPATH="./"
 
 #options passed in from the users
-while getopts "n:T:P:M:N:I:e:p:o:i:t:b:a:k:K:D:L:U:R:s:f:A:B:G:g:d:V:r:u:c:C:H:z:E:h:" opt; do
+while getopts "n:T:P:M:N:I:e:p:o:i:t:b:a:k:K:D:L:U:R:s:f:A:B:G:g:d:V:r:u:c:C:H:z:E:h:J:Z:" opt; do
         case $opt in
         n )
                 polymorph_num=$OPTARG
@@ -211,13 +211,20 @@ while getopts "n:T:P:M:N:I:e:p:o:i:t:b:a:k:K:D:L:U:R:s:f:A:B:G:g:d:V:r:u:c:C:H:z
 	h )
 		hinge=$OPTARG
 		;;
+	J )
+		JOBPATH=$OPTARG
+		;;
+	Z )
+		TEMPLATEPATH=$OPTARG
+		;;
         esac
 done
+
+export $TEMPLATEPATH
 
 #=============================================================================================
 # ENSURE THAT INPUTS HAVE BEEN PROPERLY ENTERED
 #=============================================================================================
-
 #TEMPERATURE
 if [ $TEMP == "-1" ]; then
         echo "Invalid Temperature: $TEMP"
@@ -575,12 +582,12 @@ fi
 
 #Name the job
 export MOLNAME="$MOLECULE"
-if [ "$SIMULATION" == "gromacs" ]; then
-    export JOBNAME="${MOLNAME}_${SimNAME}_${PotNAME}_${polymorph_num}_${MOLNUM}_${TEMPNAME}K${Chargename}${Drudename}${LNAME}${GaNAME}${PNAME}${VNAME}${hinge}"
-else
-    export JOBNAME="${MOLNAME}_${SimNAME}_${PotNAME}_${polymorph_num}_${MOLNUM}_${TEMPNAME}K${PNAME}${DNAME}${hinge}"
-fi
-export JOBPATH="./${JOBNAME}"
+#if [ "$SIMULATION" == "gromacs" ]; then
+#    export JOBNAME="${MOLNAME}_${SimNAME}_${PotNAME}_${polymorph_num}_${MOLNUM}_${TEMPNAME}K${Chargename}${Drudename}${LNAME}${GaNAME}${PNAME}${VNAME}${hinge}"
+#else
+#    export JOBNAME="${MOLNAME}_${SimNAME}_${PotNAME}_${polymorph_num}_${MOLNUM}_${TEMPNAME}K${PNAME}${DNAME}${hinge}"
+#fi
+#export JOBPATH="./${JOBNAME}"
 export GNAME="pre_EQ"
 export TNAME="topology"
 
@@ -698,10 +705,14 @@ if [ "$SIMULATION" == "gromacs" ]; then
 	    sed -i "s/ref_p.*/ref_p                    = ${PRESSURE} ${PRESSURE} ${PRESSURE} 0.0 0.0 0.0/g" ${JOBPATH}/production.mdp
 	    sed -i "s/ref_p.*/ref_p                    = ${PRESSURE} ${PRESSURE} ${PRESSURE} 0.0 0.0 0.0/g" ${JOBPATH}/anneal.mdp
 	    #If we are simply interested in getting to the average volume at a new pressure, use a fast time constant
-	    if [ "$barostat" == "berendsen" ]; then
-		    sed -i "s/tau_p.*/tau_p                    = 1.0/g" ${JOBPATH}/equilibration.mdp
-                    sed -i "s/tau_p.*/tau_p                    = 10.0/g" ${JOBPATH}/production.mdp
-	    fi
+	    #NSA: When run, this wasn't matching Eric's files. If using Perinello-Raman wtih NPT he had the equilibration using berendsen wtih tau_p = 1.0 and producution using Peranello-Rhaman and tau_p = 10.0
+	    #if [ "$barostat" == "berendsen" ]; then
+	    #    sed -i "s/tau_p.*/tau_p                    = 1.0/g" ${JOBPATH}/equilibration.mdp
+            #    sed -i "s/tau_p.*/tau_p                    = 10.0/g" ${JOBPATH}/production.mdp
+	    #fi
+	    sed -i "s/tau_p.*/tau_p                    = 1.0/g" ${JOBPATH}/equilibration.mdp
+            sed -i "s/tau_p.*/tau_p                    = 10.0/g" ${JOBPATH}/production.mdp
+	    
 	    #If this polymorph is not rectangular, change the compressibility to allow Beta to change
 	    #string=$(less ${JOBPATH}/${GNAME}.gro | tail -1 | awk '{print $9}')
 	    #if [ "$string" != "" ]; then
@@ -798,6 +809,7 @@ if [ "$SIMULATION" == "gromacs" ]; then
 	#Copy over the molecule itp file and make the necessary modifications to the bond lengths, charges, and sigma values
 	echo "Copying itp file..."
 	cp ${TEMPLATEPATH}/${MOLNAME}_${POTENTIAL}.itp ${JOBPATH}/molecule.itp
+	cp ${TEMPLATEPATH}/${MOLNAME}_${POTENTIAL}.itp ./
 	
 	#Conduct any interpolations in the itp file
 	if [ "$POTENTIAL" == "oplsaatofakeg" ] || [ "$POTENTIAL" == "oplsaatofakea" ]; then

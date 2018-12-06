@@ -172,19 +172,19 @@ fi
 #=============================================================================================
 # SETUP INTERACTION DISSAPEARANCE PATH
 #=============================================================================================
+CODEPATH=$(dirname $0)
 
-Gamma=$MINGAMMA
-while [ "$Gamma" -lt "$MAXGAMMA" ]; do
-	for poly in $polymorph_num; do
-	#Gamma=$(echo "($RawGamma^$EXPONENT) / ($MAXGAMMA^($EXPONENT-1))" | bc)
-		setup_molecule -n $poly -T $TEMP -P $PRESSURE -M $MOLECULE -N $MOLECULES -I $INDEPENDENT -e $equil_steps -p $prod_steps -i $integrator -t $thermostat -U $LAMBDA -R $LAMBDA -L $LAMBDA -f $EXPONENT -a $cores -E NVT -K $k_max -A $MAXGAMMA -B $MINGAMMA -g $GSPACING -G $Gamma -r $CUTOFF -u $POTENTIAL -h $hinge
-	#let "RawGamma=$RawGamma+$GSPACING"
+for poly in $polymorph_num; do
+	Gamma=$MINGAMMA
+	mkdir "$poly/interactions"
+	while [ "$Gamma" -lt "$MAXGAMMA" ]; do
+		${CODEPATH}/setup_molecule -n $poly -T $TEMP -P $PRESSURE -M $MOLECULE -N $MOLECULES -I $INDEPENDENT -e $equil_steps -p $prod_steps -i $integrator -t $thermostat -U $LAMBDA -R $LAMBDA -L $LAMBDA -f $EXPONENT -a $cores -E NVT -K $k_max -A $MAXGAMMA -B $MINGAMMA -g $GSPACING -G $Gamma -r $CUTOFF -u $POTENTIAL -h $hinge -J "$poly/interactions/$Gamma"
+		let "Gamma=$Gamma+$GSPACING"
 	done
-	let "Gamma=$Gamma+$GSPACING"
 done
 
 #Catch the final gamma off-by-one exception
 for poly in $polymorph_num; do
-	setup_molecule -n $poly -T $TEMP -P $PRESSURE -M $MOLECULE -N $MOLECULES -I $INDEPENDENT -e $equil_steps -p $prod_steps -i $integrator -t $thermostat -U $LAMBDA -R $LAMBDA -L $LAMBDA -f $EXPONENT -a $cores -E NVT -K $k_max -A $MAXGAMMA -B $MINGAMMA -g $GSPACING -G $MAXGAMMA -r $CUTOFF -u $POTENTIAL -h $hinge
+	${CODEPATH}/setup_molecule -n $poly -T $TEMP -P $PRESSURE -M $MOLECULE -N $MOLECULES -I $INDEPENDENT -e $equil_steps -p $prod_steps -i $integrator -t $thermostat -U $LAMBDA -R $LAMBDA -L $LAMBDA -f $EXPONENT -a $cores -E NVT -K $k_max -A $MAXGAMMA -B $MINGAMMA -g $GSPACING -G $MAXGAMMA -r $CUTOFF -u $POTENTIAL -h $hinge -J "$poly/interactions/$MAXGAMMA"
 done
 
