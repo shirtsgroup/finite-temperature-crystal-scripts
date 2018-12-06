@@ -89,7 +89,8 @@ if __name__ == '__main__':
                                            + ' -u ' + str(inputs['gen_in']['potential'])
                                            + ' -z ' + str(inputs['temp_in']['simulation_package'])
                                            + ' -h ' + str(inputs['gen_in']['hinge'])
-                                           + ' -o ' + str(inputs['temp_in']['prodoutputs'])], shell=True)
+                                           + ' -o ' + str(inputs['temp_in']['prodoutputs'])
+                                           + ' -Z ' + inputs['gen_in']['template_path']], shell=True)
 
     
 
