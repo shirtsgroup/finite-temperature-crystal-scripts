@@ -204,18 +204,19 @@ fi
 #=============================================================================================
 # SETUP HARMONIC RESTRAINT PATH
 #=============================================================================================
-Lambda=$MINLAMBDA
-while [ "$Lambda" -lt "$MAXLAMBDA" ]; do
-	for poly in $polymorph_num; do
-	#Lambda=$(echo "($RawLambda^$EXPONENT) / ($MAXLAMBDA^($EXPONENT-1))" | bc)
-		setup_molecule -n $poly -T $TEMP -P $PRESSURE -M $MOLECULE -N $MOLECULES -I $INDEPENDENT -e $equil_steps -p $prod_steps -a $cores -i $integrator -t $thermostat -k $k_min -K $k_max -U $MINLAMBDA -R $MAXLAMBDA -s $LSPACING -f $EXPONENT -E NVT -L $Lambda -A $GAMMA -B $GAMMA -G $GAMMA -r $CUTOFF -u $POTENTIAL -h $hinge
-	#let "RawLambda=$RawLambda+$LSPACING"
+CODEPATH=$(dirname $0)
+
+for poly in $polymorph_num; do
+	Lambda=$MINLAMBDA
+	mkdir "$poly/restraints"
+	while [ "$Lambda" -lt "$MAXLAMBDA" ]; do
+		${CODEPATH}/setup_molecule -n $poly -T $TEMP -P $PRESSURE -M $MOLECULE -N $MOLECULES -I $INDEPENDENT -e $equil_steps -p $prod_steps -a $cores -i $integrator -t $thermostat -k $k_min -K $k_max -U $MINLAMBDA -R $MAXLAMBDA -s $LSPACING -f $EXPONENT -E NVT -L $Lambda -A $GAMMA -B $GAMMA -G $GAMMA -r $CUTOFF -u $POTENTIAL -h $hinge -J "$poly/restraints/$Lambda"
+		let "Lambda=$Lambda+$LSPACING"
 	done
-	let "Lambda=$Lambda+$LSPACING"
 done
 
 #Catch the final Lambda off-by-one exception
 for poly in $polymorph_num; do
-	setup_molecule -n $poly -T $TEMP -P $PRESSURE -M $MOLECULE -N $MOLECULES -I $INDEPENDENT -e $equil_steps -p $prod_steps -a $cores -i $integrator -t $thermostat -k $k_min -K $k_max -U $MINLAMBDA -R $MAXLAMBDA -s $LSPACING -f $EXPONENT -E NVT -L $MAXLAMBDA -A $GAMMA -B $GAMMA -G $GAMMA -r $CUTOFF -u $POTENTIAL -h $hinge
+	${CODEPATH}/setup_molecule -n $poly -T $TEMP -P $PRESSURE -M $MOLECULE -N $MOLECULES -I $INDEPENDENT -e $equil_steps -p $prod_steps -a $cores -i $integrator -t $thermostat -k $k_min -K $k_max -U $MINLAMBDA -R $MAXLAMBDA -s $LSPACING -f $EXPONENT -E NVT -L $MAXLAMBDA -A $GAMMA -B $GAMMA -G $GAMMA -r $CUTOFF -u $POTENTIAL -h $hinge  -J "$poly/restraints/$MAXLAMBDA"
 done
 

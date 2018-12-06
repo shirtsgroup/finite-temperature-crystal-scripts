@@ -122,7 +122,6 @@ done
 #=============================================================================================
 # ENSURE THAT INPUTS HAVE BEEN PROPERLY ENTERED
 #=============================================================================================
-
 #INDEPENDENT MOLECULES
 if [ "$INDEPENDENT" == "same" ] || [ "$INDEPENDENT" == "$MOLECULES" ]; then
     INDEPENDENT=$MOLECULES
@@ -191,10 +190,14 @@ fi
 #=============================================================================================
 # Setup Temperatures
 #=============================================================================================
+CODEPATH=$(dirname $0)
 
-for temp in $TEMPERATURES; do
-	for poly in $polymorph_num; do
-		setup_molecule -n $poly -T $temp -P $PRESSURE -M $MOLECULE -N $MOLECULES -I $INDEPENDENT -e $equil_steps -p $prod_steps -E $ENSEMBLE -i $integrator -t $thermostat -b $barostat -a $cores -c $Charge -K $k_max -r $CUTOFF -u $POTENTIAL -z $SIMULATION -h $hinge -o $PRODOUTPUTS 
+for poly in $polymorph_num; do
+	mkdir "$poly/temperature"
+	num=0
+	for temp in $TEMPERATURES; do
+		${CODEPATH}/setup_molecule -n $poly -T $temp -P $PRESSURE -M $MOLECULE -N $MOLECULES -I $INDEPENDENT -e $equil_steps -p $prod_steps -E $ENSEMBLE -i $integrator -t $thermostat -b $barostat -a $cores -c $Charge -K $k_max -r $CUTOFF -u $POTENTIAL -z $SIMULATION -h $hinge -o $PRODOUTPUTS -T $temp -J "$poly/temperature/"$num
+		num=$((num + 1))
 	done
 done
 

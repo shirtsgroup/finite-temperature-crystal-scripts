@@ -100,10 +100,11 @@ CHARGE="0.1150"
 SigmaC="100"
 SigmaH="100"
 hinge="DefaultHinge"
-
+JOBPATH="./"
 
 #options passed in from the users
-while getopts "n:T:P:M:N:I:e:p:o:i:t:b:a:k:K:D:L:U:R:s:f:A:B:G:g:d:V:r:u:c:C:H:z:E:h:" opt; do
+while getopts "n:T:P:M:N:I:e:p:o:i:t:b:a:k:K:D:L:U:R:s:f:A:B:G:g:d:V:r:u:c:C:H:z:E:h:J:" opt; do
+#while getopts "n:T:P:M:N:I:e:p:o:i:t:b:a:k:K:D:L:U:R:s:f:A:B:G:g:d:V:r:u:c:C:H:z:E:h:" opt; do
         case $opt in
         n )
                 polymorph_num=$OPTARG
@@ -211,13 +212,15 @@ while getopts "n:T:P:M:N:I:e:p:o:i:t:b:a:k:K:D:L:U:R:s:f:A:B:G:g:d:V:r:u:c:C:H:z
 	h )
 		hinge=$OPTARG
 		;;
+	J )
+		JOBPATH=$OPTARG
+		;;
         esac
 done
 
 #=============================================================================================
 # ENSURE THAT INPUTS HAVE BEEN PROPERLY ENTERED
 #=============================================================================================
-
 #TEMPERATURE
 if [ $TEMP == "-1" ]; then
         echo "Invalid Temperature: $TEMP"
@@ -575,12 +578,12 @@ fi
 
 #Name the job
 export MOLNAME="$MOLECULE"
-if [ "$SIMULATION" == "gromacs" ]; then
-    export JOBNAME="${MOLNAME}_${SimNAME}_${PotNAME}_${polymorph_num}_${MOLNUM}_${TEMPNAME}K${Chargename}${Drudename}${LNAME}${GaNAME}${PNAME}${VNAME}${hinge}"
-else
-    export JOBNAME="${MOLNAME}_${SimNAME}_${PotNAME}_${polymorph_num}_${MOLNUM}_${TEMPNAME}K${PNAME}${DNAME}${hinge}"
-fi
-export JOBPATH="./${JOBNAME}"
+#if [ "$SIMULATION" == "gromacs" ]; then
+#    export JOBNAME="${MOLNAME}_${SimNAME}_${PotNAME}_${polymorph_num}_${MOLNUM}_${TEMPNAME}K${Chargename}${Drudename}${LNAME}${GaNAME}${PNAME}${VNAME}${hinge}"
+#else
+#    export JOBNAME="${MOLNAME}_${SimNAME}_${PotNAME}_${polymorph_num}_${MOLNUM}_${TEMPNAME}K${PNAME}${DNAME}${hinge}"
+#fi
+#export JOBPATH="./${JOBNAME}"
 export GNAME="pre_EQ"
 export TNAME="topology"
 
