@@ -22,6 +22,9 @@ if __name__ == '__main__':
     args = parser.parse_args()
     inputs = yaml_loader(args.input_file)
 
+    for i in inputs['gen_in']['polymorph_num'].split():
+        subprocess.call(['mkdir', i])
+
     path = os.path.realpath(__file__).strip('Run_setup.py')
     if inputs['PSCP_in']['run_restraints'] == True:
         subprocess.call([path + 'setup-scripts/setup_Restraints -n "' + (inputs['gen_in']['polymorph_num']) + '"'
