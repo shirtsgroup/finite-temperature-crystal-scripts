@@ -4,5 +4,5 @@
 #SBATCH --ntasks=aaaa
 #SBATCH --partition=RM-shared
 
-Run_simulation -a aaaa -r rrrr -E eeee -i iiii -u uuuu
+Run_simulation -a aaaa -r rrrr -i iiii -u uuuu -E EEEE -P PPPP -A AAAA
 

@@ -101,9 +101,10 @@ SigmaC="100"
 SigmaH="100"
 hinge="DefaultHinge"
 JOBPATH="./"
+ANNEAL_TEMP=400
 
 #options passed in from the users
-while getopts "n:T:P:M:N:I:e:p:o:i:t:b:a:k:K:D:L:U:R:s:f:A:B:G:g:d:V:r:u:c:C:H:z:E:h:J:Z:" opt; do
+while getopts "n:T:P:M:N:I:e:p:o:i:t:b:a:k:K:D:L:U:R:s:f:A:B:G:g:d:V:r:u:c:C:H:z:E:h:J:Z:W:w:" opt; do
         case $opt in
         n )
                 polymorph_num=$OPTARG
@@ -217,10 +218,16 @@ while getopts "n:T:P:M:N:I:e:p:o:i:t:b:a:k:K:D:L:U:R:s:f:A:B:G:g:d:V:r:u:c:C:H:z
 	Z )
 		TEMPLATEPATH=$OPTARG
 		;;
+	W )
+		ANNEAL_TEMP=$OPTARG
+		;;
+	w )
+		anneal_steps=$OPTARG
+		;;
         esac
 done
 
-export $TEMPLATEPATH
+#export $TEMPLATEPATH
 
 #=============================================================================================
 # ENSURE THAT INPUTS HAVE BEEN PROPERLY ENTERED
@@ -691,7 +698,11 @@ if [ "$SIMULATION" == "gromacs" ]; then
 	    sed -i "s/gen_temp.*/gen_temp                 = ${TEMP}/g" ${JOBPATH}/equilibration.mdp
 	    sed -i "s/gen_temp.*/gen_temp                 = ${TEMP}/g" ${JOBPATH}/production.mdp
 	    sed -i "s/gen_temp.*/gen_temp                 = ${TEMP}/g" ${JOBPATH}/anneal.mdp
-	    sed -i "s/STARTTEMP/${TEMP}/g" ${JOBPATH}/anneal.mdp
+	    anneal_time=$(bc -l <<< "scale=4; $anneal_steps / 2000 - $anneal_steps / 20000")
+	    echo $anneal_time
+	    sed -i "s/END_ANNEAL_TIME/$anneal_time/g" ${JOBPATH}/anneal.mdp
+	    sed -i "s/STARTTEMP/${ANNEAL_TEMP}/g" ${JOBPATH}/anneal.mdp
+	    sed -i "s/ENDTEMP/${TEMP}/g" ${JOBPATH}/anneal.mdp
 
 	fi
 
@@ -939,11 +950,25 @@ if [ "$SIMULATION" == "gromacs" ]; then
         cp ${CODEPATH}/submit_cluster.slurm ${JOBPATH}/
      
 
+	#if the number of Annealing steps is 0, skip the equilibration
+        annealing=true
+        if [ "$anneal_steps" == "0" ]; then
+                annealing=false
+                echo "Skipping Annealing..."
+        fi	
+
 	#if the number of equilibration steps is 0, skip the equilibration
         equilibration=true
         if [ "$equil_steps" == "0" ]; then
                 equilibration=false
                 echo "Skipping Equilibration..."
+        fi	
+
+	#if the number of production steps is 0, skip the equilibration
+        production=true
+        if [ "$prod_steps" == "0" ]; then
+                production=false
+                echo "Skipping Production..."
         fi	
 	
 	#If there is no force-averaging, remove the index file command
@@ -1002,14 +1027,20 @@ if [ "$SIMULATION" == "gromacs" ]; then
 #                sed -i "/FREEZE THE JOB/,+1d" ${JOBPATH}/submit_cluster_bridges.slurm
 #        fi
         sed -i "s/rrrr/${reweight}/g" ${JOBPATH}/submit_local.sh
-        sed -i "s/eeee/${equilibration}/g" ${JOBPATH}/submit_local.sh
         sed -i "s/iiii/${indexing}/g" ${JOBPATH}/submit_local.sh
         sed -i "s/uuuu/${potential_to_pass}/g" ${JOBPATH}/submit_local.sh
+        sed -i "s/AAAA/${annealing}/g" ${JOBPATH}/submit_local.sh
+        sed -i "s/EEEE/${equilibration}/g" ${JOBPATH}/submit_local.sh
+        sed -i "s/PPPP/${production}/g" ${JOBPATH}/submit_local.sh
+
         sed -i "s/rrrr/${reweight}/g" ${JOBPATH}/submit_cluster.slurm
-        sed -i "s/eeee/${equilibration}/g" ${JOBPATH}/submit_cluster.slurm
         sed -i "s/iiii/${indexing}/g" ${JOBPATH}/submit_cluster.slurm
         sed -i "s/uuuu/${potential_to_pass}/g" ${JOBPATH}/submit_cluster.slurm
         sed -i "s/aaaa/${cores}/g" ${JOBPATH}/submit_cluster.slurm
+        sed -i "s/AAAA/${annealing}/g" ${JOBPATH}/submit_cluster.slurm
+        sed -i "s/PPPP/${production}/g" ${JOBPATH}/submit_cluster.slurm
+        sed -i "s/EEEE/${equilibration}/g" ${JOBPATH}/submit_cluster.slurm
+
         
 
 elif [ "$SIMULATION" == "tinker" ]; then	
