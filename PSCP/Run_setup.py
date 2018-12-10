@@ -161,7 +161,6 @@ if __name__ == '__main__':
 
     if args.REP:
         inputs['temp_in']['temperatures'], RE_nodes = setup_ReplicaExchange_temperatures(inputs)
-        inputs['temp_in']['temp_prod_steps'] = 0
         subprocess.call(['mv', args.input_file, args.input_file.strip('.yaml') + '_prep.yaml'])
         with open(args.input_file, 'w') as yaml_file:
             yaml.dump(inputs, yaml_file, default_flow_style=False)
@@ -218,6 +217,10 @@ if __name__ == '__main__':
                                               + ' -h ' + str(inputs['gen_in']['hinge'])], shell=True)
 
     if inputs['temp_in']['run_temperature'] == True:
+        run_production = "false"
+        if (inputs['temp_in']['temp_prod_steps'] > 0) and not args.REP:
+            run_production = "true"
+
         subprocess.call([path + 'setup-scripts/setup_Temperature', 
                          '-T', str(inputs['temp_in']['temperatures']), 
                          '-n', str(inputs['gen_in']['polymorph_num']),
@@ -228,6 +231,7 @@ if __name__ == '__main__':
                          '-I', str(inputs['gen_in']['independent']),
                          '-e', str(inputs['temp_in']['temp_equil_steps']),
                          '-p', str(inputs['temp_in']['temp_prod_steps']),
+                         '-Y', run_production,
                          '-i', inputs['gen_in']['integrator'],
                          '-t', inputs['gen_in']['thermostat'],
                          '-b', inputs['temp_in']['barostat'],

@@ -102,9 +102,10 @@ SigmaH="100"
 hinge="DefaultHinge"
 JOBPATH="./"
 ANNEAL_TEMP=400
+RUN_PRODUCTION=true
 
 #options passed in from the users
-while getopts "n:T:P:M:N:I:e:p:o:i:t:b:a:k:K:D:L:U:R:s:f:A:B:G:g:d:V:r:u:c:C:H:z:E:h:J:Z:W:w:" opt; do
+while getopts "n:T:P:M:N:I:e:p:o:i:t:b:a:k:K:D:L:U:R:s:f:A:B:G:g:d:V:r:u:c:C:H:z:E:h:J:Z:W:w:Y:" opt; do
         case $opt in
         n )
                 polymorph_num=$OPTARG
@@ -223,6 +224,9 @@ while getopts "n:T:P:M:N:I:e:p:o:i:t:b:a:k:K:D:L:U:R:s:f:A:B:G:g:d:V:r:u:c:C:H:z
 		;;
 	w )
 		anneal_steps=$OPTARG
+		;;
+	Y )
+		RUN_PRODUCTION=$OPTARG
 		;;
         esac
 done
@@ -966,6 +970,11 @@ if [ "$SIMULATION" == "gromacs" ]; then
 	#if the number of production steps is 0, skip the equilibration
         production=true
         if [ "$prod_steps" == "0" ]; then
+                production=false
+                echo "Skipping Production..."
+        fi
+
+        if [ "$RUN_PRODUCTION" == "false" ]; then
                 production=false
                 echo "Skipping Production..."
         fi	
