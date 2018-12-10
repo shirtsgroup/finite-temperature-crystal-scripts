@@ -6,6 +6,9 @@ import sys
 import subprocess
 import yaml
 import mdtraj as md
+import numpy as np
+from scipy.optimize import fsolve
+from scipy.special import erf
 from pymbar.timeseries import detectEquilibration
 
 path = os.path.realpath(__file__).strip('Run_setup.py')
@@ -51,6 +54,12 @@ def prob_diff(dT, P, T0, dmu, b_mu, dsig, b_sig):
     sig_2 = dsig * (T0 + dT) + b_sig
     return P - compute_prob(mu_1, mu_2, sig_1, sig_2)
 
+def compute_prob(mu_1, mu_2, sig_1, sig_2):
+    c = (mu_2 * sig_1**2 - sig_2*(mu_1*sig_2 + sig_1*np.sqrt((mu_1 - mu_2)**2 + 2*(sig_1**2 - sig_2**2)*np.log10(sig_1/sig_2)))) / (sig_1**2 - sig_2**2)
+    P = 1 - 0.5*erf((c- mu_1) / (np.sqrt(2) *sig_1)) + 0.5*erf((c- mu_2) / (np.sqrt(2) *sig_2))
+    return P
+
+
 def return_dT(dmu, b_mu, dsig, b_sig, P, T0):
     # Finds the dT that provides the desired proability overlap
     x = fsolve(prob_diff, 0.5, args=(P, T0, dmu, b_mu, dsig, b_sig))
@@ -62,22 +71,22 @@ def setup_ReplicaExchange_temperatures(inputs):
     temperatures = np.array(inputs['temp_in']['temperatures'].split())
 
     # Setting up arrays to store values from previous run
-    average = np.zeros((len(polymorph_num), len(temp_in)))
+    average = np.zeros((len(polymorph_num), len(temperatures)))
     average[:, :] = np.nan
-    st_dev = np.zeros((len(polymorph_num), len(temp_in)))
+    st_dev = np.zeros((len(polymorph_num), len(temperatures)))
     st_dev[:, :] = np.nan
 
     # Pulling data from previous run and reporting if certain temperatures are missing
     run_replica_exchange = True
     for i in range(len(polymorph_num)):
         for j in range(len(temperatures)):
-            if os.path.isfile(polymorph_num[i] + '/temperatures/' + int(j) + '/potenergy.xvg'):
-                U = load_potenergy(polymorph_num[i] + '/temperatures/' + int(j) + '/potenergy.xvg')
+            if os.path.isfile(polymorph_num[i] + '/temperature/' + str(int(j)) + '/potenergy.xvg'):
+                U = load_potenergy(polymorph_num[i] + '/temperature/' + str(int(j)) + '/potenergy.xvg')
                 average[i, j] = np.mean(U)
                 st_dev[i, j] = np.std(U)
             else:
                 run_replica_exchange = False
-                print('WARNING: File /' + polymorph_num[i] + '/temperatures/' + int(j) + '/potenergy.xvg' + ' is missing')
+                print('WARNING: File /' + polymorph_num[i] + '/temperature/' + str(int(j)) + '/potenergy.xvg' + ' is missing')
 
     # Ending the run if previous temperature runs are not present
     if run_replica_exchange == False:
@@ -85,20 +94,27 @@ def setup_ReplicaExchange_temperatures(inputs):
         sys.exit()
 
     # Using the average and standard deviation of the previous runs to determine the temperature spacing fro replica exchange
+# NSA: right now this is just taking the first polymorph to determine the temperature spacing
     temperatures = temperatures.astype(float)
-    dmu, b_mu = np.polyfit(temperatures, average, 1)
-    dsig, b_sig = np.polyfit(temperautres, st_dev, 1)
+    dmu = np.zeros(len(polymorph_num[0]))
+    b_mu = np.zeros(len(polymorph_num[0]))
+    dsig = np.zeros(len(polymorph_num[0]))
+    b_sig = np.zeros(len(polymorph_num[0]))
+
+    for i in range(len(polymorph_num[0])):
+        dmu[i], b_mu[i] = np.polyfit(temperatures, average[i, :], 1)
+        dsig[i], b_sig[i] = np.polyfit(temperatures, st_dev[i, :], 1)
 
     temp = float(inputs['rep_exch_in']['T_min'])
     T_out = [temp]
     while temp < float(inputs['rep_exch_in']['T_max']):
-        dt = np.around(return_dT(dmu, b_mu, dsig, b_sig, inputs['rep_exch_in']['prob_overlap']), 1)
-        temp += dt
+        dt = np.around(return_dT(dmu[0], b_mu[0], dsig[0], b_sig[0], inputs['rep_exch_in']['prob_overlap'], temp), 1)
+        temp += dt[0]
         if temp < float(inputs['rep_exch_in']['T_max']):
             T_out.append(temp)
         else:
             T_out.append(float(inputs['rep_exch_in']['T_max']))
-    
+
     # Correcting for the number of nodes and changing the temperautre back to a string
     T_out, nodes = correct_for_nodes(T_out)
     T = ""
@@ -106,11 +122,12 @@ def setup_ReplicaExchange_temperatures(inputs):
         T += str(i) + " "
     return T, nodes
     
+
 def correct_for_nodes(T):
     nodes = 1000
     # Minimizing the required noedes for replica Exchange
     for i in range(len(T), len(T) + 10):
-        for j in range(3, 7):
+        for j in range(4, 7):
             if ((i * j / 28) < nodes) and ((i * j % 28) == 0):
                 nodes = i * j / 28
                 extra_T = i - len(T)
@@ -125,6 +142,7 @@ def correct_for_nodes(T):
                     append = True
                     T = np.append(T, T_rand)
     return np.sort(T), nodes
+
 
 if __name__ == '__main__':
     import argparse
@@ -144,14 +162,14 @@ if __name__ == '__main__':
     if args.REP:
         inputs['temp_in']['temperatures'], RE_nodes = setup_ReplicaExchange_temperatures(inputs)
         inputs['temp_in']['temp_prod_steps'] = 0
-        with open('result.yml', 'w') as yaml_file:
+        subprocess.call(['mv', args.input_file, args.input_file.strip('.yaml') + '_prep.yaml'])
+        with open(args.input_file, 'w') as yaml_file:
             yaml.dump(inputs, yaml_file, default_flow_style=False)
 
     # Creating a directory for each polymorph
     for i in inputs['gen_in']['polymorph_num'].split():
         if args.REP:
             subprocess.call(['mv', i, i + '_prep'])
-            subprocess.call(['mv', args.input_file, args.input_file.strip('.yaml') + '_prep.yaml'])
         subprocess.call(['mkdir', i])
 
     if inputs['PSCP_in']['run_restraints'] == True:
@@ -224,8 +242,23 @@ if __name__ == '__main__':
                          '-W', str(inputs['gen_in']['anneal_temp']),
                          '-w', str(inputs['temp_in']['temp_anneal_steps'])])
 
-#        if args.REP:
-#            subprocess.call([])
+        if args.REP:
+            DIRS = ''
+            for i in range(len(inputs['temp_in']['temperatures'].split())):
+                DIRS += str(i) + ','
+            DIRS = DIRS.strip(',')
+
+            process_num = len(inputs['temp_in']['temperatures'].split())
+
+            exchange_num = process_num ** 3
+
+            for i in inputs['gen_in']['polymorph_num'].split():
+                subprocess.call([path + 'setup-scripts/setup_ReplicaExchange',
+                                 '-N', str(int(RE_nodes)),
+                                 '-D', DIRS,
+                                 '-n', str(int(process_num)),
+                                 '-x', str(int(exchange_num)),
+                                 '-J', str(i) + '/temperature'])
         
 
 
