@@ -1,0 +1,69 @@
+# Input file for setting up a PSCP between two crystalline polymorphs along with intermediate temperature samples
+
+# General input parameters
+gen_in:
+    template_path: none
+    polymorph_num: none
+    molecule: none
+    number_of_molecules: none
+    independent: same
+    pressure: 1
+    cores: 7
+    cutoff: 8
+    potential: oplsaa
+    hinge: DefaultHinge
+    integrator: sd
+    thermostat: nose-hoover
+    aneal_temp: 400
+
+PSCP_in:
+    PSCP_temperature: 200
+
+    # Input parameters for setup_Interactions
+    interactions:
+        run_interactions: False
+        max_gamma: 100
+        min_gamma: 0
+        gamma_spacing: 10
+        gamma_exponent: 2
+        lambda: 100
+        gamma_equil_steps: 100000
+        gamma_prod_steps: 1000000
+        k_max: 1000000
+    
+    # Input parameters for setop_Restraints
+    restraints:
+        run_restraints: False
+        min_lambda: 0
+        max_lambda: 100
+        lambda_spacing: 5
+        lambda_exponent: 4
+        gamma: 100
+        lambda_equil_steps: 1000000
+        lambda_prod_steps: 10000000
+        k_min: 0
+        k_max: 1000
+
+temp_in:
+    # Input parameters for setup_Temperature
+    run_temperature: False
+    simulation_package: gromacs
+    temperatures: 50 100 200 300
+    charge: 0.1150
+    temp_anneal_steps: 500
+    temp_equil_steps: 1000000
+    temp_prod_steps: 10000000
+    barostat: Parrinello-Rahman
+    k_max: 1000
+    ensemble: NPT
+    prodoutputs: 1000
+
+analysis_in:
+    potential_energy: none
+
+rep_exch_in:
+    # Settings for replica exchange
+    T_min: 10
+    T_max: 400
+    prob_overlap: 0.3
+    
