@@ -699,7 +699,6 @@ if [ "$SIMULATION" == "gromacs" ]; then
 	    sed -i "s/gen_temp.*/gen_temp                 = ${TEMP}/g" ${JOBPATH}/production.mdp
 	    sed -i "s/gen_temp.*/gen_temp                 = ${TEMP}/g" ${JOBPATH}/anneal.mdp
 	    anneal_time=$(bc -l <<< "scale=4; $anneal_steps / 2000 - $anneal_steps / 20000")
-	    echo $anneal_time
 	    sed -i "s/END_ANNEAL_TIME/$anneal_time/g" ${JOBPATH}/anneal.mdp
 	    sed -i "s/STARTTEMP/${ANNEAL_TEMP}/g" ${JOBPATH}/anneal.mdp
 	    sed -i "s/ENDTEMP/${TEMP}/g" ${JOBPATH}/anneal.mdp
