@@ -346,7 +346,7 @@ for potential in $potentials; do
     #Copy over the appropriate itp file and topology file
     echo "Copying itp and topology file..."
 #    cp ${RUNFILES_LOC}/${molecule}_${potential}.itp ${potential}.itp
-    cp ../${molecule}_${potential}.itp ${potential}.itp
+    cp ../../../${molecule}_${potential}.itp ${potential}.itp
 
     if [ -f topology.top ]; then
         cp topology.top reweighting_topology.top
