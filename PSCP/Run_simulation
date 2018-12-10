@@ -9,8 +9,10 @@ reweight=true
 equilibration=true
 indexing=false
 potential="oplsaa"
+production=true
+anneal=false
 
-while getopts "a:r:E:i:u:" opt; do
+while getopts "a:r:E:i:u:P:A:" opt; do
         case $opt in
         a )
                 cores=$OPTARG
@@ -26,6 +28,12 @@ while getopts "a:r:E:i:u:" opt; do
                 ;;
         u )
                 potential=$OPTARG
+                ;;
+        P )
+                production=$OPTARG
+                ;;
+        A )
+                anneal=$OPTARG
                 ;;
         esac
 done
@@ -46,6 +54,32 @@ sleep 1
 #Change the job status to 'SUBMITTED'
 echo "SUBMITTED" > jobstatus.txt
 
+if [ $anneal == true ]; then
+        # ANNEALING
+        cp pre_EQ.gro pre_ANNEAL.gro
+        if [ $indexing == true ]; then
+                # For force-averaging
+                ${GRO_grompp} -f anneal.mdp -c pre_ANNEAL.gro -r restraint.gro -p topology.top -o ANNEAL.tpr -n index.ndx  -maxwarn 10
+        else
+                ${GRO_grompp} -f anneal.mdp -c pre_ANNEAL.gro -r restraint.gro -p topology.top -o ANNEAL.tpr  -maxwarn 10
+        fi
+        ${GRO_mdrun} -nt $cores -v -deffnm ANNEAL -dhdl dhdl_ANNEAL
+
+        sleep 1
+
+        # EXTRACT THE FINAL FRAME FROM THE OUTPUT XTC FILE AND USE IT AS THE FINAL EQUILIBRATION FRAME
+        echo "Total-Energy" | ${GRO_energy} -f ANNEAL.edr -o time.xvg
+        finaltime=$(tail -1 time.xvg | awk '{print $1}')
+        rm ANNEAL.gro
+        echo 0 | ${GRO_trjconv} -f ANNEAL.xtc -s ANNEAL.tpr -o ANNEAL.gro -pbc whole -ndec 12 -dump $finaltime
+
+        if [ $equilibration == false ]; then
+            cp ANNEAL.gro EQ.gro
+        fi
+fi
+
+sleep 1
+
 if [ $equilibration == true ]; then
         # EQUILIBRATION
         if [ $indexing == true ]; then
@@ -63,48 +97,56 @@ if [ $equilibration == true ]; then
         finaltime=$(tail -1 time.xvg | awk '{print $1}')
         rm EQ.gro
         echo 0 | ${GRO_trjconv} -f EQ.xtc -s EQ.tpr -o EQ.gro -pbc whole -ndec 12 -dump $finaltime
-fi
-
-sleep 1
-
-# PRODUCTION
-${GRO_grompp} -f production.mdp -c EQ.gro -r restraint.gro -p topology.top -o PROD.tpr  -maxwarn 10
-${GRO_mdrun} -nt $cores -v -deffnm PROD -dhdl dhdl_PROD
-
-sleep 1
-
-# EXTRACT THE FINAL FRAME FROM THE OUTPUT TRR FILE AND USE IT AS THE FINAL PRODUCTION FRAME
-echo "Total-Energy" | ${GRO_energy} -f PROD.edr -o time.xvg
-finaltime=$(tail -1 time.xvg | awk '{print $1}')
-rm PROD.gro
-echo 0 | ${GRO_trjconv} -f PROD.trr -s PROD.tpr -o PROD.gro -pbc whole -ndec 12 -dump $finaltime
-
-sleep 1
-
-# Determine the code path
-CODEPATH=$(dirname $0)
-
-# CALCULATE THE CONFIGURATION ENERGIES AND ENSEMBLE AVERAGES
-${CODEPATH}/run-scripts/crunchjobenergy
-
-sleep 1
-
-# RELAX THE MOLECULE AND ENERGY MINIMIZE THE INTRAMOLECULAR INTERACTIONS TO CREATE THE RESTRAINT FILES
-${CODEPATH}/run-scripts/relax_molecule -i ${indexing}
-
-if [ $reweight == true ]; then
-        # REWEIGHT THE JOB INTO THE OTHER POTENTIALS IF THERE ARE NO RESTRAINTS
-        ${CODEPATH}/run-scripts/reweightjobgromacs -s gromacs -u $potential
-        if [ $potential == "designeda" ]; then
-                ${CODEPATH}/run-scripts/reweightjobtinker -s gromacs -u "amoeba09todesa" -d 10
+else
+        if [ $anneal == true ]; then
+                cp ANNEAL.gro EQ.gro
+        else
+                cp pre_EQ.gro EQ.gro
         fi
-        rm -rf TinkerXYZ
 fi
 
+sleep 1
 
-#DELETE THE LOGFILE IF THE JOB FINISHED CORRECTLY
-if [ -f PROD.log ] && [ "$(tail -1 PROD.log | awk '{print $1}')" == "Finished" ]; then
-    rm logfile
+if [ $production == true ]; then
+        # PRODUCTION
+        ${GRO_grompp} -f production.mdp -c EQ.gro -r restraint.gro -p topology.top -o PROD.tpr  -maxwarn 10
+        ${GRO_mdrun} -nt $cores -v -deffnm PROD -dhdl dhdl_PROD
+        
+        sleep 1
+        
+        # EXTRACT THE FINAL FRAME FROM THE OUTPUT TRR FILE AND USE IT AS THE FINAL PRODUCTION FRAME
+        echo "Total-Energy" | ${GRO_energy} -f PROD.edr -o time.xvg
+        finaltime=$(tail -1 time.xvg | awk '{print $1}')
+        rm PROD.gro
+        echo 0 | ${GRO_trjconv} -f PROD.trr -s PROD.tpr -o PROD.gro -pbc whole -ndec 12 -dump $finaltime
+        
+        sleep 1
+        
+        # Determine the code path
+        CODEPATH=$(dirname $0)
+        
+        # CALCULATE THE CONFIGURATION ENERGIES AND ENSEMBLE AVERAGES
+        ${CODEPATH}/run-scripts/crunchjobenergy
+        
+        sleep 1
+        
+        # RELAX THE MOLECULE AND ENERGY MINIMIZE THE INTRAMOLECULAR INTERACTIONS TO CREATE THE RESTRAINT FILES
+        ${CODEPATH}/run-scripts/relax_molecule -i ${indexing}
+        
+        if [ $reweight == true ]; then
+                # REWEIGHT THE JOB INTO THE OTHER POTENTIALS IF THERE ARE NO RESTRAINTS
+                ${CODEPATH}/run-scripts/reweightjobgromacs -s gromacs -u $potential
+                if [ $potential == "designeda" ]; then
+                        ${CODEPATH}/run-scripts/reweightjobtinker -s gromacs -u "amoeba09todesa" -d 10
+                fi
+                rm -rf TinkerXYZ
+        fi
+        
+        
+        #DELETE THE LOGFILE IF THE JOB FINISHED CORRECTLY
+        if [ -f PROD.log ] && [ "$(tail -1 PROD.log | awk '{print $1}')" == "Finished" ]; then
+            rm logfile
+        fi
 fi
 
 echo "FINISHED" > jobstatus.txt
