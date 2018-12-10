@@ -1,0 +1,44 @@
+#!/bin/bash
+
+#BASH SCRIPT TO SET UP REPLICA EXCHANGE SLURM SCRIPT
+#By: Nate Abraham 12/10/2018
+
+#=============================================================================================
+# SETUP DEFAULT VALUES AND READ IN PARAMETERS FROM USER
+#=============================================================================================
+
+
+#options passed in from the users
+while getopts "N:D:n:x:J:" opt; do
+        case $opt in
+        N )
+                NODES=$OPTARG
+                ;;
+	D )
+		DIRS=$OPTARG
+		;;
+	n )
+		process_num=$OPTARG
+		;;
+	x )
+		exchange_num=$OPTARG
+		;;
+	J )
+		JOBPATH=$OPTARG
+		;;
+	esac
+done
+
+CODEPATH=$(dirname $0)
+
+# Copying submission script into temperature direcotry
+cp ${CODEPATH}/submit_cluster_REP.slurm ${JOBPATH}/
+
+# Replacing specific strings in the submit script to match the user input
+sed -i "s/NODES/${NODES}/g" ${JOBPATH}/submit_cluster_REP.slurm
+sed -i "s/DIRS/${DIRS}/g" ${JOBPATH}/submit_cluster_REP.slurm
+sed -i "s/NNPP/${process_num}/g" ${JOBPATH}/submit_cluster_REP.slurm
+sed -i "s/NNEEXX/${exchange_num}/g" ${JOBPATH}/submit_cluster_REP.slurm
+
+
+
