@@ -96,24 +96,29 @@ def setup_ReplicaExchange_temperatures(inputs):
     # Using the average and standard deviation of the previous runs to determine the temperature spacing fro replica exchange
 # NSA: right now this is just taking the first polymorph to determine the temperature spacing
     temperatures = temperatures.astype(float)
-    dmu = np.zeros(len(polymorph_num[0]))
-    b_mu = np.zeros(len(polymorph_num[0]))
-    dsig = np.zeros(len(polymorph_num[0]))
-    b_sig = np.zeros(len(polymorph_num[0]))
+    #dmu = np.zeros(len(polymorph_num[0]))
+    #b_mu = np.zeros(len(polymorph_num[0]))
+    #dsig = np.zeros(len(polymorph_num[0]))
+    #b_sig = np.zeros(len(polymorph_num[0]))
 
-    for i in range(len(polymorph_num[0])):
-        dmu[i], b_mu[i] = np.polyfit(temperatures, average[i, :], 1)
-        dsig[i], b_sig[i] = np.polyfit(temperatures, st_dev[i, :], 1)
+    #print(len(polymorph_num))
+    #for i in range(len(polymorph_num[0])):
+    print(average[0,:], st_dev[0,:])
+    dmu, b_mu = np.polyfit(temperatures, average[0, :], 1)
+    dsig, b_sig = np.polyfit(temperatures, st_dev[0, :], 1)
+    print(dmu, b_mu, dsig, b_sig)
+    sys.exit()
 
     temp = float(inputs['rep_exch_in']['T_min'])
     T_out = [temp]
     while temp < float(inputs['rep_exch_in']['T_max']):
-        dt = np.around(return_dT(dmu[0], b_mu[0], dsig[0], b_sig[0], inputs['rep_exch_in']['prob_overlap'], temp), 1)
+        dt = np.around(return_dT(dmu, b_mu, dsig, b_sig, inputs['rep_exch_in']['prob_overlap'], temp), 1)
         temp += dt[0]
         if temp < float(inputs['rep_exch_in']['T_max']):
             T_out.append(temp)
         else:
             T_out.append(float(inputs['rep_exch_in']['T_max']))
+    sys.exit()
 
     # Correcting for the number of nodes and changing the temperautre back to a string
     T_out, nodes = correct_for_nodes(T_out)

@@ -14,7 +14,7 @@ gen_in:
     hinge: DefaultHinge
     integrator: sd
     thermostat: nose-hoover
-    aneal_temp: 400
+    anneal_temp: 400
 
 PSCP_in:
     PSCP_temperature: 200
