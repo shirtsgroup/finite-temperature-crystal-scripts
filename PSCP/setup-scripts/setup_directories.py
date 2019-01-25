@@ -6,7 +6,34 @@ import numpy as np
 from resize_gro_individual import run_resize_gro_individual
 from interpolate_itp import interpolate_itp
 
-path = os.path.realpath(__file__).strip('Run_LatticeDynamics.py')
+path = os.path.realpath(__file__).strip('setup_directories.py')
+
+def setup_temperature(inputs, run_production):
+    # Python script to automatically set up simulations over a given range of temperatures
+    # Original script written in bash by: Eric Dybeck on 03/31/2014
+    # Converted to python by: Nate Abraham on 01/25/2019
+#NSA: General checks from all of these should be condensed elsewhere
+
+    # Going through the setup for each polymorph
+    for i in inputs['gen_in']['polymorph_num'].split():
+        subprocess.call(['mkdir', i + '/temperature'])
+        count = 0
+        for j in inputs['temp_in']['temperatures'].split():
+            setup_molecule(polymorph_num=i, temperature=j, pressure=inputs['gen_in']['pressure'],
+                           molecule=inputs['gen_in']['molecule'],
+                           number_of_molecules=inputs['gen_in']['number_of_molecules'],
+                           independent=inputs['gen_in']['independent'],
+                           equil_steps=inputs['temp_in']['temp_equil_steps'],
+                           prod_steps=inputs['temp_in']['temp_prod_steps'],
+                           prodoutputs=inputs['temp_in']['prodoutputs'], integrator=inputs['gen_in']['integrator'],
+                           thermostat=inputs['gen_in']['thermostat'], barostat=inputs['temp_in']['barostat'],
+                           cores=inputs['gen_in']['cores'], k_max=inputs['temp_in']['k_max'],
+                           cutoff=inputs['gen_in']['cutoff'], potential=inputs['gen_in']['potential'],
+                           simulation=inputs['temp_in']['simulation_package'], jobpath=i + '/temperature/' + str(count),
+                           templatepath=inputs['gen_in']['template_path'], anneal_temp=inputs['gen_in']['anneal_temp'],
+                           anneal_steps=inputs['temp_in']['temp_anneal_steps'], run_production=run_production,
+                           charge=inputs['temp_in']['charge'], hinge=inputs['gen_in']['hinge'])
+            count += 1
 
 def setup_interactions(polymorph_num=['p1', 'p2' 'p3'], molecule="benzene", max_gamma=100, min_gamma=0, gamma_spacing=10,
                        gamma_exponent=2, lambd=100, PSCP_temperature=200, pressure=1, number_of_molecules=72,
@@ -43,7 +70,7 @@ def setup_restraints(polymorph_num=['p1', 'p2', 'p3'], molecule="benzene", min_l
             setup_molecule()
             lambd += lambda_spacing
 
-
+"""
 def setup_mdp_lambdas(current_lambda, current_gamma, polymorph_num='all', min_lambda=0, max_lambda=100, lambda_spacing=-1, lambda_exponent=2, min_gamma=0, max_gamma=100,
                       gamma_spacing=-1, gamma_exponent=2, jobpath='DefaultPath'):
     # Python script to automatically set up the mdp files to take on multiple lambda values
@@ -135,134 +162,9 @@ def setup_mdp_lambdas(current_lambda, current_gamma, polymorph_num='all', min_la
             gamma_1 = np.around(max_gamma ** 2/ 100, 6)
             gamma_2 = np.around(gamma_1 / 100., 6)
             lambda_vector =
-
-
-
-
-
-
-
-
 """
-       Lambda_vect="${Lambda_vect}${lambda} "
-       Gamma_vect="${Gamma_vect}${gamma} "
-
-       if[$LAMBDA == $RawLambda]; then
-       sed -i "/init_lambda_state/c init_lambda_state        = $i    ;Which state are we sampling from?" ${JOBPATH} / equilibration.mdp
-       sed -i "/init_lambda_state/c init_lambda_state        = $i    ;Which state are we sampling from?" ${JOBPATH} / production.mdp
-       fi
-
-       let "RawLambda=$RawLambda+$LSPACING"
-       let "i=i+1"
-       done
-
-       # Catch the final temperature off-by-one exception
-       Lambda_indicies="${Lambda_indicies}   ${i}    "
-       lambda =$(echo "x=$MAXLAMBDA*0.010000; if(x==0) print \"0.00000\"; if(x<1 && x>0) print 0; x" | bc)
-       Gamma=$(echo "scale=6; ($MAXGAMMA^2) / (100)" | bc)
-       gamma=$(echo "x=$Gamma*0.010000; if(x==0) print \"0.00000\"; if(x<1 && x>0) print 0; x" | bc)
-       Lambda_vect="${Lambda_vect}${lambda} "
-       Gamma_vect="${Gamma_vect}${gamma} "
-
-       if[$LAMBDA == $MAXLAMBDA]; then
-       sed -i "/init_lambda_state/c init_lambda_state        = $i    ;Which state are we sampling from?" ${JOBPATH} / equilibration.mdp
-       sed -i "/init_lambda_state/c init_lambda_state        = $i    ;Which state are we sampling from?" ${JOBPATH} / production.mdp
-       fi
-
-       # Set the coupling specifications for turning the interactions off
-       if["$GAMMA" == "0"]; then
-       sed -i "/couple-lambda0/c couple-lambda0           = none" ${JOBPATH} / equilibration.mdp
-       sed -i "/couple-lambda1/c couple-lambda1           = vdw-q" ${JOBPATH} / equilibration.mdp
-       sed -i "/couple-intramol/c couple-intramol          = yes" ${JOBPATH} / equilibration.mdp
-       sed -i "/couple-lambda0/c couple-lambda0           = none" ${JOBPATH} / production.mdp
-       sed -i "/couple-lambda1/c couple-lambda1           = vdw-q" ${JOBPATH} / production.mdp
-       sed -i "/couple-intramol/c couple-intramol          = yes" ${JOBPATH} / production.mdp
-       fi
-       Lambda_indicies=";Lambda Indicies         = ${Lambda_indicies}"
-       Lambda_vect="restraint_lambdas        = ${Lambda_vect}"
-       Gamma_vect1="coul-lambdas             = ${Gamma_vect}"
-       Gamma_vect2="vdw-lambdas              = ${Gamma_vect}"
-       Gamma_vect3="bonded-lambdas           = "
-
-       else
-       # If the interactions are changing, loop over all gamma points and set up the gamma vector in the mdp files
-       RawGamma=$MINGAMMA
-       Lambda_indicies=""
-       Lambda_vect=""
-       Gamma_indicies=""
-       Gamma_vect=""
-       # Gamma_vect_bond=""
-       gamma=0.0
-       i=0
-       while["$RawGamma" -lt "$MAXGAMMA"]; do
-
-       if["$i" -lt "10"]; then
-       Lambda_indicies="${Lambda_indicies}    ${i}    "
-       else
-       Lambda_indicies="${Lambda_indicies}    ${i}   "
-       fi
-
-       Gamma=$(echo "scale=6; ($RawGamma^$EXPONENT) / ($MAXGAMMA^($EXPONENT-1))" | bc)
-       lambda =$(echo "x=$MAXLAMBDA*0.010000; if(x==0) print \"0.00000\"; if(x<1 && x>0) print 0; x" | bc)
-       gamma=$(echo "x=$Gamma*0.010000; if(x==0) print \"0.00000\"; if(x<1 && x>0) print 0; x" | bc)
-       # gamma_bond=$(echo "x=1.000000-$gamma; if(x==0) print \"0.00000\"; if(x<1 && x>0) print 0; x" | bc)
-       # gamma="1.000000"
-       Lambda_vect="${Lambda_vect}${lambda} "
-       Gamma_vect="${Gamma_vect}${gamma} "
-       Gamma_vect_bond="${Gamma_vect_bond}${gamma_bond} "
-
-       if[$GAMMA == $RawGamma] & &[$MINLAMBDA == $MAXLAMBDA]; then
-       sed -i "/init_lambda_state/c init_lambda_state        = $i    ;Which state are we sampling from?" ${JOBPATH} / equilibration.mdp
-       sed -i "/init_lambda_state/c init_lambda_state        = $i    ;Which state are we sampling from?" ${JOBPATH} / production.mdp
-       fi
-
-       let "RawGamma=$RawGamma+$GSPACING"
-       let "i=i+1"
-       done
 
 
-       # Catch the final gamma off-by-one exception
-       Lambda_indicies="${Lambda_indicies}    ${i}   "
-       lambda =$(echo "x=$MAXLAMBDA*0.010000; if(x==0) print \"0.00000\"; if(x<1 && x>0) print 0; x" | bc)
-       gamma=$(echo "x=$MAXGAMMA*0.010000; if(x==0) print \"0.00000\"; if(x<1 && x>0) print 0; x" | bc)
-       # gamma_bond=$(echo "x=1.000000-$gamma; if(x==0) print \"0.00000\"; if(x<1 && x>0) print 0; x" | bc)
-       # gamma="1.000000"
-       Lambda_vect="${Lambda_vect}${lambda} "
-       Gamma_vect="${Gamma_vect}${gamma} "
-       Gamma_vect_bond="${Gamma_vect_bond}${gamma_bond} "
-
-       if[$GAMMA == $MAXGAMMA] & &[$MINLAMBDA == $MAXLAMBDA]; then
-       sed -i "/init_lambda_state/c init_lambda_state        = $i    ;Which state are we sampling from?" ${JOBPATH} / equilibration.mdp
-       sed -i "/init_lambda_state/c init_lambda_state        = $i    ;Which state are we sampling from?" ${JOBPATH} / production.mdp
-       fi
-
-       Lambda_indicies=";Lambda Indicies         = ${Lambda_indicies}"
-       Lambda_vect="restraint_lambdas        = ${Lambda_vect}"
-       Gamma_vect1="coul-lambdas             = ${Gamma_vect}"
-       Gamma_vect2="vdw-lambdas              = ${Gamma_vect}"
-       Gamma_vect3="bonded-lambdas           = ${Gamma_vect_bond}"
-
-       # Set the coupling specifications for turning the interactions off
-       sed -i "/couple-lambda0/c couple-lambda0           = none" ${JOBPATH} / equilibration.mdp
-       sed -i "/couple-lambda1/c couple-lambda1           = vdw-q" ${JOBPATH} / equilibration.mdp
-       sed -i "/couple-intramol/c couple-intramol          = yes" ${JOBPATH} / equilibration.mdp
-       sed -i "/couple-lambda0/c couple-lambda0           = none" ${JOBPATH} / production.mdp
-       sed -i "/couple-lambda1/c couple-lambda1           = vdw-q" ${JOBPATH} / production.mdp
-       sed -i "/couple-intramol/c couple-intramol          = yes" ${JOBPATH} / production.mdp
-       fi
-
-       # Now replace the free-energy section with the new strings
-       sed -i "/;Lambda Indicies/c ${Lambda_indicies}" ${JOBPATH} / equilibration.mdp
-       sed -i "/restraint_lambdas/c ${Lambda_vect}" ${JOBPATH} / equilibration.mdp
-       sed -i "/coul-lambdas/c ${Gamma_vect1}" ${JOBPATH} / equilibration.mdp
-       sed -i "/vdw-lambdas/c ${Gamma_vect2}" ${JOBPATH} / equilibration.mdp
-       sed -i "/bonded-lambdas/c ${Gamma_vect3}" ${JOBPATH} / equilibration.mdp
-       sed -i "/;Lambda Indicies/c ${Lambda_indicies}" ${JOBPATH} / production.mdp
-       sed -i "/restraint_lambdas/c ${Lambda_vect}" ${JOBPATH} / production.mdp
-       sed -i "/coul-lambdas/c ${Gamma_vect1}" ${JOBPATH} / production.mdp
-       sed -i "/vdw-lambdas/c ${Gamma_vect2}" ${JOBPATH} / production.mdp
-       sed -i "/bonded-lambdas/c ${Gamma_vect3}" ${JOBPATH} / production.mdp
-"""
 ################################################################################
 #### Specific functions for setup_molecule
 ################################################################################
@@ -270,7 +172,7 @@ def setup_mdp_lambdas(current_lambda, current_gamma, polymorph_num='all', min_la
 def replace_string_in_text(fil, string, replacement_string):
     # Replaces the 'string' with 'replacement_string' in the provided file 'fil'
     s = open(fil).read()
-    s = s.replace(string, replacement_string)
+    s = s.replace(str(string), str(replacement_string))
     f = open(fil, 'w')
     f.write(s)
     f.close()
@@ -281,8 +183,8 @@ def replace_line_starting_with(fil, string, line):
         out = ''
         for l in f:
             if len(l.split()) > 0:
-                if l.split()[0] == string:
-                    l = line
+                if l.split()[0] == str(string):
+                    l = str(line) + '\n'
             out += l
     with open(fil, 'w') as F:
         F.write(out)
@@ -290,7 +192,7 @@ def replace_line_starting_with(fil, string, line):
 def grofil_number_of_atoms(fil):
     # Determining the number of atoms in the gro file
     with open(fil) as f:
-        number_of_atoms = int(f[1].split()[0])
+        number_of_atoms = int(f.read().split('\n')[1].split()[0])
     return number_of_atoms
 
 def append_files(file_1, file_2):
@@ -302,12 +204,14 @@ def append_files(file_1, file_2):
     subprocess.call(['mv', 'hold', file_1])
 
 
-def setup_molecule(polymorph_num, temperature, pressure, molecule, number_of_molecules, independent, equil_steps,
-                   eqoutputs, prod_steps, prodoutputs, integrator, thermostat, barostat, cores, k_min, k_max, lambd, min_lambda,
-                   max_lambda, lambda_spacing, lambda_exponent, gamma, min_gamma, max_gamma, gamma_exponent, gamma_spacing, cutoff, potential,
-                   simulation, ensemble, jobpath, templatepath, anneal_temp, anneal_steps, run_production, volume,
-                   charge, hinge, delta, SigmaH, SigmaC, drude_k):
-
+def setup_molecule(polymorph_num='p1', temperature=[], pressure=1, molecule='', number_of_molecules=0,
+                   independent='same', equil_steps=100000, prod_steps=40000000, prodoutputs=20000, integrator='sd',
+                   thermostat='nose-hoover', barostat='Parrinello-Rahman', cores=1, k_min=0, k_max=1000000, lambd=0,
+                   min_lambda=0, max_lambda=0, lambda_spacing=100, lambda_exponent=2, gamma=100, min_gamma=100,
+                   max_gamma=100, gamma_exponent=2, gamma_spacing=100, cutoff=8, potential='oplsaa',
+                   simulation='gromacs', ensemble='NPT', jobpath='./', templatepath='', anneal_temp=400,
+                   anneal_steps=10000, run_production=True, volume=-1, charge=0.1150, hinge='DefaultHinge', delta=0,
+                   SigmaH=100, SigmaC=100, drude_k=100):
     # =============================================================================================
     # ENSURE THAT INPUTS HAVE BEEN PROPERLY ENTERED
     # =============================================================================================
@@ -391,13 +295,17 @@ def setup_molecule(polymorph_num, temperature, pressure, molecule, number_of_mol
         print("Invalid Lambda Spacing: ", lambda_spacing)
         sys.exit()
 
-    if (exponent < 0) or (exponent > 4):
-        print("Invalid Exponent: ", exponent)
+    if (lambda_exponent < 0) or (lambda_exponent > 4):
+        print("Invalid Lambda Exponent: ", lambda_exponent)
         sys.exit()
 
     # GAMMA POINT
     if gamma_spacing < 0:
         print("Invalid Gambda Spacing: ", gamma_spacing)
+        sys.exit()
+
+    if (gamma_exponent < 0) or (gamma_exponent > 4):
+        print("Invalid Lambda Exponent: ", gamma_exponent)
         sys.exit()
 
     # SIGMAC
@@ -454,7 +362,7 @@ def setup_molecule(polymorph_num, temperature, pressure, molecule, number_of_mol
         return return_string
 
     # Format the temperature name
-    tempname = number_to_string(temperature)
+    tempname = number_to_string(int(float(temperature)))
 
     # Format the number of molecules
     if number_of_molecules == independent:
@@ -518,16 +426,16 @@ def setup_molecule(polymorph_num, temperature, pressure, molecule, number_of_mol
     tname = "topology"
 
     # make the directory if it does not already exist
-    print('Making Directory: ${JOBPATH} ...')
+    print('Making Directory: ', jobpath,'...')
     subprocess.call(['mkdir', jobpath])
 
     # OUTPUT FREQUENCY
-    equil_output_frequency = equil_steps / 100  # The 100 was eqoutput
-    equil_trr_output_frequency = equil_steps / 100  # The 100 was emtroutputs
-    prod_output_frequency = prod_steps / prodoutputs
-    prod_trr_output_frequency = prod_steps / prodoutputs
-    anneal_output_frequency = anneal_steps / 10000  # The 10000 could be a user specified variable
-    anneal_trr_output_frequency = anneal_steps / 10000
+    equil_output_frequency = int(equil_steps / 100)  # The 100 was eqoutput
+    equil_trr_output_frequency = int(equil_steps / 100)  # The 100 was emtroutputs
+    prod_output_frequency = int(prod_steps / prodoutputs)
+    prod_trr_output_frequency = int(prod_steps / prodoutputs)
+    anneal_output_frequency = int(anneal_steps / 10000)  # The 10000 could be a user specified variable
+    anneal_trr_output_frequency = int(anneal_steps / 10000)
     if simulation == 'gromacs':
         # COPY OVER THE INITIAL GRO FILE
         print('Copying .gro file...')
@@ -599,7 +507,7 @@ def setup_molecule(polymorph_num, temperature, pressure, molecule, number_of_mol
         if ensemble in ['NVT', 'NPT']:
             # Changing the thermostat in the .mdp files
             replace_line_starting_with(jobpath + '/equilibration.mdp', 'tcoupl', 'tcoupl = ' + thermostat)
-            replace_line_starting_with(jobpath + '/prodcution.mdp', 'tcoupl', 'tcoupl = ' + thermostat)
+            replace_line_starting_with(jobpath + '/production.mdp', 'tcoupl', 'tcoupl = ' + thermostat)
             replace_line_starting_with(jobpath + '/anneal.mdp', 'tcoupl', 'tcoupl = ' + thermostat)
 
             # Changing the reference temperature in the .mdp file
@@ -625,16 +533,16 @@ def setup_molecule(polymorph_num, temperature, pressure, molecule, number_of_mol
             replace_line_starting_with(jobpath + '/production.mdp', 'pcoupl', 'pcoupl = ' + barostat)
             replace_line_starting_with(jobpath + '/anneal.mdp', 'pcoupl', 'pcoupl = berendsen')
 
-            replace_line_starting_with(jobpath + 'equilibration.mdp', 'tau_p', 'tau_p = 1.0')
-            replace_line_starting_with(jobpath + 'production.mdp', 'tau_p', 'tau_p = 10.0')
-            replace_line_starting_with(jobpath + 'anneal.mdp', 'tau_p', 'tau_p = 1.0')
+            replace_line_starting_with(jobpath + '/equilibration.mdp', 'tau_p', 'tau_p = 1.0')
+            replace_line_starting_with(jobpath + '/production.mdp', 'tau_p', 'tau_p = 10.0')
+            replace_line_starting_with(jobpath + '/anneal.mdp', 'tau_p', 'tau_p = 1.0')
 
             # Making sure that we are sampling full anisotropy in the crystal lattice
-            replace_line_starting_with(jobpath + 'equilibration.mdp', 'compressibility',
+            replace_line_starting_with(jobpath + '/equilibration.mdp', 'compressibility',
                                        'compressibility = 4.5e-5 4.5e-5 4.5e-5 4.5e-5 4.5e-5 4.5e-5')
-            replace_line_starting_with(jobpath + 'production.mdp', 'compressibility',
+            replace_line_starting_with(jobpath + '/production.mdp', 'compressibility',
                                        'compressibility = 4.5e-5 4.5e-5 4.5e-5 4.5e-5 4.5e-5 4.5e-5')
-            replace_line_starting_with(jobpath + 'anneal.mdp', 'compressibility',
+            replace_line_starting_with(jobpath + '/anneal.mdp', 'compressibility',
                                        'compressibility = 4.5e-5 4.5e-5 4.5e-5 4.5e-5 4.5e-5 4.5e-5')
 
         # CUTOFF RADIUS
@@ -686,12 +594,12 @@ def setup_molecule(polymorph_num, temperature, pressure, molecule, number_of_mol
         replace_line_starting_with(jobpath + '/anneal.mdp', 'nsteps', 'nsteps = ' + str(anneal_steps))
 
         # OUTPUT FREQUENCY
-        replace_line_starting_with(jobpath + '/equilibraiton.mdp', 'nstlog', 'nstlog = ' + str(equil_output_frequency))
-        replace_line_starting_with(jobpath + '/equilibraiton.mdp', 'nstenergy', 'nstenergy = ' +
+        replace_line_starting_with(jobpath + '/equilibration.mdp', 'nstlog', 'nstlog = ' + str(equil_output_frequency))
+        replace_line_starting_with(jobpath + '/equilibration.mdp', 'nstenergy', 'nstenergy = ' +
                                    str(equil_output_frequency))
-        replace_line_starting_with(jobpath + '/equilibraiton.mdp', 'nstxout', 'nstxout = ' +
+        replace_line_starting_with(jobpath + '/equilibration.mdp', 'nstxout', 'nstxout = ' +
                                    str(equil_trr_output_frequency))
-        replace_line_starting_with(jobpath + '/equilibraiton.mdp', 'nstxout-compressed', 'nstxout-compressed = ' +
+        replace_line_starting_with(jobpath + '/equilibration.mdp', 'nstxout-compressed', 'nstxout-compressed = ' +
                                    str(equil_trr_output_frequency))
 
         replace_line_starting_with(jobpath + '/production.mdp', 'nstlog', 'nstlog = ' + str(prod_output_frequency))
@@ -711,13 +619,16 @@ def setup_molecule(polymorph_num, temperature, pressure, molecule, number_of_mol
                                    str(prod_trr_output_frequency))
 
         # INTEGRATOR
-        replace_line_starting_with(jobpath + '/equilibraton.mdp', 'integrator', 'integrator = ' + integrator)
+        replace_line_starting_with(jobpath + '/equilibration.mdp', 'integrator', 'integrator = ' + integrator)
         replace_line_starting_with(jobpath + '/production.mdp', 'integrator', 'integrator = ' + integrator)
         replace_line_starting_with(jobpath + '/anneal.mdp', 'integrator', 'integrator = ' + integrator)
 
         # FREE ENERGY PARAMETERS
-#setup_mdpLambdas - L $Lambda - W $MINLAMBDA - S $MAXLAMBDA - s $LSPACING - A $MAXGAMMA - B $MINGAMMA - G $GAMMA - g $GSPACING - f $EXPONENT - d $JOBPATH
-
+#NSA: need to re-write setup_mdpLambdas as a python script
+        subprocess.call(['setup_mdpLambdas', '-L', str(lambd), '-W', str(min_lambda), '-S', str(max_lambda),
+                         '-s', str(lambda_spacing), '-A', str(max_gamma), '-B', str(min_gamma), '-G', str(gamma),
+                         '-g', str(gamma_spacing), '-f', str(lambda_exponent), '-F', str(gamma_exponent),
+                         '-d', jobpath])
 
         # Copy over the molecule itp file and make the necessary modifications to the bond lengths, charges, and sigma values
         print('Copying itp file...')
@@ -744,28 +655,29 @@ def setup_molecule(polymorph_num, temperature, pressure, molecule, number_of_mol
             replace_string_in_text(jobpath + '/parameters.txt', 'HHHHH', '0.1079')
 
         if charge != '':
-            replace_string_in_text(jobpath + 'molecule.itp', '-0.115    12.011', '-' + str(np.around(charge, 3)) +
+            replace_string_in_text(jobpath + '/molecule.itp', '-0.115    12.011', '-' + str(np.around(charge, 3)) +
                                    '    12.011')
-            replace_string_in_text(jobpath + 'molecule.itp', '0.115     1.008', str(np.around(charge, 3)) +
+            replace_string_in_text(jobpath + '/molecule.itp', '0.115     1.008', str(np.around(charge, 3)) +
                                    '     1.008')
         replace_string_in_text(jobpath + '/parameters.txt', 'CCCHARGE', str(np.around(charge, 3)))
 
         # CREATE THE POSITION RESTRAINT ITP FILE
-        c = subprocess.Popen(['gmx', 'genrestr', '-f', jobpath + '/' + gname + '.gro'
+        c = subprocess.Popen(['echo', '0'], stdout=subprocess.PIPE)
+        output = subprocess.check_output(['gmx', 'genrestr', '-f', jobpath + '/' + gname + '.gro',
                                                  '-o', jobpath + '/posre.itp',
-                                                 '-fc', str(k_max) + ' ' + str(k_max) + ' ' + str(k_max),
-                                                 '-quiet'])
-        c.communicate(b'0 0\n')
+                                                 '-fc', str(k_max), str(k_max), str(k_max), '-quiet'], stdin=c.stdout)
         c.wait()
 
         # Now lop off all but the first apermol + 4 lines
         atoms = grofil_number_of_atoms(jobpath + '/' + gname + '.gro')
         # echo "atoms: $atoms"
-        apermol = atoms / number_of_molecules
+        apermol = int(atoms / number_of_molecules)
         with open(jobpath + '/posre.itp') as f:
             out = ''
+            f = f.read().split('\n')
             for l in range(apermol + 4):
-                out += f[l]
+                out += f[l] + '\n'
+
         with open(jobpath + '/restr.itp', 'w') as F:
             F.write(out)
 
@@ -825,33 +737,34 @@ def setup_molecule(polymorph_num, temperature, pressure, molecule, number_of_mol
         #subprocess.call(['cp', templatepath + '/submit_minimization_local.sh', jobpath + '/'])
         #subprocess.call(['cp', templatepath + '/submit_minimization.sh', jobpath + '/'])
         #subprocess.call(['cp', templatepath + '/submit_relaxation.sh', jobpath + '/'])
+        print(path)
         subprocess.call(['cp', path + 'submit_local.sh', jobpath + '/'])
-        subprocess.call(['cp', path + 'submit_cluster.sh', jobpath + '/'])
+        subprocess.call(['cp', path + 'submit_cluster.slurm', jobpath + '/'])
 
         # if the number of Annealing steps is 0, skip the equilibration
-        annealing = True
+        annealing = 'true'
         if anneal_steps == 0:
-            annealing = False
+            annealing = 'false'
             print('Skipping Annealing...')
 
         # if the number of equilibration steps is 0, skip the equilibration
-        equilibration = True
+        equilibration = 'true'
         if equil_steps == 0:
-            equilibration = False
+            equilibration = 'false'
             print('Skipping Equilibration...')
 
         # if the number of production steps is 0, skip the equilibration
-        production = True
+        production = 'true'
         if (prod_steps == 0) or (run_production == False):
-            production = False
+            production = 'false'
             print('Skipping Production...')
 
         # If there is no force-averaging, remove the index file command
-        indexing = True
+        indexing = 'true'
         if number_of_molecules == independent:
-            indexing = False
-            replace_string_in_text(jobpath + '/submit_minimization_local.sh', '-n index.ndx', '')
-            replace_string_in_text(jobpath + '/submit_minimization.sh', '-n index.ndx', '')
+            indexing = 'false'
+            #replace_string_in_text(jobpath + '/submit_minimization_local.sh', '-n index.ndx', '')
+            #replace_string_in_text(jobpath + '/submit_minimization.sh', '-n index.ndx', '')
 
         # If we are not using the drude oscillator potential, remove the drude settings from the mdp file
         if potential != 'drude':
@@ -863,9 +776,9 @@ def setup_molecule(polymorph_num, temperature, pressure, molecule, number_of_mol
                 replace_line_starting_with(jobpath + '/' + i, 'drude-r', '')
 
         # IF THIS IS THE PSCP, DONT REWEIGHT, ENERGY MINIMIZE, OR PICK THE AVERAGE CONFIGURATION
-        reweight = True
+        reweight = 'true'
         if hinge in ['_L', '_G']:
-            reweight = False
+            reweight = 'false'
 
         # SET THE APPROPRIATE POST-SIMULATION REWEIGHTING
         if potential == 'oplsaa':
