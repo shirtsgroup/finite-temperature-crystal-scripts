@@ -12,6 +12,8 @@ from scipy.special import erf
 from pymbar.timeseries import detectEquilibration
 
 path = os.path.realpath(__file__).strip('Run_setup.py')
+sys.path.insert(0, path + 'setup-scripts')
+import setup_directories as setup
 
 def setdefault(input_data, default_values):
     # Function to fill in the input_data if the default values are not set
@@ -103,11 +105,8 @@ def setup_ReplicaExchange_temperatures(inputs):
 
     #print(len(polymorph_num))
     #for i in range(len(polymorph_num[0])):
-    print(average[0,:], st_dev[0,:])
     dmu, b_mu = np.polyfit(temperatures, average[0, :], 1)
     dsig, b_sig = np.polyfit(temperatures, st_dev[0, :], 1)
-    print(dmu, b_mu, dsig, b_sig)
-    sys.exit()
 
     temp = float(inputs['rep_exch_in']['T_min'])
     T_out = [temp]
@@ -118,7 +117,6 @@ def setup_ReplicaExchange_temperatures(inputs):
             T_out.append(temp)
         else:
             T_out.append(float(inputs['rep_exch_in']['T_max']))
-    sys.exit()
 
     # Correcting for the number of nodes and changing the temperautre back to a string
     T_out, nodes = correct_for_nodes(T_out)
@@ -225,7 +223,8 @@ if __name__ == '__main__':
         run_production = "false"
         if (inputs['temp_in']['temp_prod_steps'] > 0) and not args.REP:
             run_production = "true"
-
+        setup.setup_temperature(inputs, run_production)
+        """
         subprocess.call([path + 'setup-scripts/setup_Temperature', 
                          '-T', str(inputs['temp_in']['temperatures']), 
                          '-n', str(inputs['gen_in']['polymorph_num']),
@@ -250,7 +249,7 @@ if __name__ == '__main__':
                          '-Z', inputs['gen_in']['template_path'],
                          '-W', str(inputs['gen_in']['anneal_temp']),
                          '-w', str(inputs['temp_in']['temp_anneal_steps'])])
-
+        """
         if args.REP:
             DIRS = ''
             for i in range(len(inputs['temp_in']['temperatures'].split())):
