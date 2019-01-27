@@ -70,6 +70,18 @@ def setup_restraints(polymorph_num=['p1', 'p2', 'p3'], molecule="benzene", min_l
             setup_molecule()
             lambd += lambda_spacing
 
+def setup_replica_exchange(nodes, directories, process_number, exchange_number, jobpath):
+    # Copying submission script into temperature direcotry
+    subprocess.call(['cp', path + '/submit_cluster_REP.slurm', jobpath + '/'])
+
+    # Replacing specific strings in the submit script to match the user input
+    replace_string_in_text(jobpath + '/submit_cluster_REP.slurm', 'NODES', nodes)
+    replace_string_in_text(jobpath + '/submit_cluster_REP.slurm', 'DIRS', directories)
+    replace_string_in_text(jobpath + '/submit_cluster_REP.slurm', 'NNPP', process_number)
+    replace_string_in_text(jobpath + '/submit_cluster_REP.slurm', 'NNEEXX', exchange_number)
+
+
+
 """
 def setup_mdp_lambdas(current_lambda, current_gamma, polymorph_num='all', min_lambda=0, max_lambda=100, lambda_spacing=-1, lambda_exponent=2, min_gamma=0, max_gamma=100,
                       gamma_spacing=-1, gamma_exponent=2, jobpath='DefaultPath'):
