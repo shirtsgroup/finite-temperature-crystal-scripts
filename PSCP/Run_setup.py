@@ -261,13 +261,16 @@ if __name__ == '__main__':
             exchange_num = process_num ** 3
 
             for i in inputs['gen_in']['polymorph_num'].split():
+                setup.setup_replica_exchange(int(RE_nodes), DIRS, int(process_num), int(exchange_num),
+                                             str(i) + '/temperature')
+                """
                 subprocess.call([path + 'setup-scripts/setup_ReplicaExchange',
                                  '-N', str(int(RE_nodes)),
                                  '-D', DIRS,
                                  '-n', str(int(process_num)),
                                  '-x', str(int(exchange_num)),
                                  '-J', str(i) + '/temperature'])
-        
+                """
 
 
 
