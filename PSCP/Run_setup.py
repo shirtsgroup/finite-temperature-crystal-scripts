@@ -11,8 +11,8 @@ from scipy.optimize import fsolve
 from scipy.special import erf
 from pymbar.timeseries import detectEquilibration
 
-path = os.path.realpath(__file__).strip('Run_setup.py')
-sys.path.insert(0, path + 'setup-scripts')
+path = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, path + '/setup-scripts')
 import setup_directories as setup
 
 def setdefault(input_data, default_values):
@@ -29,7 +29,7 @@ def yaml_loader(file_path):
         data = yaml.load(input_file)
 
     # Load in the default values
-    with open(path + 'setup-scripts/default.yaml', "r") as default_file:
+    with open(path + '/setup-scripts/default.yaml', "r") as default_file:
         default_input = yaml.load(default_file)
 
     # Setting the default values if not specified
@@ -175,7 +175,7 @@ if __name__ == '__main__':
         subprocess.call(['mkdir', i])
 
     if inputs['PSCP_in']['run_restraints'] == True:
-        subprocess.call([path + 'setup-scripts/setup_Restraints -n "' + (inputs['gen_in']['polymorph_num']) + '"'
+        subprocess.call([path + '/setup-scripts/setup_Restraints -n "' + (inputs['gen_in']['polymorph_num']) + '"'
                                             + ' -M ' + str(inputs['gen_in']['molecule'])
                                             + ' -U ' + str(inputs['PSCP_in']['min_lambda'])
                                             + ' -R ' + str(inputs['PSCP_in']['max_lambda'])
@@ -198,7 +198,7 @@ if __name__ == '__main__':
                                             + ' -h ' + str(inputs['gen_in']['hinge'])], shell=True)
 
     if inputs['PSCP_in']['run_interactions'] == True:
-        subprocess.call([path + 'setup-scripts/setup_Interactions -n "' + str(inputs['gen_in']['polymorph_num']) + '"'
+        subprocess.call([path + '/setup-scripts/setup_Interactions -n "' + str(inputs['gen_in']['polymorph_num']) + '"'
                                               + ' -M ' + str(inputs['gen_in']['molecule'])
                                               + ' -A ' + str(inputs['PSCP_in']['max_gamma'])
                                               + ' -B ' + str(inputs['PSCP_in']['min_gamma'])
@@ -221,56 +221,33 @@ if __name__ == '__main__':
 
     if inputs['temp_in']['run_temperature'] == True:
         run_production = "false"
+
+        # Determining if there needs to be a production for individual temperatures
+        # If replica exchange is occuring, the production run for the submit_cluster.slurm scripts is turned off
         if (inputs['temp_in']['temp_prod_steps'] > 0) and not args.REP:
             run_production = "true"
+
+        # Setting up the directories for the temperature run
         setup.setup_temperature(inputs, run_production)
-        """
-        subprocess.call([path + 'setup-scripts/setup_Temperature', 
-                         '-T', str(inputs['temp_in']['temperatures']), 
-                         '-n', str(inputs['gen_in']['polymorph_num']),
-                         '-C', str(inputs['temp_in']['charge']),
-                         '-M', inputs['gen_in']['molecule'],
-                         '-P', str(inputs['gen_in']['pressure']),
-                         '-N', str(inputs['gen_in']['number_of_molecules']),
-                         '-I', str(inputs['gen_in']['independent']),
-                         '-e', str(inputs['temp_in']['temp_equil_steps']),
-                         '-p', str(inputs['temp_in']['temp_prod_steps']),
-                         '-Y', run_production,
-                         '-i', inputs['gen_in']['integrator'],
-                         '-t', inputs['gen_in']['thermostat'],
-                         '-b', inputs['temp_in']['barostat'],
-                         '-a', str(inputs['gen_in']['cores']),
-                         '-k', str(inputs['temp_in']['k_max']),
-                         '-r', str(inputs['gen_in']['cutoff']),
-                         '-u', inputs['gen_in']['potential'],
-                         '-z', inputs['temp_in']['simulation_package'],
-                         '-h', inputs['gen_in']['hinge'],
-                         '-o', str(inputs['temp_in']['prodoutputs']),
-                         '-Z', inputs['gen_in']['template_path'],
-                         '-W', str(inputs['gen_in']['anneal_temp']),
-                         '-w', str(inputs['temp_in']['temp_anneal_steps'])])
-        """
+
         if args.REP:
+            # Creating a string with the list of directories 0,....N
             DIRS = ''
             for i in range(len(inputs['temp_in']['temperatures'].split())):
                 DIRS += str(i) + ','
             DIRS = DIRS.strip(',')
 
+            # Determining the number of total replicas
             process_num = len(inputs['temp_in']['temperatures'].split())
 
+            # Determining the number of total exchanges to consider
             exchange_num = process_num ** 3
 
+            # Setting up the replica exchange script to be run from each directory
             for i in inputs['gen_in']['polymorph_num'].split():
                 setup.setup_replica_exchange(int(RE_nodes), DIRS, int(process_num), int(exchange_num),
                                              str(i) + '/temperature')
-                """
-                subprocess.call([path + 'setup-scripts/setup_ReplicaExchange',
-                                 '-N', str(int(RE_nodes)),
-                                 '-D', DIRS,
-                                 '-n', str(int(process_num)),
-                                 '-x', str(int(exchange_num)),
-                                 '-J', str(i) + '/temperature'])
-                """
+
 
 
 
