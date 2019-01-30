@@ -1082,7 +1082,7 @@ def dGvsT(plot_out=True, Temperatures=np.array([100,200,300]), Pressure=1, Molec
         np.save('ddUvT_' + molecule + '_' + Poly + '_' + potential, (ddU2[p, :] ** 2 + ddU2[0, :] ** 2) ** 0.5)
     plt.tight_layout()
     plt.show()
-    
+
 if __name__ == '__main__':
     # =============================================================================================
     # READ IN USER INPUTS
