@@ -63,6 +63,9 @@ if __name__ == '__main__':
         # Writing out the input file with updated dG and ddG values
         with open(args.input_file, 'w') as yaml_file:
             yaml.dump(inputs, yaml_file, default_flow_style=False)
+    else:
+        absolutedU = np.array(inputs['PSCP_out']['absolutedU']).astype(float)
+        refdU = absolutedU - absolutedU[0]
 
     dGvsT(Temperatures=np.array(inputs['temp_in']['temperatures'].split()).astype(float), Pressure=inputs['gen_in']['pressure'],
           Molecules=inputs['gen_in']['number_of_molecules'], molecule=inputs['gen_in']['molecule'],
