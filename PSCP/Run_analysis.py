@@ -27,7 +27,7 @@ if __name__ == '__main__':
         independent = inputs['gen_in']['number_of_molecules']
     else:
         independent = inputs['gen_in']['independent']
-
+    print((inputs['PSCP_out']['refdG'] == None),(inputs['PSCP_out']['refddG'] == None))
     if (inputs['PSCP_out']['refdG'] == None) or (inputs['PSCP_out']['refddG'] == None):
         if (inputs['PSCP_in']['run_restraints'] == True) and (inputs['PSCP_in']['run_interactions'] == True):
             # Computing the free energy difference from the PSCP
