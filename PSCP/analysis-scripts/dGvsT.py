@@ -382,6 +382,7 @@ def dGvsT(plot_out=True, Temperatures=np.array([100,200,300]), Pressure=1, Molec
           simulation='gromacs', directory='', ensemble='NVT', spacing=1, hinge='DefaultHinge', phase='solid',
           Polymorphs=['p1', 'p2', 'p3'], refT=200, refdG=[0.000, 0.185, 0.306], refddG=[0.000, 0.019, 0.019],
           refdU=[0.000, 0.267, 0.240], absolutedU=[-5.624, -5.362, -5.380]):
+#NSA: Is this needed?
     Colors = ['b', 'g', 'r', 'm', 'c', 'y', 'k', 'g', 'g', 'g', 'g', 'g', 'g', 'g', 'g', 'g', 'g', 'g', 'g']
 
     # Hard set from old dictionary funciton
@@ -393,7 +394,7 @@ def dGvsT(plot_out=True, Temperatures=np.array([100,200,300]), Pressure=1, Molec
     SimNAMES, Chargenames, PotNAMES = get_potential_info(potential)
 
     if (plot_out):
-        import matplotlib # for making plots, version 'matplotlib-1.1.0-1'; errors may pop up when using earlier versions
+        import matplotlib  # for making plots, version 'matplotlib-1.1.0-1'; errors may pop up when using earlier versions
         import matplotlib.pyplot as plt
         import matplotlib.cm as cm
         from matplotlib.font_manager import FontProperties as FP
@@ -409,15 +410,16 @@ def dGvsT(plot_out=True, Temperatures=np.array([100,200,300]), Pressure=1, Molec
     if Pressure < 0:
         print("Invalid Pressure: " + str(Pressure))
         sys.exit()
-    
-    # SIMULATION
-    if simulation == 'gromacs':
-        simulation_short = 'GRO'
-    elif simulation == 'tinker':
-        simulation_short = 'TIN'
-    else:
-        print("Invalid Simulation Package: " + str(simulation))
-        sys.exit()
+
+#NSA: can this go?
+#    # SIMULATION
+#    if simulation == 'gromacs':
+#        simulation_short = 'GRO'
+#    elif simulation == 'tinker':
+#        simulation_short = 'TIN'
+#    else:
+#        print("Invalid Simulation Package: " + str(simulation))
+#        sys.exit()
     
     # ENSEMBLE
     if ensemble != "NVE" and ensemble != "NVT" and ensemble != "NPT":
@@ -429,6 +431,7 @@ def dGvsT(plot_out=True, Temperatures=np.array([100,200,300]), Pressure=1, Molec
     # FORMAT INPUTS
     # =============================================================================================
     # TEMPERATURE
+#NSA: I think this can go as well, except the final 'if'?
     Tnames = []
     refk = -1
     for k, temp in enumerate(Temperatures):
@@ -442,6 +445,7 @@ def dGvsT(plot_out=True, Temperatures=np.array([100,200,300]), Pressure=1, Molec
             refk = k + refPot * len(Temperatures)
     
     # PRESSURE
+#NSA: I think this can go as well
     Pnames = []
     for k, press in enumerate(Pressures):
         if press < 10:
@@ -452,14 +456,11 @@ def dGvsT(plot_out=True, Temperatures=np.array([100,200,300]), Pressure=1, Molec
             Pnames.append("_" + str(press) + "P")
     
     # OPTIONAL HINGE
+#NSA: I think this can go as well
     # Format the hinge
     if hinge == "DefaultHinge":
         hinge = ""
-    #else:
-        #hinge = "_" + hinge
-    
-    
-    
+
     # =============================================================================================
     # READ IN RAW DATA
     # =============================================================================================
@@ -471,12 +472,14 @@ def dGvsT(plot_out=True, Temperatures=np.array([100,200,300]), Pressure=1, Molec
     K = len(Potentials) * len(Temperatures)
     
     #  maximum number of snapshots/simulation (could make this automated) - doesn't matter, as long as it's long enough.
+#NSA: What is this for?
     N_max = 3000
     
     # beta factor for the different temperatures
     beta_k = 1.0 / (kB * Temperatures)
-    beta_k = np.tile(beta_k, (1, len(Potentials)))[0]
-    
+    beta_k = np.tile(beta_k, (len(Potentials)))
+
+#NSA: comment says angstrom, but value and variable is nm
     # Conversion from angstroms into meters
     nm_to_M = 10 ** -9
     
@@ -488,17 +491,20 @@ def dGvsT(plot_out=True, Temperatures=np.array([100,200,300]), Pressure=1, Molec
     
     # Avogadros numbers
     Na = 6.022 * 10 ** 23
-    
-    # Convert all energies to kcal/mol
-    convert_units = kJ_to_kcal * np.ones([len(Potentials), len(Potentials)], float)
-    
-    # Convert all pV to kcal/mol
-    convert_units_V = Bar_to_Pa * nm_to_M ** 3 * 0.001 * kJ_to_kcal * Na * np.ones([len(Potentials), len(Potentials)],
-                                                                                   float)
-    # convert_units[0,0] = J_to_kcal
-    
-    ignore_symbols = ['#', '@', '@TYPE', 'STEP', '=====================', 'TIME(ps)']
-    Efficiency = np.zeros(K, float)  # This is the sampling efficiency for each potential in each combination of potentials
+
+#NSA: can this go?
+#    # Convert all energies to kcal/mol
+#    convert_units = kJ_to_kcal * np.ones([len(Potentials), len(Potentials)], float)
+#
+#    # Convert all pV to kcal/mol
+#    convert_units_V = Bar_to_Pa * nm_to_M ** 3 * 0.001 * kJ_to_kcal * Na * np.ones([len(Potentials), len(Potentials)],
+#                                                                                   float)
+
+#NSA: can this go?
+#    ignore_symbols = ['#', '@', '@TYPE', 'STEP', '=====================', 'TIME(ps)']
+
+    # This is the sampling efficiency for each potential in each combination of potentials
+    Efficiency = np.zeros(K, float)
     
     # Allocate storage for simulation data
     # u_pklnT is the complete matrix of all energy data. 'p' is the polymorph, 'k' is the sampled state, 'l' is the
@@ -590,17 +596,14 @@ def dGvsT(plot_out=True, Temperatures=np.array([100,200,300]), Pressure=1, Molec
                             charge_hinge_l = "_" + Chargenames[j]
                     elif SimNAMES[j] == "TIN":
                         charge_hinge_l = ""
-                    #dirpath = '/home/ecd4bd/crystals/NMA/finishedJobs/feb1GROM/' + molecule + '_' + SimNAMES[i] + '_' + PotNAMES[i] + '_' + polymorph + '_' + Molname + Tname + charge_hinge_k + alchemical_hinge + Pname + hinge + '/'
-                    dirpath = molecule + '_' + \
-                              SimNAMES[i] + '_' + PotNAMES[i] + '_' + polymorph + '_' + Molname + Tname + charge_hinge_k + \
-                              alchemical_hinge + Pname + hinge + '/'
-                    #fname_energy = dirpath + 'potenergy.xvg'
+                    dirpath = polymorph + '/temperature/' + str(t) + '/'
                     fname_energy = dirpath + potential_l + charge_hinge_l + '_energy.xvg'
                     fname_volume = dirpath + 'volume.xvg'
      
-                    #Read in the energy file data for state k evaluated in state l using HARVIST
+                    # Read in the energy file data for state k evaluated in state l using HARVIST
                     if k == 0:
                         Terms_l.append(Harvist.CreateTerms(fname_energy))
+
                     N = Harvist.DetermineLength(fname_energy, ignoreframes=ignoreframes)
                     N_k[k] = N
                     u_pklnT[p, k, l, :N, :len(Terms_l[j])] = Harvist.GrabTerms(fname_energy, Terms_l[j],
@@ -610,12 +613,11 @@ def dGvsT(plot_out=True, Temperatures=np.array([100,200,300]), Pressure=1, Molec
                     # Now set these energies over all temperatures
                     u_pklnT[p, k, l: (l + len(Temperatures)), :N, :len(Terms_l[j])] = u_pklnT[p, k, l, :N, :len(Terms_l[j])]
                     u_kln[k, l:(l + len(Temperatures)), :N] = u_kln[k, l, :N]
+
                     # Now read in the volumes and add them to the u_kln matrix
                     V_pkn[p, t, :N] = Harvist.GrabTerms(fname_volume, ['VOLUME', 'Volume'],
                                                         ignoreframes=ignoreframes)[0][:N, 0]
-                    #pdb.set_trace()
-                    #u_kln[k,l:(l+len(Temperatures)),:N] += Pressures.reshape(len(Temperatures),1)*V_pkn[p,t,:N].reshape(1,N)* Bar_to_Pa * nm_to_M**3 * 0.001 * Na
-    
+
         print("Start1")
         # Convert all units to kcal
         u_pklnT[p, :, :, :] *= kJ_to_kcal
@@ -657,29 +659,30 @@ def dGvsT(plot_out=True, Temperatures=np.array([100,200,300]), Pressure=1, Molec
     
         # Now create the full N_k matrix including the roll-backs as well as the free energy container
         # N_k_matrix[i,k] is the total number of snapshots from alchemical state k using in spacing i
-        N_k_matrix = np.zeros([spacing+1, K], np.int32)
-        for i in range(spacing+1):
+        N_k_matrix = np.zeros([spacing + 1, K], np.int32)
+        for i in range(spacing + 1):
             N_k_matrix[i, :] = N_k_save.copy()
-            N_k_matrix[i, 0:len(Temperatures)] = N_k_matrix[i, 0:len(Temperatures)] * float(i) / float(spacing)
+            N_k_matrix[i, 0: len(Temperatures)] = N_k_matrix[i, 0:len(Temperatures)] * float(i) / float(spacing)
     
         # =============================================================================================
         # COMPUTE FREE ENERGY DIFFERENCE USING MBAR FOR EACH SPACING
         # =============================================================================================
         for i in range(spacing+1):
-            if i==0 and len(Potentials)==1:
+            if i == 0 and len(Potentials) == 1:
                 continue
             # Initialize MBAR.
             print("Running MBAR...")
+
             # generate the weights of each of the umbrella set
-            #mbar = pymbar.MBAR(u_kln, N_k, verbose = True, method = 'adaptive', use_optimized=False)
             mbar = pymbar.MBAR(u_kln, N_k_matrix[i, :], verbose=True)
             print("MBAR Converged...")
         
             # extract self-consistent weights and uncertainties
             (df_i, ddf_i, theta_i) = mbar.getFreeEnergyDifferences()
+
             # extract entropy
-            [Delta_f_ij, dDelta_f_ij, Delta_u_ij, dDelta_u_ij, Delta_s_ij, dDelta_s_ij] = mbar.computeEntropyAndEnthalpy()
-    
+            [Delta_f_ij, dDelta_f_ij, Delta_u_ij, dDelta_u_ij, Delta_s_ij, dDelta_s_ij] = \
+                mbar.computeEntropyAndEnthalpy()
             print("Free Energies Optained...")
         
             # Store the dimensionless results in the dA container
@@ -694,21 +697,22 @@ def dGvsT(plot_out=True, Temperatures=np.array([100,200,300]), Pressure=1, Molec
         # =============================================================================================
         g_k = np.zeros([K])
         N_k_matrix_save = N_k_matrix.copy()
-        for i in range(spacing+1):
+        for i in range(spacing + 1):
             if i == 0 and len(Potentials) == 1:
                 continue
+
             for k in range(K):
                 # subsample correlated data - for now, use energy from current state
                 if N_k_matrix[i, k] > 0:
-                    print(N_k_matrix[i,k])
-                    #print str(i) + ' ' + str(k)
-                    #print u_kln_save[k,k,0:100]
+                    print(N_k_matrix[i, k])
                     g_k[k] = timeseries.statisticalInefficiency(u_kln_save[k, k, 0:100])
                     print("Correlation time for phase (%s), sampled state %d is %10.3f" % (phase, k, g_k[k]))
+
                     # subsample the data to get statistically uncorrelated data
                     indices = np.array(timeseries.subsampleCorrelatedData(u_kln_save[k, k, 0:N_k_matrix[i, k]],
                                                                           g=g_k[k]))
                     N_k_matrix[i, k] = len(indices)
+#NSA: see next comment
                     u_kln[k, :, 0:N_k_matrix[i, k]] = u_kln_save[k, :, indices].transpose()  # not sure why we have to transpose
     
             print("Number of retained samples")
@@ -730,21 +734,21 @@ def dGvsT(plot_out=True, Temperatures=np.array([100,200,300]), Pressure=1, Molec
             # testing
             weights_in_gromos = np.zeros(K, float)
             for k in range(K):
-                w = np.exp(mbar.Log_W_nk[:,k])
-                print("max weight in state %d is %12.7f" % (k,np.max(w)))
-                # using Kish (1965) formula.
-                # effective # of samples =  (\sum_{i=1}^N w_i)^2 / \sum_{i=1}^N w_i^2
-                #                        =  (\sum_{i=1}^N w_i^2)^-1
+                w = np.exp(mbar.Log_W_nk[:, k])
+                print("max weight in state %d is %12.7f" % (k, np.max(w)))
                 neff = 1 / np.sum(w ** 2)
+
                 # Store the effective number of samples in the target potential with no sampling
                 if i == 0 and k == 0:
-                    neff_target=neff
+                    neff_target = neff
+
                 print("Effective number of sample in state %d is %10.3f" % (k, neff))
                 print("Efficiency for state %d is %d/%d = %10.4f" % (k, neff, len(w), neff / len(w)))
                 Efficiency[k] = neff / len(w)  # Store the efficiency
                 w_0 = np.exp(mbar.Log_W_nk[:, 0])  # Weights in gromos
                 initial_configs = np.sum(N_k[0:k])
                 final_configs = np.sum(N_k[0:k + 1])
+
                 print("Total weight in gromos " + str(np.sum(w_0[initial_configs:final_configs])))
                 weights_in_gromos[k] = np.sum(w_0[initial_configs:final_configs])
         
@@ -755,7 +759,8 @@ def dGvsT(plot_out=True, Temperatures=np.array([100,200,300]), Pressure=1, Molec
     
             # Store the dimensionless results in the ddA container
             ddA[p, i, :] = ddf_u[refk]
-    
+
+#NSA: Do we need this?
         ##Bootstrap the reduced free energies
         #indexVect = np.zeros([2,len(N_k)], np.float)
         #indexVect[0,:]=refk
@@ -773,10 +778,8 @@ def dGvsT(plot_out=True, Temperatures=np.array([100,200,300]), Pressure=1, Molec
         #	if not os.path.isfile(stdfile+'.txt'):
         #	    MBARBootstrap.runMBARBootstrap(u_kln, N_k, np.ones(len(N_k),float), 1, indexVect, datafile, stdfile, 200)
         #    ddA[p,0,:]=MBARBootstrap.ExtractBootstrap(stdfile+'.txt')
-         
-    
-    #os.exit()
-    #Check the overlap it necessary
+
+    # Check the overlap it necessary
     if len(Temperatures) == 2:
         print("Overlap:")
         print(O_pij)
@@ -791,19 +794,16 @@ def dGvsT(plot_out=True, Temperatures=np.array([100,200,300]), Pressure=1, Molec
     BootstrapNum = 200
     i = spacing
     
-    # dA_Bootstrap0 is the reduced free energy for the reference polymorph at each temperature t at a particular bootstrap
-    #     iteration n
+    # dA_Bootstrap0 is the reduced free energy for the reference polymorph at each temperature t at a particular bootstrap iteration n
     dA_Bootstrap0 = np.zeros(len(Temperatures), float)
     
     # dA_Bootstrapp is the reduced free energy for polymorph p  at each temperature t at a particular bootstrap iteration n
     dA_Bootstrapp = np.zeros(len(Temperatures), float)
     
-    # dG_Bootstrap[p,i,t,n] is the free energy between the reference polymorph and polymorph p for spacing i and
-    #     temperature t at bootstrap iteration n
+    # dG_Bootstrap[p,i,t,n] is the free energy between the reference polymorph and polymorph p for spacing i and temperature t at bootstrap iteration n
     dG_Bootstrap = np.zeros([len(Polymorphs), spacing + 1, len(Temperatures), BootstrapNum])
     
-    # dS_Bootstrap[p,i,t,n] is the entropy difference between the reference polymorph and polymorph p for spacing i and
-    #     temperature t at bootstrap iteration n
+    # dS_Bootstrap[p,i,t,n] is the entropy difference between the reference polymorph and polymorph p for spacing i and temperature t at bootstrap iteration n
     dS_Bootstrap = np.zeros([len(Polymorphs), spacing + 1, len(Temperatures), BootstrapNum])
     
     if refT < 10:
@@ -879,8 +879,7 @@ def dGvsT(plot_out=True, Temperatures=np.array([100,200,300]), Pressure=1, Molec
     print("Polymorph Free Energy:")
     for p in range(len(Polymorphs)):
         print("%8.3f %8.3f" % (dG[p, spacing, len(Temperatures) - 1], ddG[p, spacing, len(Temperatures) - 1]))
-    
-    
+
     ##Now print the y-intersept using both the 10K point and the 20K point
     #for p in range(len(Polymorphs)):
     #    if p==0:
@@ -1069,13 +1068,13 @@ def dGvsT(plot_out=True, Temperatures=np.array([100,200,300]), Pressure=1, Molec
     plt.ylabel('Average Energy Difference (kcal/mol)', fontsize=20)
     for p in range(len(Polymorphs)):
         if p == 0:
-            yerror=np.zeros(len(ddU2[0, :]))
+            yerror = np.zeros(len(ddU2[0, :]))
         else:
-            yerror=[]
+            yerror = []
             for t in range(len(ddU2[0, :])):
                 yerror.append(float((ddU2[0, t] ** 2 + ddU2[p, t] ** 2) ** 0.5))
-        a.errorbar(Temperatures2, dU2[p, :] - dU2[0, :], yerr=yerror, linestyle='--', marker='.', linewidth=2, alpha=0.6,
-                   color=Colors[p], label=Polymorphs[p])
+        a.errorbar(Temperatures2, dU2[p, :] - dU2[0, :], yerr=yerror, linestyle='--', marker='.', linewidth=2,
+                   alpha=0.6, color=Colors[p], label=Polymorphs[p])
     
     # Save the data for future use.
     for p, Poly in enumerate(Polymorphs):
@@ -1084,11 +1083,6 @@ def dGvsT(plot_out=True, Temperatures=np.array([100,200,300]), Pressure=1, Molec
     plt.tight_layout()
     plt.show()
     
-
-
-
-
-
 if __name__ == '__main__':
     # =============================================================================================
     # READ IN USER INPUTS
@@ -1133,8 +1127,8 @@ if __name__ == '__main__':
     phase = "solid"
     
     Polymorphs, refT, refdG, refddG, refdU, absolutedU = old_systems_dictionary(potential, molecule)
-    dGvsT(plot_out=plot_out, Temperatures=Temperatures, Pressure=Pressure, Molecules=Molecules, molecule=molecule, 
+    dGvsT(plot_out=plot_out, Temperatures=Temp, Pressure=Pressure, Molecules=Molecules, molecule=molecule,
           Independent=Independent, potential=potential, ignoreframes=ignoreframes, includeframes=includeframes, 
           simulation=simulation, directory=directory, ensemble=ensemble, spacing=spacing, hinge=hinge, phase=phase, 
-          Polymorphs=Polymorphs, refT=refT, refG=refG, refddG=refddG, refdU=refdU, absolutedU=absolutedU)
+          Polymorphs=Polymorphs, refT=refT, refdG=refdG, refddG=refddG, refdU=refdU, absolutedU=absolutedU)
 
