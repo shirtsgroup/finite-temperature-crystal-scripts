@@ -64,7 +64,7 @@ if __name__ == '__main__':
         with open(args.input_file, 'w') as yaml_file:
             yaml.dump(inputs, yaml_file, default_flow_style=False)
 
-    dGvsT(Temperatures=np.array(inputs['temp_in']['temperatures'].split()).astype(int), Pressure=inputs['gen_in']['pressure'],
+    dGvsT(Temperatures=np.array(inputs['temp_in']['temperatures'].split()).astype(float), Pressure=inputs['gen_in']['pressure'],
           Molecules=inputs['gen_in']['number_of_molecules'], molecule=inputs['gen_in']['molecule'],
           Independent=independent, potential=inputs['gen_in']['potential'],
           simulation=inputs['temp_in']['simulation_package'], hinge=inputs['gen_in']['hinge'],
