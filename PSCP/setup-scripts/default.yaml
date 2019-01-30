@@ -42,6 +42,11 @@ PSCP_in:
     k_min: 0
     k_max: 1000
 
+PSCP_out:
+    refdG: None
+    refddG: None
+    absolutedU: None
+
 temp_in:
     # Input parameters for setup_Temperature
     run_temperature: False
@@ -55,9 +60,6 @@ temp_in:
     k_max: 1000
     ensemble: NPT
     prodoutputs: 1000
-
-analysis_in:
-    potential_energy: none
 
 rep_exch_in:
     # Settings for replica exchange
