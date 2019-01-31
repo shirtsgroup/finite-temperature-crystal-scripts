@@ -169,6 +169,8 @@ elif [ "$molecule" == "bedmig" ]; then
     apermol=30
 elif [ "$molecule" == "qopbed" ]; then
     apermol=10
+elif [ "$molecule" == "pyrzin" ]; then
+    apermol=14
 else
     echo "Unrecognized molecule: $molecule"
     exit 1
