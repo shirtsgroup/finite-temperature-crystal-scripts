@@ -5,7 +5,7 @@ import os
 import sys
 import subprocess
 import yaml
-import mdtraj as md
+#import mdtraj as md
 import numpy as np
 from scipy.optimize import fsolve
 from scipy.special import erf
