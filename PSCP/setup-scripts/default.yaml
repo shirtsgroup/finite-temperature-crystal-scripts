@@ -43,9 +43,9 @@ PSCP_in:
     k_max: 1000
 
 PSCP_out:
-    refdG: None
-    refddG: None
-    absolutedU: None
+    refdG:
+    refddG:
+    absolutedU:
 
 temp_in:
     # Input parameters for setup_Temperature
