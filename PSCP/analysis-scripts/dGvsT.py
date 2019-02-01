@@ -577,24 +577,29 @@ def dGvsT(plot_out=True, Temperatures=np.array([100,200,300]), Pressure=1, Molec
                     dirpath = polymorph + '/temperature/' + str(t) + '/'
                     fname_energy = dirpath + potential_l + charge_hinge_l + '_energy.xvg'
                     fname_volume = dirpath + 'volume.xvg'
-     
+
+                    all_energy = panedr.edr_to_df(dirpath + 'PROD.edr')
+                    [start_production, _, _] = timeseries.detectEquilibration(np.array(all_energy['Total Energy']))
+
                     # Read in the energy file data for state k evaluated in state l using HARVIST
                     if k == 0:
                         Terms_l.append(Harvist.CreateTerms(fname_energy))
 
-                    N = Harvist.DetermineLength(fname_energy, ignoreframes=ignoreframes)
+                    N = len(np.array(all_energy['Total Energy'])[start_production:]) #Harvist.DetermineLength(fname_energy, ignoreframes=ignoreframes)
                     N_k[k] = N
                     u_pklnT[p, k, l, :N, :len(Terms_l[j])] = Harvist.GrabTerms(fname_energy, Terms_l[j],
-                                                                               ignoreframes=ignoreframes)[0]
+                                                                               ignoreframes=start_production)[0]
                     u_kln[k, l, :N] = Harvist.GrabTerms(fname_energy, ['ENERGY', 'Potential'],
-                                                        ignoreframes=ignoreframes)[0][:, 0]
+                                                        ignoreframes=start_production)[0][:, 0]
                     # Now set these energies over all temperatures
                     u_pklnT[p, k, l: (l + len(Temperatures)), :N, :len(Terms_l[j])] = u_pklnT[p, k, l, :N, :len(Terms_l[j])]
                     u_kln[k, l:(l + len(Temperatures)), :N] = u_kln[k, l, :N]
 
                     # Now read in the volumes and add them to the u_kln matrix
-                    V_pkn[p, t, :N] = Harvist.GrabTerms(fname_volume, ['VOLUME', 'Volume'],
-                                                        ignoreframes=ignoreframes)[0][:N, 0]
+                    V_pkn[p, t, :N] = np.array(all_energy['Volume'])[start_production:]
+                    V_avg[p, t] = np.average(V_pkn[p, t, :N]) / float(Independent)
+                    ddV_avg[p, t] = np.std(V_pkn[p, t, :N]) / N ** 0.5 / float(Independent)
+
 
         print("Start1")
         # Convert all units to kcal
@@ -620,8 +625,8 @@ def dGvsT(plot_out=True, Temperatures=np.array([100,200,300]), Pressure=1, Molec
         for t in range(len(Temperatures)):
             dU[p, t] = np.average(u_kln[t, t, :N_k[t]]) / float(Independent)
             ddU[p, t] = np.std(u_kln[t, t, :N_k[t]]) / N_k[t] ** 0.5 / float(Independent)
-            V_avg[p, t] = np.average(V_pkn[p, t, :N_k[t]]) / float(Independent)
-            ddV_avg[p, t] = np.std(V_pkn[p, t, :N_k[t]]) / N_k[t] ** 0.5 / float(Independent)
+#            V_avg[p, t] = np.average(V_pkn[p, t, :N_k[t]]) / float(Independent)
+#            ddV_avg[p, t] = np.std(V_pkn[p, t, :N_k[t]]) / N_k[t] ** 0.5 / float(Independent)
     
         print("Start5")
         # convert to nondimensional units from kcal/mol
@@ -737,7 +742,7 @@ def dGvsT(plot_out=True, Temperatures=np.array([100,200,300]), Pressure=1, Molec
     
             # Store the dimensionless results in the ddA container
             ddA[p, i, :] = ddf_u[refk]
-
+    np.save('volume_hold', V_pkn)
     # Check the overlap it necessary
     if len(Temperatures) == 2:
         print("Overlap:")
