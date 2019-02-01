@@ -538,8 +538,9 @@ def dGvsT(plot_out=True, Temperatures=np.array([100,200,300]), Pressure=1, Molec
 
                     u_pklnT[p, k, l, :N, :len(Terms_l[j])] = Harvist.GrabTerms(fname_energy, Terms_l[j],
                                                                                ignoreframes=start_production)[0]
-                    u_kln[k, l, :N] = Harvist.GrabTerms(fname_energy, ['ENERGY', 'Potential'],
-                                                        ignoreframes=start_production)[0][:, 0]
+                    u_kln[k, l, :N] = np.array(all_energy['Potential'])[start_production:]
+                        #Harvist.GrabTerms(fname_energy, ['ENERGY', 'Potential'],
+                        #                                ignoreframes=start_production)[0][:, 0]
                     # Now set these energies over all temperatures
                     u_pklnT[p, k, l: (l + len(Temperatures)), :N, :len(Terms_l[j])] = u_pklnT[p, k, l, :N, :len(Terms_l[j])]
                     u_kln[k, l:(l + len(Temperatures)), :N] = u_kln[k, l, :N]
@@ -548,7 +549,7 @@ def dGvsT(plot_out=True, Temperatures=np.array([100,200,300]), Pressure=1, Molec
                     V_pkn[p, t, :N] = np.array(all_energy['Volume'])[start_production:]
                     V_avg[p, t] = np.average(V_pkn[p, t, :N]) / float(Independent)
                     ddV_avg[p, t] = np.std(V_pkn[p, t, :N]) / N ** 0.5 / float(Independent)
-        np.save('ukln_' + polymorph, u_kln)
+        np.save('ukln_' + polymorph, ukln)
 
         print("Start1")
         # Convert all units to kcal
