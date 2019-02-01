@@ -548,7 +548,7 @@ def dGvsT(plot_out=True, Temperatures=np.array([100,200,300]), Pressure=1, Molec
                     V_pkn[p, t, :N] = np.array(all_energy['Volume'])[start_production:]
                     V_avg[p, t] = np.average(V_pkn[p, t, :N]) / float(Independent)
                     ddV_avg[p, t] = np.std(V_pkn[p, t, :N]) / N ** 0.5 / float(Independent)
-
+        np.save('ukln_' + polymorph, u_kln)
 
         print("Start1")
         # Convert all units to kcal
