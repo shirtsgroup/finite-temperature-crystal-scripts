@@ -379,12 +379,15 @@ def get_potential_info(potential):
     return SimNAMES, Chargenames, PotNAMES
 
 def dGvsT(plot_out=True, Temperatures=np.array([100,200,300]), Pressure=1, Molecules=72, molecule='benzene', 
-          Independent=72, potential='oplsaa', ignoreframes=200, includeframes=100000, 
+          Independent=0, potential='oplsaa', ignoreframes=200, includeframes=100000,
           simulation='gromacs', directory='', ensemble='NVT', spacing=1, hinge='DefaultHinge', phase='solid',
           Polymorphs=['p1', 'p2', 'p3'], refT=200, refdG=[0.000, 0.185, 0.306], refddG=[0.000, 0.019, 0.019],
           refdU=[0.000, 0.267, 0.240], absolutedU=[-5.624, -5.362, -5.380]):
 #NSA: Is this needed?
     Colors = ['b', 'g', 'r', 'm', 'c', 'y', 'k', 'g', 'g', 'g', 'g', 'g', 'g', 'g', 'g', 'g', 'g', 'g', 'g']
+
+    if Independent == 0:
+        Independent = Molecules
 
     # Hard set from old dictionary funciton
     refPot = 0
