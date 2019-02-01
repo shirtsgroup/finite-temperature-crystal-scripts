@@ -9,6 +9,7 @@ import numpy as np
 import pymbar # multistate Bennett acceptance ratio
 from pymbar import timeseries # timeseries analysis
 from optparse import OptionParser # for parsing command-line options
+import mdtraj as md
 import MBARBootstrap # Bootstrapping algorithm
 import random
 import os
@@ -501,8 +502,14 @@ def dGvsT(plot_out=True, Temperatures=np.array([100,200,300]), Pressure=1, Molec
     # V_avg is the average volume of polymorph p at temperature k
     V_avg = np.zeros([len(Polymorphs), len(Temperatures)], float)
     
-    # V_avg is the standard deviation of the volume of polymorph p at temperature k
+    # ddV_avg is the standard deviation of the volume of polymorph p at temperature k
     ddV_avg = np.zeros([len(Polymorphs), len(Temperatures)], float)
+
+    # h_avg is the average lattice tensor of the polymorph p at temperature k
+    h_avg = np.zeros([len(Polymorphs), len(Temperatures), 3, 3], float)
+
+    # dh is the standard deviation of the lattice tensor of the polymorph p at temperature k
+    dh = np.zeros([len(Polymorphs), len(Temperatures), 3, 3], float)
     
     # Cycle through all polymorphs
     for p, polymorph in enumerate(Polymorphs):
@@ -544,10 +551,20 @@ def dGvsT(plot_out=True, Temperatures=np.array([100,200,300]), Pressure=1, Molec
                     u_pklnT[p, k, l: (l + len(Temperatures)), :N, :len(Terms_l[j])] = u_pklnT[p, k, l, :N, :len(Terms_l[j])]
                     u_kln[k, l:(l + len(Temperatures)), :N] = u_kln[k, l, :N]
 
-                    # Now read in the volumes and add them to the u_kln matrix
+                    # Now read in the volumes and average them
                     V_pkn[p, t, :N] = np.array(all_energy['Volume'])[start_production:]
                     V_avg[p, t] = np.average(V_pkn[p, t, :N]) / float(Independent)
                     ddV_avg[p, t] = np.std(V_pkn[p, t, :N]) / N ** 0.5 / float(Independent)
+
+                    # Now read in the lattice tensor and average them
+                    box_letters = ['XX', 'YY', 'ZZ', 'YX', 'ZX', 'ZY']
+                    box_place = np.matrix([[0, 0], [1, 1], [2, 2], [0, 1], [0, 2], [1, 2]])
+                    sign = np.sign(md.load(dirpath + 'pre_EQ.gro').unitcell_vectors[0].T)
+                    for b in range(6):
+                        h_pkn = np.array(all_energy['Box-' + box_letters[b]])[start_production:] * \
+                                sign[box_place[b, 0], box_place[b, 1]]
+                        h_avg[p, t, :N, box_place[b, 0], box_place[b, 1]] = np.average(h_pkn)
+                        dh[p, t, :N, box_place[b, 0], box_place[b, 1]] = np.std(h_pkn)
 
         print("Start1")
         # Convert all units to kcal
@@ -788,7 +805,9 @@ def dGvsT(plot_out=True, Temperatures=np.array([100,200,300]), Pressure=1, Molec
 
     for p, Poly in enumerate(Polymorphs):
         np.save('VvT_' + molecule + '_' + Poly + '_' + potential, V_avg[p, :])
-    
+        np.save('hvT_' + molecule + '_' + Poly + '_' + potential, h_avg[p, :])
+        np.save('dhvT_' + molecule + '_' + Poly + '_' + potential, dh[p, :])
+
     # =============================================================================================
     # PLOT THE DIFFERENCE IN AVERAGE ENERGY VS TEMPERATURE
     # =============================================================================================
