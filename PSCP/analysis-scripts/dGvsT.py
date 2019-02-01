@@ -563,8 +563,8 @@ def dGvsT(plot_out=True, Temperatures=np.array([100,200,300]), Pressure=1, Molec
                     for b in range(6):
                         h_pkn = np.array(all_energy['Box-' + box_letters[b]])[start_production:] * \
                                 sign[box_place[b, 0], box_place[b, 1]]
-                        h_avg[p, t, :N, box_place[b, 0], box_place[b, 1]] = np.average(h_pkn)
-                        dh[p, t, :N, box_place[b, 0], box_place[b, 1]] = np.std(h_pkn)
+                        h_avg[p, t, box_place[b, 0], box_place[b, 1]] = np.average(h_pkn)
+                        dh[p, t, box_place[b, 0], box_place[b, 1]] = np.std(h_pkn)
 
         print("Start1")
         # Convert all units to kcal
