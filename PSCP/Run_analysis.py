@@ -27,7 +27,7 @@ if __name__ == '__main__':
         independent = inputs['gen_in']['number_of_molecules']
     else:
         independent = inputs['gen_in']['independent']
-    print((inputs['PSCP_out']['refdG'] == None),(inputs['PSCP_out']['refddG'] == None))
+
     if (inputs['PSCP_out']['refdG'] == None) or (inputs['PSCP_out']['refddG'] == None):
         if (inputs['PSCP_in']['run_restraints'] == True) and (inputs['PSCP_in']['run_interactions'] == True):
             # Computing the free energy difference from the PSCP
@@ -55,7 +55,7 @@ if __name__ == '__main__':
             refdU = absolutedU - absolutedU[0]
         else:
             # Pulling old data from Temperature Transformation paper 2017
-            Polymorphs, inputs['PSCP_in']['PSCP_temperature'], inputs['PSCP_out']['refdG'], \
+            inputs['gen_in']['polymorph_num'], inputs['PSCP_in']['PSCP_temperature'], inputs['PSCP_out']['refdG'], \
             inputs['PSCP_out']['refddG'], refdU, absolutedU = \
                 old_systems_dictionary(inputs['gen_in']['potential'], inputs['gen_in']['molecule'])
         inputs['PSCP_out']['absolutedU'] = absolutedU

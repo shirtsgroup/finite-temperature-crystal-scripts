@@ -471,7 +471,7 @@ def dGvsT(plot_out=False, Temperatures=np.array([100,200,300]), Pressure=1, Mole
     
     # beta factor for the different temperatures
     beta_k = 1.0 / (kB * Temperatures)
-    beta_k = np.tile(beta_k, (len(Potentials)))
+    beta_k = np.tile(beta_k, (1, len(Potentials)))[0]
     
     # Conversion from kJ to kcal
     kJ_to_kcal = 0.2390057
@@ -482,7 +482,7 @@ def dGvsT(plot_out=False, Temperatures=np.array([100,200,300]), Pressure=1, Mole
     # Allocate storage for simulation data
     # u_pklnT is the complete matrix of all energy data. 'p' is the polymorph, 'k' is the sampled state, 'l' is the
     #    evaluated state, 'n' is the sample number,  and T is the energy term
-    u_pklnT = np.zeros([len(Polymorphs), K, K, N_max, 20])
+    #u_pklnT = np.zeros([len(Polymorphs), K, K, N_max, 20])
     
     # N_k[k] is the total number of snapshots from alchemical state k
     N_k = np.zeros(K, np.int32)
@@ -530,7 +530,6 @@ def dGvsT(plot_out=False, Temperatures=np.array([100,200,300]), Pressure=1, Mole
     ddV_avg = np.zeros([len(Polymorphs), len(Temperatures)], float)
 
     # C_pkn is the lattice tensor of the polymorph p at temperature k
-    box_letters = ['XX', 'YY', 'ZZ', 'YX', 'ZX', 'ZY']
     box_place = np.matrix([[0, 0], [1, 1], [2, 2], [0, 1], [0, 2], [1, 2]])
     C_pkn = np.zeros([len(Polymorphs), len(Temperatures), N_max, 3, 3], float)
 
@@ -565,19 +564,19 @@ def dGvsT(plot_out=False, Temperatures=np.array([100,200,300]), Pressure=1, Mole
                     [start_production, _, _] = timeseries.detectEquilibration(np.array(all_energy['Total Energy']))
 
                     # Read in the energy file data for state k evaluated in state l using HARVIST
-                    if k == 0:
-                        Terms_l.append(Harvist.CreateTerms(fname_energy))
+                    #if k == 0:
+                    #    Terms_l.append(Harvist.CreateTerms(fname_energy))
 
                     # Setting the end point of the simulation
                     N = len(np.array(all_energy['Total Energy'])[start_production:])
                     N_k[k] = N
 
-                    u_pklnT[p, k, l, :N, :len(Terms_l[j])] = Harvist.GrabTerms(fname_energy, Terms_l[j],
-                                                                               ignoreframes=start_production)[0]
+                    #u_pklnT[p, k, l, :N, :len(Terms_l[j])] = Harvist.GrabTerms(fname_energy, Terms_l[j],
+                    #                                                           ignoreframes=start_production)[0]
                     u_kln[k, l, :N] = np.array(all_energy['Potential'])[start_production:]
 
                     # Now set these energies over all temperatures
-                    u_pklnT[p, k, l: (l + len(Temperatures)), :N, :len(Terms_l[j])] = u_pklnT[p, k, l, :N, :len(Terms_l[j])]
+                    #u_pklnT[p, k, l: (l + len(Temperatures)), :N, :len(Terms_l[j])] = u_pklnT[p, k, l, :N, :len(Terms_l[j])]
                     u_kln[k, l:(l + len(Temperatures)), :N] = u_kln[k, l, :N]
 
                     # Now read in the volumes and average them
@@ -586,34 +585,43 @@ def dGvsT(plot_out=False, Temperatures=np.array([100,200,300]), Pressure=1, Mole
                     ddV_avg[p, t] = np.std(V_pkn[p, t, :N]) / N ** 0.5 / float(Independent)
 
                     # Now read in the lattice tensor and average them
+                    if 'Box-XX' in list(all_energy):
+                        box_letters = ['XX', 'YY', 'ZZ', 'YX', 'ZX', 'ZY']
+                    else:
+                        box_letters = ['X', 'Y', 'Z']
+
                     sign = np.sign(md.load(dirpath + 'pre_EQ.gro').unitcell_vectors[0].T)
-                    for b in range(6):
+                    for s in range(3):
+                        for j in range(3):
+                            if sign[s, j] == 0.:
+                                # Correcting for the sign of the lattice parameters
+                                sign[s, j] = 1.
+ 
+                    for b in range(len(box_letters)):
                         C_pkn[p, t, :N, box_place[b, 0], box_place[b, 1]] = np.array(all_energy['Box-' + box_letters[b]])[start_production:] * \
                                 sign[box_place[b, 0], box_place[b, 1]] * 10
                     C_avg = np.average(C_pkn[p, t, :N], axis=0)
-                    print('HERE')
-                    print(C_avg)
                     dC = np.std(C_pkn[p, t, :N], axis=0)
                     h_avg[p, t] = crystal_matrix_to_lattice_parameters(C_avg) 
                     dh[p, t] = np.absolute(crystal_matrix_to_lattice_parameters(C_avg + dC) - h_avg[p, t])
 
         print("Start1")
         # Convert all units to kcal
-        u_pklnT[p, :, :, :] *= kJ_to_kcal
+        #u_pklnT[p, :, :, :] *= kJ_to_kcal
         u_kln *= kJ_to_kcal
         
         print("Start2")
         # If this was already in kcal or already fully independent, revert
         for j in range(len(Potentials)):
             if Potentials[j][:6] == "amoeba":
-                u_pklnT[p, :, j * len(Temperatures):(j + 1) * len(Temperatures), :, :] /= kJ_to_kcal
+                #u_pklnT[p, :, j * len(Temperatures):(j + 1) * len(Temperatures), :, :] /= kJ_to_kcal
                 u_kln[:, j * len(Temperatures):(j + 1) * len(Temperatures), :] /= kJ_to_kcal
         
         print("Start3")
         # Remove dependent molecules
         for j in range(len(Potentials)):
             if Potentials[j][:6] != "amoeba":
-                u_pklnT[p, :, j * len(Temperatures):(j + 1) * len(Temperatures), :, :] *= float(Independent) / Molecules
+                #u_pklnT[p, :, j * len(Temperatures):(j + 1) * len(Temperatures), :, :] *= float(Independent) / Molecules
                 u_kln[:, j * len(Temperatures):(j + 1) * len(Temperatures), :] *= float(Independent) / Molecules
     
         print("Start4")
@@ -743,6 +751,7 @@ def dGvsT(plot_out=False, Temperatures=np.array([100,200,300]), Pressure=1, Mole
     for i in range(spacing + 1):
         for t, T in enumerate(Temperatures):
             for p in range(len(Polymorphs)):
+                #print('HERE!!!!!', dA[p, i, t], dA[0, i, t], (dA[p, i, t] - dA[0, i, t]), (beta_k[t] * float(Independent)), float(T),  float(refT), refdG[p])
                 dG[p, i, t] = (dA[p, i, t] - dA[0, i, t]) / (beta_k[t] * float(Independent)) + float(T) / float(refT) * \
                                                                                                refdG[p]
                 ddG[p, i, t] = ((ddA[p, i, t] ** 2 + ddA[0, i, t] ** 2) / (beta_k[t] * float(Independent)) ** 2 +
