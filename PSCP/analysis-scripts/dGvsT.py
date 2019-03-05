@@ -549,61 +549,61 @@ def dGvsT(plot_out=False, Temperatures=np.array([100,200,300]), Pressure=1, Mole
                 for j, potential_l in enumerate(Potentials):
                     l = len(Temperatures) * j
     
-                    # set up the state l hinges for molecules, charges, and alchemical transformations
-                    if SimNAMES[j] == "GRO":
-                        if Chargenames[i] == "":
-                            charge_hinge_l = ""
-                        else:
-                            charge_hinge_l = "_" + Chargenames[j]
-                    elif SimNAMES[j] == "TIN":
-                        charge_hinge_l = ""
+#                    # set up the state l hinges for molecules, charges, and alchemical transformations
+#                    if SimNAMES[j] == "GRO":
+#                        if Chargenames[i] == "":
+#                            charge_hinge_l = ""
+#                        else:
+#                            charge_hinge_l = "_" + Chargenames[j]
+#                    elif SimNAMES[j] == "TIN":
+#                        charge_hinge_l = ""
                     dirpath = polymorph + '/temperature/' + str(t) + '/'
-                    fname_energy = dirpath + potential_l + charge_hinge_l + '_energy.xvg'
-
-                    all_energy = panedr.edr_to_df(dirpath + 'PROD.edr')
-                    [start_production, _, _] = timeseries.detectEquilibration(np.array(all_energy['Total Energy']))
-
-                    # Read in the energy file data for state k evaluated in state l using HARVIST
-                    #if k == 0:
-                    #    Terms_l.append(Harvist.CreateTerms(fname_energy))
-
-                    # Setting the end point of the simulation
-                    N = len(np.array(all_energy['Total Energy'])[start_production:])
-                    N_k[k] = N
-
-                    #u_pklnT[p, k, l, :N, :len(Terms_l[j])] = Harvist.GrabTerms(fname_energy, Terms_l[j],
-                    #                                                           ignoreframes=start_production)[0]
-                    u_kln[k, l, :N] = np.array(all_energy['Potential'])[start_production:]
-
-                    # Now set these energies over all temperatures
-                    #u_pklnT[p, k, l: (l + len(Temperatures)), :N, :len(Terms_l[j])] = u_pklnT[p, k, l, :N, :len(Terms_l[j])]
-                    u_kln[k, l:(l + len(Temperatures)), :N] = u_kln[k, l, :N]
-
-                    # Now read in the volumes and average them
-                    V_pkn[p, t, :N] = np.array(all_energy['Volume'])[start_production:]
-                    V_avg[p, t] = np.average(V_pkn[p, t, :N]) / float(Independent)
-                    ddV_avg[p, t] = np.std(V_pkn[p, t, :N]) / N ** 0.5 / float(Independent)
-
-                    # Now read in the lattice tensor and average them
-                    if 'Box-XX' in list(all_energy):
-                        box_letters = ['XX', 'YY', 'ZZ', 'YX', 'ZX', 'ZY']
+#                    fname_energy = dirpath + potential_l + charge_hinge_l + '_energy.xvg'
+                    if os.path.isfile(dirpath)
+                        all_energy = panedr.edr_to_df(dirpath + 'PROD.edr')
+                        [start_production, _, _] = timeseries.detectEquilibration(np.array(all_energy['Total Energy']))
+    
+                        # Setting the end point of the simulation
+                        N = len(np.array(all_energy['Total Energy'])[start_production:])
+                        N_k[k] = N
+    
+                        u_kln[k, l, :N] = np.array(all_energy['Potential'])[start_production:]
+    
+                        # Now set these energies over all temperatures
+                        #u_pklnT[p, k, l: (l + len(Temperatures)), :N, :len(Terms_l[j])] = u_pklnT[p, k, l, :N, :len(Terms_l[j])]
+                        u_kln[k, l:(l + len(Temperatures)), :N] = u_kln[k, l, :N]
+    
+                        # Now read in the volumes and average them
+                        V_pkn[p, t, :N] = np.array(all_energy['Volume'])[start_production:]
+                        V_avg[p, t] = np.average(V_pkn[p, t, :N]) / float(Independent)
+                        ddV_avg[p, t] = np.std(V_pkn[p, t, :N]) / N ** 0.5 / float(Independent)
+    
+                        # Now read in the lattice tensor and average them
+                        if 'Box-XX' in list(all_energy):
+                            box_letters = ['XX', 'YY', 'ZZ', 'YX', 'ZX', 'ZY']
+                        else:
+                            box_letters = ['X', 'Y', 'Z']
+    
+                        sign = np.sign(md.load(dirpath + 'pre_EQ.gro').unitcell_vectors[0].T)
+                        for s in range(3):
+                            for j in range(3):
+                                if sign[s, j] == 0.:
+                                    # Correcting for the sign of the lattice parameters
+                                    sign[s, j] = 1.
+     
+                        for b in range(len(box_letters)):
+                            C_pkn[p, t, :N, box_place[b, 0], box_place[b, 1]] = np.array(all_energy['Box-' + box_letters[b]])[start_production:] * \
+                                    sign[box_place[b, 0], box_place[b, 1]] * 10
+                        C_avg = np.average(C_pkn[p, t, :N], axis=0)
+                        dC = np.std(C_pkn[p, t, :N], axis=0)
+                        h_avg[p, t] = crystal_matrix_to_lattice_parameters(C_avg) 
+                        dh[p, t] = np.absolute(crystal_matrix_to_lattice_parameters(C_avg + dC) - h_avg[p, t])
                     else:
-                        box_letters = ['X', 'Y', 'Z']
-
-                    sign = np.sign(md.load(dirpath + 'pre_EQ.gro').unitcell_vectors[0].T)
-                    for s in range(3):
-                        for j in range(3):
-                            if sign[s, j] == 0.:
-                                # Correcting for the sign of the lattice parameters
-                                sign[s, j] = 1.
- 
-                    for b in range(len(box_letters)):
-                        C_pkn[p, t, :N, box_place[b, 0], box_place[b, 1]] = np.array(all_energy['Box-' + box_letters[b]])[start_production:] * \
-                                sign[box_place[b, 0], box_place[b, 1]] * 10
-                    C_avg = np.average(C_pkn[p, t, :N], axis=0)
-                    dC = np.std(C_pkn[p, t, :N], axis=0)
-                    h_avg[p, t] = crystal_matrix_to_lattice_parameters(C_avg) 
-                    dh[p, t] = np.absolute(crystal_matrix_to_lattice_parameters(C_avg + dC) - h_avg[p, t])
+                        N_k[k] = 0
+                        V_avg[p, t] = np.nan
+                        ddV_avg[p, t] = np.nan
+                        h_avg[p, t] = np.nan
+                        dh[p, t] = np.nan
 
         print("Start1")
         # Convert all units to kcal
