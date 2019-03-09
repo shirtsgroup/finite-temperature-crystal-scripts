@@ -406,7 +406,7 @@ def crystal_matrix_to_lattice_parameters(crystal_matrix):
     lattice_parameters = np.array([a, b, c, alpha, beta, gamma])
     return lattice_parameters
 
-def dGvsT(plot_out=False, Temperatures=np.array([100,200,300]), Pressure=1, Molecules=72, molecule='benzene', 
+def dGvsT(plot_out=False, Temperatures=np.array([100,200,300]), Temperatures_unsampled=[], Pressure=1, Molecules=72, molecule='benzene', 
           Independent=0, potential='oplsaa', ignoreframes=200, includeframes=100000,
           simulation='gromacs', directory='', ensemble='NVT', spacing=1, hinge='DefaultHinge', phase='solid',
           Polymorphs=['p1', 'p2', 'p3'], refT=200, refdG=[0.000, 0.185, 0.306], refddG=[0.000, 0.019, 0.019],
@@ -420,6 +420,7 @@ def dGvsT(plot_out=False, Temperatures=np.array([100,200,300]), Pressure=1, Mole
     # Hard set from old dictionary funciton
     refPot = 0
     ExtraPressures = []
+    Temperatures = np.sort(np.append(Temperatures, Temperatures_unsampled))
     Pressures = np.ones(len(Temperatures), int)
     Pressures[len(Pressures) - len(ExtraPressures): len(Pressures)] = ExtraPressures
     Potentials = [potential]
@@ -543,6 +544,7 @@ def dGvsT(plot_out=False, Temperatures=np.array([100,200,300]), Pressure=1, Mole
     for p, polymorph in enumerate(Polymorphs):
         # Cycle through all sampled potentials
         for i, potential_k in enumerate(Potentials):
+            count = 0
             for t in range(len(Temperatures)):
                 k = len(Temperatures) * i + t
                 # Cycle through all evaluated potentials
@@ -557,9 +559,10 @@ def dGvsT(plot_out=False, Temperatures=np.array([100,200,300]), Pressure=1, Mole
 #                            charge_hinge_l = "_" + Chargenames[j]
 #                    elif SimNAMES[j] == "TIN":
 #                        charge_hinge_l = ""
-                    dirpath = polymorph + '/temperature/' + str(t) + '/'
+                    dirpath = polymorph + '/temperature/' + str(count) + '/'
 #                    fname_energy = dirpath + potential_l + charge_hinge_l + '_energy.xvg'
-                    if os.path.isfile(dirpath)
+                    if os.path.isfile(dirpath + 'PROD.edr') and (Temperatures[t] not in Temperatures_unsampled):
+                        count += 1
                         all_energy = panedr.edr_to_df(dirpath + 'PROD.edr')
                         [start_production, _, _] = timeseries.detectEquilibration(np.array(all_energy['Total Energy']))
     
@@ -590,9 +593,9 @@ def dGvsT(plot_out=False, Temperatures=np.array([100,200,300]), Pressure=1, Mole
                                 if sign[s, j] == 0.:
                                     # Correcting for the sign of the lattice parameters
                                     sign[s, j] = 1.
-     
+
                         for b in range(len(box_letters)):
-                            C_pkn[p, t, :N, box_place[b, 0], box_place[b, 1]] = np.array(all_energy['Box-' + box_letters[b]])[start_production:] * \
+                            C_pkn[p, t, :N, box_place[b, 0], box_place[b, 1]] = np.absolute(np.array(all_energy['Box-' + box_letters[b]])[start_production:]) * \
                                     sign[box_place[b, 0], box_place[b, 1]] * 10
                         C_avg = np.average(C_pkn[p, t, :N], axis=0)
                         dC = np.std(C_pkn[p, t, :N], axis=0)
@@ -661,7 +664,10 @@ def dGvsT(plot_out=False, Temperatures=np.array([100,200,300]), Pressure=1, Mole
             # generate the weights of each of the umbrella set
             mbar = pymbar.MBAR(u_kln, N_k_matrix[i, :], verbose=True)
             print("MBAR Converged...")
-        
+       
+            hold = mbar.computeEffectiveSampleNumber(verbose=True)
+            print(hold)
+             
             # extract self-consistent weights and uncertainties
             (df_i, ddf_i, theta_i) = mbar.getFreeEnergyDifferences()
 
@@ -935,7 +941,7 @@ if __name__ == '__main__':
     phase = "solid"
     
     Polymorphs, refT, refdG, refddG, refdU, absolutedU = old_systems_dictionary(potential, molecule)
-    dGvsT(plot_out=plot_out, Temperatures=Temp, Pressure=Pressure, Molecules=Molecules, molecule=molecule,
+    dGvsT(plot_out=plot_out, Temperatures=Temp, Temperatures_unsampled=[], Pressure=Pressure, Molecules=Molecules, molecule=molecule,
           Independent=Independent, potential=potential, ignoreframes=ignoreframes, includeframes=includeframes, 
           simulation=simulation, directory=directory, ensemble=ensemble, spacing=spacing, hinge=hinge, phase=phase, 
           Polymorphs=Polymorphs, refT=refT, refdG=refdG, refddG=refddG, refdU=refdU, absolutedU=absolutedU)
