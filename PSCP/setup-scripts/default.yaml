@@ -51,6 +51,7 @@ temp_in:
     # Input parameters for setup_Temperature
     run_temperature: False
     simulation_package: gromacs
+    temperatures_unsampled: 
     temperatures: 50 100 200 300
     charge: 0.1150
     temp_anneal_steps: 500

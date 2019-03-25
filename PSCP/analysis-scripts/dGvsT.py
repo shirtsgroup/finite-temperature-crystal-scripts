@@ -564,8 +564,19 @@ def dGvsT(plot_out=False, Temperatures=np.array([100,200,300]), Temperatures_uns
                     if os.path.isfile(dirpath + 'PROD.edr') and (Temperatures[t] not in Temperatures_unsampled):
                         count += 1
                         all_energy = panedr.edr_to_df(dirpath + 'PROD.edr')
-                        [start_production, _, _] = timeseries.detectEquilibration(np.array(all_energy['Total Energy']))
+                        [start_production, _, _] = timeseries.detectEquilibration(np.array(all_energy['Potential']))
+
+                        # Now read in the lattice tensor and average them
+                        if 'Box-XX' in list(all_energy):
+                            box_letters = ['XX', 'YY', 'ZZ', 'YX', 'ZX', 'ZY']
+                        else:
+                            box_letters = ['X', 'Y', 'Z']
     
+                        for b in range(len(box_letters)):
+                            [hold,_,_] = timeseries.detectEquilibration(np.array(all_energy['Box-' + box_letters[b]]))
+                            if hold > start_production:
+                                start_production = hold
+
                         # Setting the end point of the simulation
                         N = len(np.array(all_energy['Total Energy'])[start_production:])
                         N_k[k] = N
@@ -581,12 +592,7 @@ def dGvsT(plot_out=False, Temperatures=np.array([100,200,300]), Temperatures_uns
                         V_avg[p, t] = np.average(V_pkn[p, t, :N]) / float(Independent)
                         ddV_avg[p, t] = np.std(V_pkn[p, t, :N]) / N ** 0.5 / float(Independent)
     
-                        # Now read in the lattice tensor and average them
-                        if 'Box-XX' in list(all_energy):
-                            box_letters = ['XX', 'YY', 'ZZ', 'YX', 'ZX', 'ZY']
-                        else:
-                            box_letters = ['X', 'Y', 'Z']
-    
+                        # Making the lattice tensor all the correct sign with time    
                         sign = np.sign(md.load(dirpath + 'pre_EQ.gro').unitcell_vectors[0].T)
                         for s in range(3):
                             for j in range(3):

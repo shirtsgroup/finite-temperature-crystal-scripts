@@ -67,7 +67,9 @@ if __name__ == '__main__':
         absolutedU = np.array(inputs['PSCP_out']['absolutedU']).astype(float)
         refdU = absolutedU - absolutedU[0]
 
-    dGvsT(Temperatures=np.array(inputs['temp_in']['temperatures'].split()).astype(float), Pressure=inputs['gen_in']['pressure'],
+    dGvsT(Temperatures=np.array(inputs['temp_in']['temperatures'].split()).astype(float), 
+          Temperatures_unsampled=np.array(inputs['temp_in']['temperatures_unsampled'].split()).astype(float), 
+          Pressure=inputs['gen_in']['pressure'],
           Molecules=inputs['gen_in']['number_of_molecules'], molecule=inputs['gen_in']['molecule'],
           Independent=independent, potential=inputs['gen_in']['potential'],
           simulation=inputs['temp_in']['simulation_package'], hinge=inputs['gen_in']['hinge'],
