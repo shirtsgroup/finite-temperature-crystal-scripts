@@ -10,6 +10,7 @@ import numpy as np
 from scipy.optimize import fsolve
 from scipy.special import erf
 from pymbar.timeseries import detectEquilibration
+import panedr as pdr
 
 path = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, path + '/setup-scripts')
@@ -37,16 +38,10 @@ def yaml_loader(file_path):
     return data
 
 def load_potenergy(fil):
-    U = []
-    with open(fil) as f:
-        for line in f:
-            cols = line.split()
-            if len(cols) == 2:
-                try:
-                    U.append(float(cols[1]))
-                except ValueError:
-                    pass
-    return U
+    U = pdr.edr_to_df(fil)
+    U = np.array(U['Potential'])
+    [t0,_,_] = detectEquilibration(U) 
+    return U[t0:]
 
 def prob_diff(dT, P, T0, dmu, b_mu, dsig, b_sig):
     # Determines the difference between the desired probability overlap P and then probability overlap using dT
@@ -82,12 +77,12 @@ def setup_ReplicaExchange_temperatures(inputs):
     run_replica_exchange = True
     for i in range(len(polymorph_num)):
         for j in range(len(temperatures)):
-            if os.path.isfile(polymorph_num[i] + '/temperature/' + str(int(j)) + '/potenergy.xvg'):
-                U = load_potenergy(polymorph_num[i] + '/temperature/' + str(int(j)) + '/potenergy.xvg')
+            if os.path.isfile(polymorph_num[i] + '/temperature/' + str(int(j)) + '/PROD.edr'):
+                U = load_potenergy(polymorph_num[i] + '/temperature/' + str(int(j)) + '/PROD.edr')
                 average[i, j] = np.mean(U)
                 st_dev[i, j] = np.std(U)
             else:
-                run_replica_exchange = False
+                #run_replica_exchange = False
                 print('WARNING: File /' + polymorph_num[i] + '/temperature/' + str(int(j)) + '/potenergy.xvg' + ' is missing')
 
     # Ending the run if previous temperature runs are not present
@@ -111,7 +106,7 @@ def setup_ReplicaExchange_temperatures(inputs):
     temp = float(inputs['rep_exch_in']['T_min'])
     T_out = [temp]
     while temp < float(inputs['rep_exch_in']['T_max']):
-        dt = np.around(return_dT(dmu, b_mu, dsig, b_sig, inputs['rep_exch_in']['prob_overlap'], temp), 1)
+        dt = np.around(return_dT(dmu, b_mu, dsig, b_sig, inputs['rep_exch_in']['prob_overlap'], temp), 2)
         temp += dt[0]
         if temp < float(inputs['rep_exch_in']['T_max']):
             T_out.append(temp)
@@ -120,6 +115,8 @@ def setup_ReplicaExchange_temperatures(inputs):
 
     # Correcting for the number of nodes and changing the temperautre back to a string
     T_out, nodes = correct_for_nodes(T_out)
+    #print(T_out, nodes)
+    #sys.exit()
     T = ""
     for i in T_out:
         T += str(i) + " "
@@ -130,7 +127,8 @@ def correct_for_nodes(T):
     nodes = 1000
     # Minimizing the required noedes for replica Exchange
     for i in range(len(T), len(T) + 10):
-        for j in range(4, 7):
+#NSA: Make this an option in the input file
+        for j in range(1, 7):
             if ((i * j / 28) < nodes) and ((i * j % 28) == 0):
                 nodes = i * j / 28
                 extra_T = i - len(T)

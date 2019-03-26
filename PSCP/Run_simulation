@@ -12,10 +12,13 @@ potential="oplsaa"
 production=true
 anneal=false
 
-while getopts "a:r:E:i:u:P:A:" opt; do
+while getopts "a:R:r:E:i:u:P:A:" opt; do
         case $opt in
         a )
                 cores=$OPTARG
+                ;;
+        R )
+                REMD=$OPTARG
                 ;;
         r )
                 reweight=$OPTARG

@@ -469,6 +469,7 @@ def setup_molecule(polymorph_num='p1', temperature=[], pressure=1, molecule='', 
                 grofile = templatepath + '/' + molecule + '_' + polymorph_num + '_' + molnum
             else:
                 print("There are no available files in the runfiles directory for the combination: ")
+                print("Runfiles Directory: " + templatepath)
                 print("Molecule: " + molecule)
                 print("Polymorph: " + polymorph_num)
                 print("Number: ", str(number_of_molecules))

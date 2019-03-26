@@ -149,6 +149,7 @@ fi
 files=$(ls ${TEMPLATEPATH}/*.gro | grep "_$MOLECULE_" | grep "_$polymorph_num_" | grep "_$MOLECULES" | grep "_$independenthinge")
 if [ "$files" == "" ]; then
     echo "There are no available files in the runfiles directory for the combination: "
+    echo "Directory:" $TEMPLATEPATH
     echo "Molecule: $MOLECULE"
     echo "Polymorph: $polymorph_num"
     echo "Number: $MOLECULES"
