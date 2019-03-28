@@ -115,8 +115,8 @@ def setup_ReplicaExchange_temperatures(inputs):
 
     # Correcting for the number of nodes and changing the temperautre back to a string
     T_out, nodes = correct_for_nodes(T_out, inputs['rep_exch_in']['cores_per_replica'], inputs['rep_exch_in']['cores_per_node'])
-    print(T_out, nodes)
-    sys.exit()
+
+    # Turning the desired temperatures into a string for the input file
     T = ""
     for i in T_out:
         T += str(i) + " "
@@ -124,17 +124,12 @@ def setup_ReplicaExchange_temperatures(inputs):
     
 
 def correct_for_nodes(T, cores_per_replica, cores_per_node):
-#    nodes = 1000
-#    # Minimizing the required noedes for replica Exchange
-#    for i in range(len(T), len(T) + 10):
-##NSA: Make this an option in the input file
-#        for j in range(1, 7):
-#            if ((i * j / cores_per_node) < nodes) and ((i * j % 28) == 0):
-#                nodes = i * j / cores_per_node
-#                extra_T = i - len(T)
-
+    # Determining the number of nodes required to run REMD
     nodes = len(T) * cores_per_replica / cores_per_node
+
+    # Determineing the number of extra temperatures that need to be added to have an integer value of nodes
     extra_T = int(np.ceil(nodes) * cores_per_node / cores_per_replica - len(T))
+
     # Adding Extra Temperatures
     if extra_T != 0:
         for i in range(extra_T):
