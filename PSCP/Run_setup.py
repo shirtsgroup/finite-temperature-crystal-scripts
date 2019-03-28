@@ -114,25 +114,27 @@ def setup_ReplicaExchange_temperatures(inputs):
             T_out.append(float(inputs['rep_exch_in']['T_max']))
 
     # Correcting for the number of nodes and changing the temperautre back to a string
-    T_out, nodes = correct_for_nodes(T_out)
-    #print(T_out, nodes)
-    #sys.exit()
+    T_out, nodes = correct_for_nodes(T_out, inputs['rep_exch_in']['cores_per_replica'], inputs['rep_exch_in']['cores_per_node'])
+    print(T_out, nodes)
+    sys.exit()
     T = ""
     for i in T_out:
         T += str(i) + " "
     return T, nodes
     
 
-def correct_for_nodes(T):
-    nodes = 1000
-    # Minimizing the required noedes for replica Exchange
-    for i in range(len(T), len(T) + 10):
-#NSA: Make this an option in the input file
-        for j in range(1, 7):
-            if ((i * j / 28) < nodes) and ((i * j % 28) == 0):
-                nodes = i * j / 28
-                extra_T = i - len(T)
+def correct_for_nodes(T, cores_per_replica, cores_per_node):
+#    nodes = 1000
+#    # Minimizing the required noedes for replica Exchange
+#    for i in range(len(T), len(T) + 10):
+##NSA: Make this an option in the input file
+#        for j in range(1, 7):
+#            if ((i * j / cores_per_node) < nodes) and ((i * j % 28) == 0):
+#                nodes = i * j / cores_per_node
+#                extra_T = i - len(T)
 
+    nodes = len(T) * cores_per_replica / cores_per_node
+    extra_T = int(np.ceil(nodes) * cores_per_node / cores_per_replica - len(T))
     # Adding Extra Temperatures
     if extra_T != 0:
         for i in range(extra_T):
@@ -142,7 +144,7 @@ def correct_for_nodes(T):
                 if (T_rand > np.min(T)) and (np.all(T_rand != T)):
                     append = True
                     T = np.append(T, T_rand)
-    return np.sort(T), nodes
+    return np.sort(T), int(np.ceil(nodes))
 
 
 if __name__ == '__main__':
