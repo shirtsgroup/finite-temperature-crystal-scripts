@@ -9,9 +9,12 @@
 module load mpi/intel_mpi
 module load gromacs/2018_cpu
 
-(for dir in {DIRS}; do cd $dir; gmx grompp -f production.mdp -c EQ.gro -r restraint.gro -p topology.top -o PROD.tpr  -maxwarn 10; cd ..; done)
+Run_REMD.py -n NNPP -r restraints.gro
 
-mpirun -np NNPP  gmx_mpi mdrun -v -multidir {DIRS} -replex 50 -nex NNEEXX -deffnm PROD
+
+#(for dir in {DIRS}; do cd $dir; gmx grompp -f production.mdp -c EQ.gro -r restraint.gro -p topology.top -o PROD.tpr  -maxwarn 10; cd ..; done)
+
+#mpirun -np NNPP  gmx_mpi mdrun -v -multidir {DIRS} -replex 50 -nex NNEEXX -deffnm PROD
 
 
 

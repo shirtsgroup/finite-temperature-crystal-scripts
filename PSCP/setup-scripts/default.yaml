@@ -67,4 +67,5 @@ rep_exch_in:
     T_min: 10
     T_max: 400
     prob_overlap: 0.3
-    
+    cores_per_replica: 1
+    cores_per_node: 28

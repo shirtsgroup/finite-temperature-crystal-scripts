@@ -76,9 +76,9 @@ def setup_replica_exchange(nodes, directories, process_number, exchange_number, 
 
     # Replacing specific strings in the submit script to match the user input
     replace_string_in_text(jobpath + '/submit_cluster_REP.slurm', 'NODES', nodes)
-    replace_string_in_text(jobpath + '/submit_cluster_REP.slurm', 'DIRS', directories)
+#    replace_string_in_text(jobpath + '/submit_cluster_REP.slurm', 'DIRS', directories)
     replace_string_in_text(jobpath + '/submit_cluster_REP.slurm', 'NNPP', process_number)
-    replace_string_in_text(jobpath + '/submit_cluster_REP.slurm', 'NNEEXX', exchange_number)
+#    replace_string_in_text(jobpath + '/submit_cluster_REP.slurm', 'NNEEXX', exchange_number)
 
 
 
