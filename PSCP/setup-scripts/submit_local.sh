@@ -1,5 +1,5 @@
 #!/bin/bash
 #SUBMIT THE BENZENE JOB TO BE RUN
 
-Run_simulation -r rrrr -E EEEE -i iiii -u uuuu -P PPPP -A AAAA
+Run_simulation.py -r rrrr -e EEEE -i iiii -u uuuu -p PPPP -a AAAA
 

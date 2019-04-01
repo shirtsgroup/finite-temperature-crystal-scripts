@@ -755,27 +755,27 @@ def setup_molecule(polymorph_num='p1', temperature=[], pressure=1, molecule='', 
         subprocess.call(['cp', path + 'submit_cluster.slurm', jobpath + '/'])
 
         # if the number of Annealing steps is 0, skip the equilibration
-        annealing = 'true'
+        annealing = True
         if anneal_steps == 0:
-            annealing = 'false'
+            annealing = False
             print('Skipping Annealing...')
 
         # if the number of equilibration steps is 0, skip the equilibration
-        equilibration = 'true'
+        equilibration = True
         if equil_steps == 0:
-            equilibration = 'false'
+            equilibration = False
             print('Skipping Equilibration...')
 
         # if the number of production steps is 0, skip the equilibration
-        production = 'true'
+        production = True
         if (prod_steps == 0) or (run_production == False):
-            production = 'false'
+            production = False
             print('Skipping Production...')
 
         # If there is no force-averaging, remove the index file command
-        indexing = 'true'
+        indexing = True
         if number_of_molecules == independent:
-            indexing = 'false'
+            indexing = False
             #replace_string_in_text(jobpath + '/submit_minimization_local.sh', '-n index.ndx', '')
             #replace_string_in_text(jobpath + '/submit_minimization.sh', '-n index.ndx', '')
 
@@ -789,9 +789,9 @@ def setup_molecule(polymorph_num='p1', temperature=[], pressure=1, molecule='', 
                 replace_line_starting_with(jobpath + '/' + i, 'drude-r', '')
 
         # IF THIS IS THE PSCP, DONT REWEIGHT, ENERGY MINIMIZE, OR PICK THE AVERAGE CONFIGURATION
-        reweight = 'true'
+        reweight = True
         if hinge in ['_L', '_G']:
-            reweight = 'false'
+            reweight = False
 
         # SET THE APPROPRIATE POST-SIMULATION REWEIGHTING
         if potential == 'oplsaa':
