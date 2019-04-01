@@ -59,7 +59,7 @@ def compute_prob(mu_1, mu_2, sig_1, sig_2):
 
 def return_dT(dmu, b_mu, dsig, b_sig, P, T0):
     # Finds the dT that provides the desired proability overlap
-    x = fsolve(prob_diff, 0.5, args=(P, T0, dmu, b_mu, dsig, b_sig))
+    x = fsolve(prob_diff, 0.01, args=(P, T0, dmu, b_mu, dsig, b_sig))
     return x
 
 def setup_ReplicaExchange_temperatures(inputs):
@@ -116,6 +116,8 @@ def setup_ReplicaExchange_temperatures(inputs):
     # Correcting for the number of nodes and changing the temperautre back to a string
     T_out, nodes = correct_for_nodes(T_out, inputs['rep_exch_in']['cores_per_replica'], inputs['rep_exch_in']['cores_per_node'])
 
+    #print(T_out, nodes)
+    #sys.exit()
     # Turning the desired temperatures into a string for the input file
     T = ""
     for i in T_out:
