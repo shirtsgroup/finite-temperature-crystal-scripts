@@ -45,11 +45,12 @@ def load_potenergy(fil):
 
 def prob_diff(dT, P, T0, dmu, b_mu, dsig, b_sig):
     # Determines the difference between the desired probability overlap P and then probability overlap using dT
+    dT = np.absolute(dT)
     mu_1 = dmu * T0 + b_mu
     mu_2 = dmu * (T0 + dT) + b_mu
     sig_1 = dsig * T0 + b_sig
     sig_2 = dsig * (T0 + dT) + b_sig
-    return P - compute_prob(mu_1, mu_2, sig_1, sig_2)
+    return (P - compute_prob(mu_1, mu_2, sig_1, sig_2))**2
 
 def compute_prob(mu_1, mu_2, sig_1, sig_2):
     c = (mu_2 * sig_1**2 - sig_2*(mu_1*sig_2 + sig_1*np.sqrt((mu_1 - mu_2)**2 + 2*(sig_1**2 - sig_2**2)*np.log10(sig_1/sig_2)))) / (sig_1**2 - sig_2**2)
@@ -59,13 +60,13 @@ def compute_prob(mu_1, mu_2, sig_1, sig_2):
 
 def return_dT(dmu, b_mu, dsig, b_sig, P, T0):
     # Finds the dT that provides the desired proability overlap
-    x = fsolve(prob_diff, 0.01, args=(P, T0, dmu, b_mu, dsig, b_sig))
+    x = fsolve(prob_diff, 0.001, args=(P, T0, dmu, b_mu, dsig, b_sig))
     return x
 
-def setup_ReplicaExchange_temperatures(inputs):
+def setup_ReplicaExchange_temperatures(inputs, check):
     # Extracing specific data from the inputs
     polymorph_num = inputs['gen_in']['polymorph_num'].split()
-    temperatures = np.array(inputs['temp_in']['temperatures'].split())
+    temperatures = np.array(inputs['temp_in']['temperatures'].split()).astype(float)
 
     # Setting up arrays to store values from previous run
     average = np.zeros((len(polymorph_num), len(temperatures)))
@@ -102,12 +103,12 @@ def setup_ReplicaExchange_temperatures(inputs):
     #for i in range(len(polymorph_num[0])):
     dmu, b_mu = np.polyfit(temperatures, average[0, :], 1)
     dsig, b_sig = np.polyfit(temperatures, st_dev[0, :], 1)
-
+    
     temp = float(inputs['rep_exch_in']['T_min'])
     T_out = [temp]
     while temp < float(inputs['rep_exch_in']['T_max']):
-        dt = np.around(return_dT(dmu, b_mu, dsig, b_sig, inputs['rep_exch_in']['prob_overlap'], temp), 2)
-        temp += dt[0]
+        dt = np.around(return_dT(dmu, b_mu, dsig, b_sig, inputs['rep_exch_in']['prob_overlap'], temp), 4)
+        temp += np.absolute(dt[0])
         if temp < float(inputs['rep_exch_in']['T_max']):
             T_out.append(temp)
         else:
@@ -116,8 +117,11 @@ def setup_ReplicaExchange_temperatures(inputs):
     # Correcting for the number of nodes and changing the temperautre back to a string
     T_out, nodes = correct_for_nodes(T_out, inputs['rep_exch_in']['cores_per_replica'], inputs['rep_exch_in']['cores_per_node'])
 
-    #print(T_out, nodes)
-    #sys.exit()
+    if check == True:
+        print('Temperatures: ', str(T_out))
+        print('Nodes: ', nodes)
+        sys.exit()
+
     # Turning the desired temperatures into a string for the input file
     T = ""
     for i in T_out:
@@ -153,6 +157,7 @@ if __name__ == '__main__':
                         help='Input file containing all parameters to set up the directories to run the MD simulations')
     parser.add_argument('--REP', action='store_true',
                         help='Setups the system for replica exchange if previous temperature have been run as reference')
+    parser.add_argument('--check', action='store_true')
 
     args = parser.parse_args()
 
@@ -160,7 +165,7 @@ if __name__ == '__main__':
     inputs = yaml_loader(args.input_file)
 
     if args.REP:
-        inputs['temp_in']['temperatures'], RE_nodes = setup_ReplicaExchange_temperatures(inputs)
+        inputs['temp_in']['temperatures'], RE_nodes = setup_ReplicaExchange_temperatures(inputs, args.check)
         subprocess.call(['mv', args.input_file, args.input_file.strip('.yaml') + '_prep.yaml'])
         with open(args.input_file, 'w') as yaml_file:
             yaml.dump(inputs, yaml_file, default_flow_style=False)
