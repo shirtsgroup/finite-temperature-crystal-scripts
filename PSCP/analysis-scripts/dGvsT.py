@@ -468,7 +468,7 @@ def dGvsT(plot_out=False, Temperatures=np.array([100,200,300]), Temperatures_uns
     K = len(Potentials) * len(Temperatures)
     
     #  maximum number of snapshots/simulation (could make this automated) - doesn't matter, as long as it's long enough.
-    N_max = 3000
+    N_max = 30000
     
     # beta factor for the different temperatures
     beta_k = 1.0 / (kB * Temperatures)
@@ -590,15 +590,16 @@ def dGvsT(plot_out=False, Temperatures=np.array([100,200,300]), Temperatures_uns
                         # Now read in the volumes and average them
                         V_pkn[p, t, :N] = np.array(all_energy['Volume'])[start_production:]
                         V_avg[p, t] = np.average(V_pkn[p, t, :N]) / float(Independent)
-                        ddV_avg[p, t] = np.std(V_pkn[p, t, :N]) / N ** 0.5 / float(Independent)
+                        ddV_avg[p, t] = np.std(V_pkn[p, t, :N]) / float(Independent)
     
                         # Making the lattice tensor all the correct sign with time    
-                        sign = np.sign(md.load(dirpath + 'pre_EQ.gro').unitcell_vectors[0].T)
-                        for s in range(3):
-                            for j in range(3):
-                                if sign[s, j] == 0.:
-                                    # Correcting for the sign of the lattice parameters
-                                    sign[s, j] = 1.
+                        if count == 1:
+                            sign = np.sign(md.load(dirpath + 'pre_EQ.gro').unitcell_vectors[0].T)
+                            for s in range(3):
+                                for j in range(3):
+                                    if sign[s, j] == 0.:
+                                        # Correcting for the sign of the lattice parameters
+                                        sign[s, j] = 1.
 
                         for b in range(len(box_letters)):
                             C_pkn[p, t, :N, box_place[b, 0], box_place[b, 1]] = np.absolute(np.array(all_energy['Box-' + box_letters[b]])[start_production:]) * \
@@ -866,6 +867,7 @@ def dGvsT(plot_out=False, Temperatures=np.array([100,200,300]), Temperatures_uns
 
     for p, Poly in enumerate(Polymorphs):
         np.save('VvT_' + molecule + '_' + Poly + '_' + potential, V_avg[p, :])
+        np.save('dVvT_' + molecule + '_' + Poly + '_' + potential, ddV_avg[p, :])
 
     # =============================================================================================
     # SAVE THE AVERAGE BOX VECTORS AND ANGLES VS TEMPERATURE
