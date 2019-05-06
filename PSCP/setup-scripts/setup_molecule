@@ -8,7 +8,7 @@
 # USER SPECIFIED LOCATIONS
 #=============================================================================================
 #Exporting location to template coordinate and parameter files
-#export TEMPLATEPATH="/home/nabraham/crystals/NMA/runfiles" #/PATH/TO/TEMPLATE/LOCATION"
+export TEMPLATEPATH="/home/nabraham/crystals/NMA/runfiles" #/PATH/TO/TEMPLATE/LOCATION"
 
 #param n - polymorph number in the form 'p1'
 #param T - Temperature in K
@@ -267,6 +267,7 @@ fi
 grofiles=$(ls ${TEMPLATEPATH}/*.gro | grep "${MOLECULE}_" | grep "_${polymorph_num}_" | grep "_${MOLECULES}" | grep "_${independenthinge}")
 xyzfiles=$(ls ${TEMPLATEPATH}/*.xyz | grep "${MOLECULE}_" | grep "_${polymorph_num}_" | grep "_${MOLECULES}")
 if [ "$SIMULATION" == "gromacs" ] && [ "$grofiles" == "" ]; then
+    echo $grofiles
     echo "There are no available files in the runfiles directory for the combination: "
     echo "Molecule: $MOLECULE"
     echo "Polymorph: $polymorph_num"

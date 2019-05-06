@@ -60,7 +60,7 @@ if check_bool(args.equilibration) == True:
         # For force averaging
         subprocess.call('gmx grompp -f equilibration.mdp -c pre_EQ.gro -r restraint.gro -p topology.top -o EQ.tpr -n index.ndx -maxwarn 10', shell=True)
     else:
-        subprocess.call('gmx grompp -f equilibration.mdp -c pre_EQ.gro -r restraint.gro -p topology.top -o EQ.tpr -n index.ndx -maxwarn 10', shell=True)
+        subprocess.call('gmx grompp -f equilibration.mdp -c pre_EQ.gro -r restraint.gro -p topology.top -o EQ.tpr -maxwarn 10', shell=True)
  
     # Running the annealing simulation
     subprocess.call("gmx mdrun -nt " + str(args.num_cores) + " -v -deffnm EQ -dhdl dhdl_EQ", shell=True)
@@ -100,7 +100,9 @@ if  check_bool(args.production) == True:
 
     if check_bool(args.reweight) == True:
         # Reweight the job into the other potentials if there are no restraints
-        subprocess.call(path + '/run-scripts/reweightjobgromacs -s gromacs -u ' + args.potential)
+        subprocess.call([path + '/run-scripts/reweightjobgromacs', '-s', 'gromacs', '-u', args.potential])
         if args.potential == 'designeda':
-            subprocess.call(path + '/run-scripts/reweightjobtinker -s gromacs -u amoeba09todesa -d 10')
+            subprocess.call([path + '/run-scripts/reweightjobtinker', '-s', 'gromacs', '-u', 'amoeba09todesa', '-d', '10'])
+
+
 

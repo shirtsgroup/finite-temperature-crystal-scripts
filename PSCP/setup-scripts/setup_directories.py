@@ -12,12 +12,12 @@ def setup_temperature(inputs, run_production):
     # Python script to automatically set up simulations over a given range of temperatures
     # Original script written in bash by: Eric Dybeck on 03/31/2014
     # Converted to python by: Nate Abraham on 01/25/2019
-#NSA: General checks from all of these should be condensed elsewhere
 
     # Going through the setup for each polymorph
     for i in inputs['gen_in']['polymorph_num'].split():
         subprocess.call(['mkdir', i + '/temperature'])
         count = 0
+        # Setting up each temperature for the polymorph
         for j in inputs['temp_in']['temperatures'].split():
             setup_molecule(polymorph_num=i, temperature=j, pressure=inputs['gen_in']['pressure'],
                            molecule=inputs['gen_in']['molecule'],
@@ -35,40 +35,62 @@ def setup_temperature(inputs, run_production):
                            charge=inputs['temp_in']['charge'], hinge=inputs['gen_in']['hinge'])
             count += 1
 
-def setup_interactions(polymorph_num=['p1', 'p2' 'p3'], molecule="benzene", max_gamma=100, min_gamma=0, gamma_spacing=10,
-                       gamma_exponent=2, lambd=100, PSCP_temperature=200, pressure=1, number_of_molecules=72,
-                       independent="same", gamma_equil_steps=100000, gamma_prod_steps=1000000, integrator="sd",
-                       thermostat="nose-hoover", cores=7, k_max=1000, cutoff="8", potential="oplsaa",
-                       hinge="DefaultHinge"):
-    #NSA: The checks Eric initially had, should they go here or integrated elsewhere? (Are they more general then just this?)
+def setup_restraints(inputs):
     # Going through the setup for each polymorph
-    for i in polymorph_num:
-         gamma = min_gamma
-         subprocess.call(['mkdir', i + '/interactions'])  # making a directory for turning off the interactions
-         
-         # Setting up the directory for each gamma value between the minimum and maximum gamma
-         while gamma <= max_gamma:
-             setup_molecule(i, PSCP_temperature, pressure, molecule, number_of_molecules, independent, 
-                            gamma_equil_steps, gamma_prod_steps, integrator, thermostat, lambd, lambd, lambd, 
-                            gamma_exponent, cores, 'NVT', k_max, max_gamma, min_gamma, gamma_spacing, gamma, cutoff, 
-                            potential, hinge, i + '/interactions/' + str(gamma))
-             gamma += gamma_spacing
-
-def setup_restraints(polymorph_num=['p1', 'p2', 'p3'], molecule="benzene", min_lambda=0, max_lambda=100, 
-                     lambda_spacing=5, lambda_exponent=4, gamma=100, PSCP_temperature=200, pressure=1, 
-                     number_of_molecules=72, independent="same", lambda_equil_steps=1000000, lambda_prod_steps=10000000,
-                     integrator="sd", thermostat="nose-hoover", cores=7, k_min=0, k_max=1000, cutoff="8", 
-                     potential="oplsaa", hinge="DefaultHinge"):
-# NSA: The checks Eric initially had, should they go here or integrated elsewhere? (Are they more general then just this?)
-    # Going through the setup for each polymorph
-    for i in polymorph_num:
-        lambd = min_lambda
+    for i in inputs['gen_in']['polymorph_num'].split():
         subprocess.call(['mkdir', i + '/restraints'])  # making a directory for turning off the interactions
-
+        lambd = inputs['PSCP_in']['min_lambda']
         # Setting up the directory for each lambda value between the minimum and maximum lambda
-        while lambd <= max_lambda:
-            setup_molecule()
-            lambd += lambda_spacing
+        while lambd <= inputs['PSCP_in']['max_lambda']:
+            setup_molecule(polymorph_num=i, temperature=inputs['PSCP_in']['PSCP_temperature'],
+                           pressure=inputs['gen_in']['pressure'], molecule=inputs['gen_in']['molecule'],
+                           number_of_molecules=inputs['gen_in']['number_of_molecules'],
+                           independent=inputs['gen_in']['independent'],
+                           equil_steps=inputs['PSCP_in']['lambda_equil_steps'],
+                           prod_steps=inputs['PSCP_in']['lambda_prod_steps'],
+                           prodoutputs=inputs['temp_in']['prodoutputs'], integrator=inputs['gen_in']['integrator'],
+                           thermostat=inputs['gen_in']['thermostat'], barostat=inputs['temp_in']['barostat'],
+                           cores=inputs['gen_in']['cores'], k_min=inputs['PSCP_in']['k_min'],
+                           k_max=inputs['PSCP_in']['k_max'], lambd=lambd,
+                           min_lambda=inputs['PSCP_in']['min_lambda'], max_lambda=inputs['PSCP_in']['max_lambda'],
+                           lambda_spacing=inputs['PSCP_in']['lambda_spacing'],
+                           lambda_exponent=inputs['PSCP_in']['lambda_exponent'], gamma=inputs['PSCP_in']['gamma'],
+                           cutoff=inputs['gen_in']['cutoff'], potential=inputs['gen_in']['potential'],
+                           simulation=inputs['temp_in']['simulation_package'], ensemble='NVT',
+                           jobpath=i + '/restraints/' + str(lambd), templatepath=inputs['gen_in']['template_path'],
+                           anneal_temp=inputs['gen_in']['anneal_temp'], anneal_steps=0, run_production=True,
+                           charge=inputs['temp_in']['charge'], hinge=inputs['gen_in']['hinge'])
+            lambd += inputs['PSCP_in']['lambda_spacing']
+
+
+def setup_interactions(inputs):
+    # Going through the setup for each polymorph
+    for i in inputs['gen_in']['polymorph_num'].split():
+         subprocess.call(['mkdir', i + '/interactions'])  # making a directory for turning off the interactions
+         gamma = inputs['PSCP_in']['min_gamma']
+         # Setting up the directory for each gamma value between the minimum and maximum gamma
+         while gamma <= inputs['PSCP_in']['max_gamma']:
+             setup_molecule(polymorph_num=i, temperature=inputs['PSCP_in']['PSCP_temperature'],
+                            pressure=inputs['gen_in']['pressure'], molecule=inputs['gen_in']['molecule'],
+                            number_of_molecules=inputs['gen_in']['number_of_molecules'],
+                            independent=inputs['gen_in']['independent'],
+                            equil_steps=inputs['PSCP_in']['gamma_equil_steps'],
+                            prod_steps=inputs['PSCP_in']['gamma_prod_steps'],
+                            prodoutputs=inputs['temp_in']['prodoutputs'], integrator=inputs['gen_in']['integrator'],
+                            thermostat=inputs['gen_in']['thermostat'], barostat=inputs['temp_in']['barostat'],
+                            cores=inputs['gen_in']['cores'], k_min=inputs['PSCP_in']['k_min'],
+                            k_max=inputs['PSCP_in']['k_max'], lambd=inputs['PSCP_in']['lambda'], gamma=gamma,
+                            min_lambda=inputs['PSCP_in']['lambda'], max_lambda=inputs['PSCP_in']['lambda'],
+                            min_gamma=inputs['PSCP_in']['min_gamma'], max_gamma=inputs['PSCP_in']['max_gamma'],
+                            gamma_exponent=inputs['PSCP_in']['gamma_exponent'],
+                            gamma_spacing=inputs['PSCP_in']['gamma_spacing'], cutoff=inputs['gen_in']['cutoff'],
+                            potential=inputs['gen_in']['potential'], simulation=inputs['temp_in']['simulation_package'],
+                            ensemble='NVT', jobpath=i + '/interactions/' + str(gamma),
+                            templatepath=inputs['gen_in']['template_path'], anneal_temp=inputs['gen_in']['anneal_temp'],
+                            anneal_steps=0, run_production=True, charge=inputs['temp_in']['charge'],
+                            hinge=inputs['gen_in']['hinge'])
+             gamma += inputs['PSCP_in']['gamma_spacing']
+
 
 def setup_replica_exchange(nodes, directories, process_number, exchange_number, jobpath):
     # Copying submission script into temperature direcotry
@@ -82,99 +104,99 @@ def setup_replica_exchange(nodes, directories, process_number, exchange_number, 
 
 
 
-"""
-def setup_mdp_lambdas(current_lambda, current_gamma, polymorph_num='all', min_lambda=0, max_lambda=100, lambda_spacing=-1, lambda_exponent=2, min_gamma=0, max_gamma=100,
-                      gamma_spacing=-1, gamma_exponent=2, jobpath='DefaultPath'):
-    # Python script to automatically set up the mdp files to take on multiple lambda values
-    # Original script written in bash by: Eric Dybeck on 09/12/2014
-    # Converted to python by: Nate Abraham on 01/23/2019
 
-    # Ensure that the parameters are properly entered
-    # Lambda
-    if (min_lambda < 0) or (max_lambda > 100) or (min_lambda > max_lambda):
-        print('Minimum Lambda: ', min_lambda)
-        print('Maximum Lambda: ', max_lambda)
-        print('Is not a valid lambda range!')
-        sys.exit()
+#def setup_mdp_lambdas(current_lambda, current_gamma, polymorph_num='all', min_lambda=0, max_lambda=100, lambda_spacing=-1, lambda_exponent=2, min_gamma=0, max_gamma=100,
+#                      gamma_spacing=-1, gamma_exponent=2, jobpath='DefaultPath'):
+#    # Python script to automatically set up the mdp files to take on multiple lambda values
+#    # Original script written in bash by: Eric Dybeck on 09/12/2014
+#    # Converted to python by: Nate Abraham on 01/23/2019
+#
+#    # Ensure that the parameters are properly entered
+#    # Lambda
+#    if (min_lambda < 0) or (max_lambda > 100) or (min_lambda > max_lambda):
+#        print('Minimum Lambda: ', min_lambda)
+#        print('Maximum Lambda: ', max_lambda)
+#        print('Is not a valid lambda range!')
+#        sys.exit()
+#
+#    if lambda_spacing <= 0:
+#        print('Invalid Lambda Spacing: ', lambda_spacing)
+#        sys.exit()
+#
+#    if (min_lambda == max_lambda) and (current_lambda!= max_lambda):
+#        print('Minimum Lambda: ', min_lambda, ' Maximum Lambda: ', max_lambda, ' and Lambda: ', current_lambda,
+#              ' are not the same!')
+#        sys.exit()
+#
+#    if not 1 <= lambda_exponent <= 4:
+#        print('Invalid Lambda Exponent: ', lambda_exponent)
+#        sys.exit()
+#
+#    # Gamma
+#    if (min_gamma < 0) or (max_gamma > 100) or (min_gamma > max_gamma):
+#        print('Minimum Gamma: ', min_gamma)
+#        print('Maximum Gamma: ', max_gamma)
+#        print('Is not a valid lambda range!')
+#        sys.exit()
+#
+#    if gamma_spacing <= 0:
+#        print('Invalid Gamma Spacing: ', gamma_spacing)
+#        sys.exit()
+#
+#    if (min_gamma == max_gamma) and (current_gamma != max_gamma):
+#        print('Minimum Gamma: ', min_gamma, ' Maximum Gamma: ', max_gamma, ' and Gamma: ', current_gamma,
+#              ' are not the same!')
+#        sys.exit()
+#
+#    if not 1 <= gamma_exponent <= 4:
+#        print('Invalid Gamma Exponent: ', gamma_exponent)
+#        sys.exit()
+#
+#    #JOBPATH
+#    if jobpath == 'DefaultPath':
+#        print('Enter the job path!')
+#        sys.exit()
+#
+#    #If we have no harmonic restraints and full interactions, no need to proceed further
+#    if (min_lambda == max_lambda) and (max_lambda == 0) and (min_gamma == max_gamma) and (max_gamma == 100):
+#        print('No lambda values added.')
+#        sys.exit()
+#
+#    #If we are adding harmonic restraints, we should not be changing gamma (and vice versa)
+#    if (min_lambda != max_lambda) and (min_gamma != max_gamma):
+#        print('Harmonic restraints and Interactions changing simultaneously!!')
+#        sys.exit(
+#
+#    # Change the free energy setting from 'no' to 'yes' and the output from 0 to nstxout
+#    replace_line_starting_with(jobpath + '/equilibration.mdp', 'free_energy', 'free_energy = yes')
+#    replace_line_starting_with(jobpath + '/production.mdp', 'free_energy', 'free_energy = yes')
+#    #log_equil =$(less ${JOBPATH} / equilibration.mdp | grep -m 1 'nstenergy' | awk '{print $3}')
+#    #log_prod =$(less ${JOBPATH} / production.mdp | grep -m 1 'nstenergy' | awk '{print $3}')
+#    replace_line_starting_with(jobpath + '/equilibration.mdp', 'nstdhdl', 'nstdhdl = ' + str(log_equil))
+#    replace_line_starting_with(jobpath + '/production.mdp', 'nstdhdl', 'nstdhdl = ' + str(log_equil))
+#
+#    lambda_indicies = ''
+#    lambda_vector = ''
+#    gamma_indicies = ''
+#    gamma_vector = ''
+#
+#    # If harmonic restraints are being added, loop over all lambda points and set up the lambda vector in the mdp files
+#    if min_lambda != max_lambda:
+#        raw_lambda = min_lambda
+#        lambda_hold = 0.
+#        i = 0
+#        while raw_lambda < max_lambda:
+#            if i < 10:
+#                lambda_indicies = lambda_indicies + '    ' + str(i) + '    '
+#            else:
+#                lambda_indicies = lambda_indicies + '    ' + str(i) + '   '
+#
+#            lambda_1 = np.around(raw_lambda ** lambda_exponent / (max_lambda ** (lambda_exponent -1))), 6)
+#            lambda_2 = np.around(lambda_1 / 100., 6)
+#            gamma_1 = np.around(max_gamma ** 2/ 100, 6)
+#            gamma_2 = np.around(gamma_1 / 100., 6)
+#            lambda_vector =
 
-    if lambda_spacing <= 0:
-        print('Invalid Lambda Spacing: ', lambda_spacing)
-        sys.exit()
-
-    if (min_lambda == max_lambda) and (current_lambda!= max_lambda):
-        print('Minimum Lambda: ', min_lambda, ' Maximum Lambda: ', max_lambda, ' and Lambda: ', current_lambda,
-              ' are not the same!')
-        sys.exit()
-
-    if not 1 <= lambda_exponent <= 4:
-        print('Invalid Lambda Exponent: ', lambda_exponent)
-        sys.exit()
-
-    # Gamma
-    if (min_gamma < 0) or (max_gamma > 100) or (min_gamma > max_gamma):
-        print('Minimum Gamma: ', min_gamma)
-        print('Maximum Gamma: ', max_gamma)
-        print('Is not a valid lambda range!')
-        sys.exit()
-
-    if gamma_spacing <= 0:
-        print('Invalid Gamma Spacing: ', gamma_spacing)
-        sys.exit()
-
-    if (min_gamma == max_gamma) and (current_gamma != max_gamma):
-        print('Minimum Gamma: ', min_gamma, ' Maximum Gamma: ', max_gamma, ' and Gamma: ', current_gamma,
-              ' are not the same!')
-        sys.exit()
-
-    if not 1 <= gamma_exponent <= 4:
-        print('Invalid Gamma Exponent: ', gamma_exponent)
-        sys.exit()
-
-    #JOBPATH
-    if jobpath == 'DefaultPath':
-        print('Enter the job path!')
-        sys.exit()
-
-    #If we have no harmonic restraints and full interactions, no need to proceed further
-    if (min_lambda == max_lambda) and (max_lambda == 0) and (min_gamma == max_gamma) and (max_gamma == 100):
-        print('No lambda values added.')
-        sys.exit()
-
-    #If we are adding harmonic restraints, we should not be changing gamma (and vice versa)
-    if (min_lambda != max_lambda) and (min_gamma != max_gamma):
-        print('Harmonic restraints and Interactions changing simultaneously!!')
-        sys.exit(
-
-    # Change the free energy setting from 'no' to 'yes' and the output from 0 to nstxout
-    replace_line_starting_with(jobpath + '/equilibration.mdp', 'free_energy', 'free_energy = yes')
-    replace_line_starting_with(jobpath + '/production.mdp', 'free_energy', 'free_energy = yes')
-    #log_equil =$(less ${JOBPATH} / equilibration.mdp | grep -m 1 'nstenergy' | awk '{print $3}')
-    #log_prod =$(less ${JOBPATH} / production.mdp | grep -m 1 'nstenergy' | awk '{print $3}')
-    replace_line_starting_with(jobpath + '/equilibration.mdp', 'nstdhdl', 'nstdhdl = ' + str(log_equil))
-    replace_line_starting_with(jobpath + '/production.mdp', 'nstdhdl', 'nstdhdl = ' + str(log_equil))
-
-    lambda_indicies = ''
-    lambda_vector = ''
-    gamma_indicies = ''
-    gamma_vector = ''
-
-    # If harmonic restraints are being added, loop over all lambda points and set up the lambda vector in the mdp files
-    if min_lambda != max_lambda:
-        raw_lambda = min_lambda
-        lambda_hold = 0.
-        i = 0
-        while raw_lambda < max_lambda:
-            if i < 10:
-                lambda_indicies = lambda_indicies + '    ' + str(i) + '    '
-            else:
-                lambda_indicies = lambda_indicies + '    ' + str(i) + '   '
-
-            lambda_1 = np.around(raw_lambda ** lambda_exponent / (max_lambda ** (lambda_exponent -1))), 6)
-            lambda_2 = np.around(lambda_1 / 100., 6)
-            gamma_1 = np.around(max_gamma ** 2/ 100, 6)
-            gamma_2 = np.around(gamma_1 / 100., 6)
-            lambda_vector =
-"""
 
 
 ################################################################################
@@ -445,7 +467,7 @@ def setup_molecule(polymorph_num='p1', temperature=[], pressure=1, molecule='', 
     equil_output_frequency = int(equil_steps / 100)  # The 100 was eqoutput
     equil_trr_output_frequency = int(equil_steps / 100)  # The 100 was emtroutputs
     prod_output_frequency = int(prod_steps / prodoutputs)
-    prod_trr_output_frequency = int(prod_steps / prodoutputs)
+    prod_trr_output_frequency = int(prod_steps / 100)
     anneal_output_frequency = int(anneal_steps / 10000)  # The 10000 could be a user specified variable
     anneal_trr_output_frequency = int(anneal_steps / 10000)
     if simulation == 'gromacs':
@@ -524,20 +546,20 @@ def setup_molecule(polymorph_num='p1', temperature=[], pressure=1, molecule='', 
             replace_line_starting_with(jobpath + '/anneal.mdp', 'tcoupl', 'tcoupl = ' + thermostat)
 
             # Changing the reference temperature in the .mdp file
-            replace_line_starting_with(jobpath + '/equilibration.mdp', 'ref_t', 'ref_t = ' + temperature)
-            replace_line_starting_with(jobpath + '/production.mdp', 'ref_t', 'ref_t = ' + temperature)
-            replace_line_starting_with(jobpath + '/anneal.mdp', 'ref_t', 'ref_t = ' + temperature)
+            replace_line_starting_with(jobpath + '/equilibration.mdp', 'ref_t', 'ref_t = ' + str(temperature))
+            replace_line_starting_with(jobpath + '/production.mdp', 'ref_t', 'ref_t = ' + str(temperature))
+            replace_line_starting_with(jobpath + '/anneal.mdp', 'ref_t', 'ref_t = ' + str(temperature))
 
             # Changing the gen_temp in the .mdp file
-            replace_line_starting_with(jobpath + '/equilibration.mdp', 'gen_temp', 'gen_temp = ' + temperature)
-            replace_line_starting_with(jobpath + '/production.mdp', 'gen_temp', 'gen_temp = ' + temperature)
-            replace_line_starting_with(jobpath + '/anneal.mdp', 'gen_temp', 'gen_temp = ' + temperature)
+            replace_line_starting_with(jobpath + '/equilibration.mdp', 'gen_temp', 'gen_temp = ' + str(temperature))
+            replace_line_starting_with(jobpath + '/production.mdp', 'gen_temp', 'gen_temp = ' + str(temperature))
+            replace_line_starting_with(jobpath + '/anneal.mdp', 'gen_temp', 'gen_temp = ' + str(temperature))
 
             # Updating annealing setting in the anneal.mdp file
             replace_string_in_text(jobpath + '/anneal.mdp', 'END_ANNEAL_TIME', anneal_steps / 2000 - anneal_steps
                                    / 20000)
             replace_string_in_text(jobpath + '/anneal.mdp', 'STARTTEMP', anneal_temp)
-            replace_string_in_text(jobpath + '/anneal.mdp', 'ENDTEMP', temperature)
+            replace_string_in_text(jobpath + '/anneal.mdp', 'ENDTEMP', str(temperature))
 
         # PRESSURE COUPLING
         if ensemble == 'NPT':
@@ -689,7 +711,11 @@ def setup_molecule(polymorph_num='p1', temperature=[], pressure=1, molecule='', 
             out = ''
             f = f.read().split('\n')
             for l in range(apermol + 4):
-                out += f[l] + '\n'
+                if l > 3:
+                    hold_posre = f[l].split()
+                    out += '  ' + hold_posre[0] + '  ' + hold_posre[1] + '  0  0  0  ' + hold_posre[2] + '  ' + hold_posre[3] + '  ' + hold_posre[4] + '\n'
+                else:
+                    out += f[l] + '\n'
 
         with open(jobpath + '/restr.itp', 'w') as F:
             F.write(out)
@@ -718,7 +744,8 @@ def setup_molecule(polymorph_num='p1', temperature=[], pressure=1, molecule='', 
                                    str(k_min) + ' ' + str(k_min) + ' ' + str(k_min) + ' ' + str(k_max) + ' ' +
                                    str(k_max) + ' ' + str(k_max))
 
-        subprocess.call(['mv', jobpath + '/restr.itp', jobpath + '/posre.itp'])
+        #subprocess.call(['mv', jobpath + '/restr.itp', jobpath + '/posre.itp'])
+        subprocess.call(['cp', jobpath + '/restr.itp', jobpath + '/posre.itp'])
 
         # COPY OVER THE TOPOLOGY FILE
         print('Copying topology file...')

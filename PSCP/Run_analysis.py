@@ -66,7 +66,7 @@ if __name__ == '__main__':
     else:
         absolutedU = np.array(inputs['PSCP_out']['absolutedU']).astype(float)
         refdU = absolutedU - absolutedU[0]
-
+    print(inputs['temp_in']['temperatures_unsampled'])
     dGvsT(Temperatures=np.array(inputs['temp_in']['temperatures'].split()).astype(float), 
           Temperatures_unsampled=np.array(inputs['temp_in']['temperatures_unsampled'].split()).astype(float), 
           Pressure=inputs['gen_in']['pressure'],
