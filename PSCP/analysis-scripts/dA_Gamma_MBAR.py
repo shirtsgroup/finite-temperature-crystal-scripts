@@ -15,9 +15,6 @@ import Harvist #Hamiltonian Reweighting Visualization Toolkit
 import pdb
 
 
-
-
-
 def dA_Gamma_MBAR(plot_out=True, MINGAMMA=0, MAXGAMMA=100, GSPACING=10, LAMBDA=100, exponent=2, polymorphs='p1 p2', 
                   Molecule='benzene', Molecules=72, Independent=4, Temp=200, Pressure=1, k=1000, ignoreframes=2000,
                   includeframes=100000, potential='oplsaa',bonds='no', hinge='DefaultHinge'):
@@ -53,6 +50,7 @@ def dA_Gamma_MBAR(plot_out=True, MINGAMMA=0, MAXGAMMA=100, GSPACING=10, LAMBDA=1
         RawGamma = MINGAMMA
         Gammas = []
         Gamma_names = []
+        gamma_names = np.arange(MINGAMMA, MAXGAMMA, GSPACING)
         while RawGamma < MAXGAMMA:
             Gamma = int(100 * float(RawGamma ** exponent) / float(MAXGAMMA ** exponent))
             Gammas.append(Gamma)
@@ -178,7 +176,7 @@ def dA_Gamma_MBAR(plot_out=True, MINGAMMA=0, MAXGAMMA=100, GSPACING=10, LAMBDA=1
     T_k = Temp * np.ones(len(Gammas), float)  # Convert temperatures to floats
     print(T_k)
     print(Gammas)
-    #seeds = [201]; #The random seed used (not included at the moment)
+
     g_k = np.zeros([len(Gammas)], float)
     K = len(Gammas)  # How many states?
     
@@ -220,15 +218,10 @@ def dA_Gamma_MBAR(plot_out=True, MINGAMMA=0, MAXGAMMA=100, GSPACING=10, LAMBDA=1
                 linenum_energy = 0
                 linenum_dhdl = 0
                 # cycle through all the input total energy data
-                #dirpath = '../finishedJobs/' + poly + '/benzene_GRO_' + PotNAME + '_' + polymorph_short[i] + '_' + Molname + Tname + ChargeHinge + '_' + Lname + '_' + Gamma_names[k] + '_' + Pname + hinge
                 dirpath = Molecule  + '_GRO_' + PotNAME + '_' + polymorph_short[i] + '_' + Molname + Tname + ChargeHinge + \
                           '_' + Lname + '_' + Gamma_names[k] + '_' + Pname + hinge
-                #fname = '../finishedJobs/' + poly + '/benzene_GRO_' + PotNAME + '_' + polymorph_short[i] + '_' + Molname + Tname + ChargeHinge + '_' + Lname + '_' + Gamma_names[k] + '_' + Pname + hinge + '/potenergy.xvg'
-                #dhdlname = '../finishedJobs/' + poly + '/benzene_GRO_' + PotNAME + '_' + polymorph_short[i] + '_' + Molname + Tname + ChargeHinge + '_' + Lname + '_' + Gamma_names[k] + '_' + Pname + hinge + '/benzene_dhdl_PROD.xvg'
-                #fname = '/oldhome/ecd4bd/finishedJobs_archive/' + poly + '_PSCP72/benzene_GRO_' + PotNAME + '_' + polymorph_short[i] + '_' + Molname + Tname + ChargeHinge + '_' + Lname + '_' + Gamma_names[k] + '_' + Pname + hinge + '/potenergy.xvg'
-                #dhdlname = '/oldhome/ecd4bd/finishedJobs_archive/' + poly + '_PSCP72/benzene_GRO_' + PotNAME + '_' + polymorph_short[i] + '_' + Molname + Tname + ChargeHinge + '_' + Lname + '_' + Gamma_names[k] + '_' + Pname + hinge + '/benzene_dhdl_PROD.xvg'
-                #fname = '/oldhome/ecd4bd/finishedJobs_archive/' + poly + '_QuadraticGammas/benzene_GRO_' + PotNAME + '_' + polymorph_short[i] + '_' + str(Molecules) + '_4ind_' + Tname + '_' + Lname + '_' + Gamma_names[k] + '__' + Pname + hinge + '/potenergy.xvg'
-                # #dhdlname = '/oldhome/ecd4bd/finishedJobs_archive/' + poly + '_QuadraticGammas/benzene_GRO_' + PotNAME + '_' + polymorph_short[i] + '_' + str(Molecules) + '_' + Tname + '_' + Lname + '_' + Gamma_names[k] + '__' + Pname + hinge + '/benzene_dhdl_PROD.xvg'
+                dirpath = polymorph_short[i] + '/interactions/' + str(gamma_names[k])
+
                 fname = dirpath + '/potenergy.xvg'
                 dhdlname = dirpath + '/dhdl_PROD.xvg'
                 fname14 = dirpath + '/potenergy14.xvg'
@@ -267,13 +260,9 @@ def dA_Gamma_MBAR(plot_out=True, MINGAMMA=0, MAXGAMMA=100, GSPACING=10, LAMBDA=1
                                 and linenum_dhdl < 1000000:
                             linenum_dhdl += 1
                             tokens_dhdl = lines_dhdl[linenum_dhdl].split()
-                        #print tokens_dhdl
+
                         # the energy of every configuration from each state evaluated at its sampled state
                         if float(tokens_energy[0]) != float(tokens_dhdl[0]):
-                            #print "Steps not equal for energy and dhdl!!"
-                            #print "Energy Step: " + tokens[0]
-                            #print "DHDL Step: " + tokens_dhdl[0]
-                            #sys.exit()
                             continue
     
                         # Use this one if this is a normal PSCP
@@ -281,32 +270,13 @@ def dA_Gamma_MBAR(plot_out=True, MINGAMMA=0, MAXGAMMA=100, GSPACING=10, LAMBDA=1
                         dhdl_kn[k, n] = (float(Independent) / Molecules) * (float(tokens_dhdl[2]) + float(tokens_dhdl[3])
                                                                             + 0.0 * float(tokens_dhdl[4])) \
                                         * convert_units[k]
-                        # Use this one if this is a PSCP on a flexible molecule where dihedrals are being turned off
-                        #u_kln[k, :K, n] = (float(Independent) / Molecules) * (float(tokens_energy[1]) +
-                        #                                                      np.asarray(tokens_dhdl[6:], float)) \
-                        #                  * convert_units[k]
-                        #dhdl_kn[k, n] = (float(Independent) / Molecules) * (float(tokens_dhdl[2]) + float(tokens_dhdl[3])
-                        #                                                    + 1.0 * float(tokens_dhdl[4])) \
-                        #                * convert_units[k]
-                        #dhdl_kn[k, n] = float(tokens_dhdl[4]) * convert_units[k]
-                        #dhdl_kn[k, n] = (float(tokens_dhdl[2]) + float(tokens_dhdl[3])) * convert_units[k]
                         n += 1
                 if s == 0:
                     N_k_s[k, s] = n
                 else:
                     N_k_s[k, s] = n - sum(N_k_s[k, 0:s])
-                # Fill in the additional state with LJ14 interactions removed
-                #energies14 = Harvist.GrabTerms(fname14,['LJ-14', 'Coulomb-14'], ignoreframes=ignoreframes)[0]
-                #u_kln[k,Kbig-1,:] = u_kln[k,K-1,:]
-                #u_kln[k,Kbig-1,:N_k_s[k,s]+1] -= energies14[:,0]*(float(Independent)/Molecules)*convert_units[k]
-                #u_kln[k,Kbig-1,:N_k_s[k,s]+1] -= energies14[:,1]*(float(Independent)/Molecules)*convert_units[k]
             N_k[k] = n
-    
-        #data_vector = u_kln[Kbig-12,Kbig-12,0:N_k[Kbig-12]]-u_kln[Kbig-12,Kbig-1,0:N_k[Kbig-12]];
-        #plt.hist(data_vector,20,facecolor='b')
-        #plt.title('Average: ' + str(np.average(data_vector[0:counter])))
-        #plt.show()
-    
+
         # convert to nondimensional units from kcal/mol
     
         u_kln *= beta_k[0]
@@ -315,22 +285,13 @@ def dA_Gamma_MBAR(plot_out=True, MINGAMMA=0, MAXGAMMA=100, GSPACING=10, LAMBDA=1
         u_kln_save = u_kln.copy()
         N_k_save = N_k.copy()
         g_k = np.zeros([K])
-        """
-        for k in range(K):
-            #subsample correlated data - for now, use energy from current state
-            if k not in omitT:
-                g_k[k] = timeseries.statisticalInefficiency(u_kln[k,k,0:N_k[k]]) 
-                print "Correlation time for sampled state %d is %10.3f" % (k,g_k[k])
-                # subsample the data to get statistically uncorrelated data
-                indices = np.array(timeseries.subsampleCorrelatedData(u_kln[k, k, 0:N_k[k]], g=g_k[k]))  # subsample
-                N_k[k] = len(indices)
-                u_kln[k,:,0:N_k[k]] = u_kln_save[k,:,indices].transpose()  # not sure why we have to transpose
-        """ 
+
         print("Number of retained samples")
         print(N_k)
         print("Number of retained samples from each seed")
         print(N_k_s)
-    
+
+
         # =============================================================================================
         # COMPUTE FREE ENERGY DIFFERENCE USING MBAR
         # =============================================================================================
@@ -339,7 +300,6 @@ def dA_Gamma_MBAR(plot_out=True, MINGAMMA=0, MAXGAMMA=100, GSPACING=10, LAMBDA=1
         print("Running MBAR...")
     
         # generate the weights of each of the umbrella set
-        #mbar = pymbar.MBAR(u_kln, N_k, verbose = True, method = 'adaptive', use_optimized=False)
         mbar = pymbar.MBAR(u_kln, N_k, verbose=True, subsampling_protocol=[{'method': 'L-BFGS-B'}])
     
         print("MBAR Converged...")
@@ -365,7 +325,7 @@ def dA_Gamma_MBAR(plot_out=True, MINGAMMA=0, MAXGAMMA=100, GSPACING=10, LAMBDA=1
         ddf_i /= (beta_k[0] * float(Independent))
     
         dA[i, :] = df_i[0]
-        #ddA[i,:] = ddf_i[0]
+
     
         # =============================================================================================
         # COMPUTE UNCERTAINTY USING THE UNCORRELATED DATA
@@ -376,7 +336,6 @@ def dA_Gamma_MBAR(plot_out=True, MINGAMMA=0, MAXGAMMA=100, GSPACING=10, LAMBDA=1
             n_old = 0
             if k not in omitT:
                 for s in range(len(hinges)):
-                    #g_k[k] = timeseries.statisticalInefficiency(u_kln[k,k,0:N_k[k]])
                     g_k[k] = timeseries.statisticalInefficiency(dhdl_kn[k, n_old: (n_old + N_k_s[k, s])])
                     print("Correlation time for sampled state %d is %10.3f" % (k, g_k[k]))
                     # subsample the data to get statistically uncorrelated data
@@ -393,7 +352,6 @@ def dA_Gamma_MBAR(plot_out=True, MINGAMMA=0, MAXGAMMA=100, GSPACING=10, LAMBDA=1
         print(N_k_s)
     
         # generate the weights of each of the umbrella set
-        #mbar = pymbar.MBAR(u_kln, N_k, verbose = True, method = 'adaptive', use_optimized=False)
         mbar = pymbar.MBAR(u_kln, N_k, verbose=True, subsampling_protocol=[{'method': 'L-BFGS-B'}])
     
         print("MBAR Converged...")
@@ -404,7 +362,7 @@ def dA_Gamma_MBAR(plot_out=True, MINGAMMA=0, MAXGAMMA=100, GSPACING=10, LAMBDA=1
     
         print("Free Energies Optained...")
     
-        #convert PMF to kcal/mol and normalize by the number of molecules
+        # convert PMF to kcal/mol and normalize by the number of molecules
         df_u /= (beta_k[0] * float(Independent))
         ddf_u /= (beta_k[0] * float(Independent))
     
@@ -414,92 +372,29 @@ def dA_Gamma_MBAR(plot_out=True, MINGAMMA=0, MAXGAMMA=100, GSPACING=10, LAMBDA=1
         print("Free Energy Difference (in units of kcal/mol)")
         for k in range(Kbig):
             print("%8.3f %8.3f" % (-df_i[k, 0], ddf_u[k, 0]))
-          
-         
-        ##Calculate the uncertainties using bootstrapping
-        #indexVect = np.zeros([2,Kbig-1], np.float)
-        ##indexVect[:,0] = [0, Kbig-1];
-        ##indexVect[:,1] = [0, 10];
-        ##indexVect[:,2] = [0, 1];
-        #indexVect[0,:] = 0
-        #indexVect[1,:] = np.arange(Kbig-1)+1
-        #if len(hinges) > 1:
-        #    datafile = 'BootstrapData/BootstrapData_' + Molecule + '_' + polymorph_short[i] + '_' + Molname + Tname + '_' + Pname + '_' + PotNAME + '_dAvsG_ALL'
-        #    stdfile = 'BootstrapData/BootstrapStd_' + Molecule + '_' + polymorph_short[i] + '_' + Molname + Tname + '_' + Pname + '_' + PotNAME + '_dAvsG_ALL'
-        #else:
-        #    datafile = 'BootstrapData/BootstrapData_' + Molecule + '_' + polymorph_short[i] + '_' + Molname + Tname + '_' + Pname + '_' + PotNAME + hinge
-        #    stdfile = 'BootstrapData/BootstrapStd_' + Molecule + '_' + polymorph_short[i] + '_' + Molname + Tname + '_' + Pname + '_' + PotNAME + hinge
-        #
-        #if not os.path.isfile(stdfile+'.txt'): 
-        #    MBARBootstrap.runMBARBootstrap(u_kln, N_k, beta_k, Independent, indexVect, datafile, stdfile, 200)
         
     
     # =============================================================================================
     # PRINT THE FINAL DATA
     # =============================================================================================
+
     out_dA = np.zeros(len(polymorph))
     out_ddA = np.zeros(len(polymorph))
     for i, poly in enumerate(polymorph):
         out_dA[i] = dA[i, Kbig - 1]
         out_ddA[i] = ddA[i, Kbig - 1]
-#        print(poly + ": " + "%8.3f %8.3f" % (dA[i, Kbig - 1], ddA[i, Kbig - 1]))
-    
-    
+
+
     # =============================================================================================
     # PLOT THE FINAL DATA
     # =============================================================================================
-    """
-    for k in range(K):
-        #if k==0:
-        #    fig=plt.figure(k+2)
-        #    xlabel = 'Energy Difference (kcal/mol)'
-        #    ylabel = 'Frequency'
-        #    plt.title(polymorph_short[0] + ' dU Full Intramolecular and no Intramolecular')
-        #    #plt.title(polymorph_short[0]+' sampled in ' + potentials[k])
-        #    plt.xlabel(xlabel)
-        #    plt.ylabel(ylabel)
-        ##if omitk[k]==0:
-        #    #continue
-        ##Energy_Differences = (u_kln_save[k,11,ignoreframes:N_k_save[k]-1] - u_kln_save[k,10,ignoreframes:N_k_save[k]-1])/float(Molecules)
-        ##print Energy_Differences
-        #print 'Xaxis:'
-        #print Xaxis_OPLS
-        #print 'OPLS Energy:'
-        #print Energy_OPLS
-        #iplt.hist(Energy_Differences,10,facecolor=Colors[0],alpha=0.2,label=str(k))
-        ##n,bins,patches = plt.hist(Energy_Differences,10,facecolor='g',alpha=0.5,label=potentials_short[k])
-        #plt.hold(True)
-        #plt.legend(loc='upper right')
-        #plt.set_xlim([0,5])
-        #Histogram_data, bins = np.histogram(Energy_Differences,10)
-        #print 'Amoeba Energy:'
-        #print Energy_Amoeba
-        #pdb.set_trace()
-        #ax.errorbar(Xaxis,dA[0,:], color='b', yerr=ddA[0,:])
-        #ax.errorbar(Xaxis,dA[1,:], color='g', yerr=ddA[1,:])
-        #ax.errorbar(Xaxis,dA[2,:], color='r', yerr=ddA[2,:])
-        #plt.errorbar(Xaxis,dA[0,:],ddA[0,:],Xaxis,dA[1,:],ddA[1,:],Xaxis,dA[2,:],ddA[2,:])
-        #plt.plot(bins,Histogram_data,'b')
-        #plt.errorbar(Xaxis,dA[0,:], color='b', yerr=ddA[0,:],Xaxis,dA[1,:],color='g', yerr=ddA[1,:],Xaxis,dA[2,:],color='r',yerr=ddA[2,:])
-        #filename = polymorph_short[0] + ' ' + potentials[k] + ' dU Histogram.png'
-        #plt.savefig(filename, bbox_inches='tight')
-    plt.legend(loc='upper right')
-    plt.show()
-    """
-    
     
     if (plot_out) and polymorphs == 'all':
         # now plot the free energy change as a function of temperature
         fig = plt.figure(4)
         ax = fig.add_subplot(111)
-        #xlabel = 'Gamma Point'
-        #ylabel = 'Relative Free Energy'
         xlabel = 'Interaction Strength, $\gamma$'
         ylabel = 'Relative Free Energy (kcal/mol)'
-    #    if len(hinges) > 1:
-    #       plt.title('All Polymorphs Combined Runs')
-    #    else:
-    #        plt.title('All Polymorphs ' + hinge)
         plt.xlabel(xlabel)
         plt.ylabel(ylabel)
         Xaxis = [float(j / 100.0) for j in Gammas]
@@ -521,9 +416,7 @@ def dA_Gamma_MBAR(plot_out=True, MINGAMMA=0, MAXGAMMA=100, GSPACING=10, LAMBDA=1
         ax.errorbar(Xaxis, dA[1, :], color='g', yerr=ddA[1, :], label='Benzene II')
         ax.errorbar(Xaxis, dA[2, :], color='r', yerr=ddA[2, :], label='Benzene III')
         plt.legend(loc='upper right')
-        #plt.errorbar(Xaxis,dA[0,:],ddA[0,:],Xaxis,dA[1,:],ddA[1,:],Xaxis,dA[2,:],ddA[2,:])
-        #plt.plot(Xaxis,dA[0,:],'b',Xaxis,dA[1,:],'r',Xaxis,dA[2,:],'g')
-        #plt.errorbar(Xaxis,dA[0,:], color='b', yerr=0.1,Xaxis,dA[1,:],color='g', yerr=0.1,Xaxis,dA[2,:],color='r',yerr=0.1)
+
         if len(hinges) > 1:
             filename = PotNAME + '_' + str(Molecules) + '_' + Tname + '_dAvsG.pdf'
         else:
