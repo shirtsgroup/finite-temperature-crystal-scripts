@@ -66,15 +66,17 @@ if __name__ == '__main__':
     else:
         absolutedU = np.array(inputs['PSCP_out']['absolutedU']).astype(float)
         refdU = absolutedU - absolutedU[0]
-    print(inputs['temp_in']['temperatures_unsampled'])
-    dGvsT(Temperatures=np.array(inputs['temp_in']['temperatures'].split()).astype(float), 
-          Temperatures_unsampled=np.array(inputs['temp_in']['temperatures_unsampled'].split()).astype(float), 
-          Pressure=inputs['gen_in']['pressure'],
-          Molecules=inputs['gen_in']['number_of_molecules'], molecule=inputs['gen_in']['molecule'],
-          Independent=independent, potential=inputs['gen_in']['potential'],
-          simulation=inputs['temp_in']['simulation_package'], hinge=inputs['gen_in']['hinge'],
-          Polymorphs=inputs['gen_in']['polymorph_num'].split(), refT=inputs['PSCP_in']['PSCP_temperature'],
-          refdG=inputs['PSCP_out']['refdG'], refddG=inputs['PSCP_out']['refddG'], refdU=refdU, absolutedU=absolutedU)
+
+    if inputs['temp_in']['run_temperature'] == True:
+        dGvsT(Temperatures=np.array(inputs['temp_in']['temperatures'].split()).astype(float),
+              Temperatures_unsampled=np.array(inputs['temp_in']['temperatures_unsampled'].split()).astype(float),
+              Pressure=inputs['gen_in']['pressure'],
+              Molecules=inputs['gen_in']['number_of_molecules'], molecule=inputs['gen_in']['molecule'],
+              Independent=independent, potential=inputs['gen_in']['potential'],
+              simulation=inputs['temp_in']['simulation_package'], hinge=inputs['gen_in']['hinge'],
+              Polymorphs=inputs['gen_in']['polymorph_num'].split(), refT=inputs['PSCP_in']['PSCP_temperature'],
+              refdG=inputs['PSCP_out']['refdG'], refddG=inputs['PSCP_out']['refddG'], refdU=refdU,
+              absolutedU=absolutedU)
 
 
 
