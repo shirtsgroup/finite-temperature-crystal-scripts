@@ -87,22 +87,22 @@ if  check_bool(args.production) == True:
     # Extracing the final frame from the checkpoint file
     subprocess.call("echo '0' | gmx trjconv -f PROD.cpt -s PROD.tpr -o PROD.gro -pbc whole -ndec 12", shell=True)
 
-#    # Calculate the configuration energies and ensemble averages
-#    subprocess.call(path + '/run-scripts/crunchjobenergy')
+    # Calculate the configuration energies and ensemble averages
+    subprocess.call(path + '/run-scripts/crunchjobenergy')
 
-    # Relax the molecule and energy minimize the intramolecular interactions to create the restraint files
-    if check_bool(args.indexing) == True:
-        index = 'true'
-    else:
-        index = 'false'
-
+#    # Relax the molecule and energy minimize the intramolecular interactions to create the restraint files
+#    if check_bool(args.indexing) == True:
+#        index = 'true'
+#    else:
+#        index = 'false'
+#
 #    subprocess.call(path + '/run-scripts/relax_molecule -i' + index)
-
-    if check_bool(args.reweight) == True:
-        # Reweight the job into the other potentials if there are no restraints
-        subprocess.call([path + '/run-scripts/reweightjobgromacs', '-s', 'gromacs', '-u', args.potential])
-        if args.potential == 'designeda':
-            subprocess.call([path + '/run-scripts/reweightjobtinker', '-s', 'gromacs', '-u', 'amoeba09todesa', '-d', '10'])
+#
+#    if check_bool(args.reweight) == True:
+#        # Reweight the job into the other potentials if there are no restraints
+#        subprocess.call([path + '/run-scripts/reweightjobgromacs', '-s', 'gromacs', '-u', args.potential])
+#        if args.potential == 'designeda':
+#            subprocess.call([path + '/run-scripts/reweightjobtinker', '-s', 'gromacs', '-u', 'amoeba09todesa', '-d', '10'])
 
 
 

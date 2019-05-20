@@ -128,25 +128,25 @@ if [ $production == true ]; then
         # CALCULATE THE CONFIGURATION ENERGIES AND ENSEMBLE AVERAGES
         ${CODEPATH}/run-scripts/crunchjobenergy
         
-        sleep 1
-        
-        # RELAX THE MOLECULE AND ENERGY MINIMIZE THE INTRAMOLECULAR INTERACTIONS TO CREATE THE RESTRAINT FILES
-        ${CODEPATH}/run-scripts/relax_molecule -i ${indexing}
-        
-        if [ $reweight == true ]; then
-                # REWEIGHT THE JOB INTO THE OTHER POTENTIALS IF THERE ARE NO RESTRAINTS
-                ${CODEPATH}/run-scripts/reweightjobgromacs -s gromacs -u $potential
-                if [ $potential == "designeda" ]; then
-                        ${CODEPATH}/run-scripts/reweightjobtinker -s gromacs -u "amoeba09todesa" -d 10
-                fi
-                rm -rf TinkerXYZ
-        fi
-        
-        
-        #DELETE THE LOGFILE IF THE JOB FINISHED CORRECTLY
-        if [ -f PROD.log ] && [ "$(tail -1 PROD.log | awk '{print $1}')" == "Finished" ]; then
-            rm logfile
-        fi
+#        sleep 1
+#        
+#        # RELAX THE MOLECULE AND ENERGY MINIMIZE THE INTRAMOLECULAR INTERACTIONS TO CREATE THE RESTRAINT FILES
+#        ${CODEPATH}/run-scripts/relax_molecule -i ${indexing}
+#        
+#        if [ $reweight == true ]; then
+#                # REWEIGHT THE JOB INTO THE OTHER POTENTIALS IF THERE ARE NO RESTRAINTS
+#                ${CODEPATH}/run-scripts/reweightjobgromacs -s gromacs -u $potential
+#                if [ $potential == "designeda" ]; then
+#                        ${CODEPATH}/run-scripts/reweightjobtinker -s gromacs -u "amoeba09todesa" -d 10
+#                fi
+#                rm -rf TinkerXYZ
+#        fi
+#        
+#        
+#        #DELETE THE LOGFILE IF THE JOB FINISHED CORRECTLY
+#        if [ -f PROD.log ] && [ "$(tail -1 PROD.log | awk '{print $1}')" == "Finished" ]; then
+#            rm logfile
+#        fi
 fi
 
 echo "FINISHED" > jobstatus.txt
