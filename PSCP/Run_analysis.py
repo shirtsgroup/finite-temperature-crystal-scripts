@@ -51,21 +51,21 @@ if __name__ == '__main__':
 
             inputs['PSCP_out']['refdG'] = (dA_L - dA_L[0]) + (dA_G - dA_G[0])
             inputs['PSCP_out']['refddG'] = np.sqrt(ddA_L**2 + ddA_G**2)
-            absolutedU = np.array(inputs['PSCP_out']['absolutedU']).astype(float)
-            refdU = absolutedU - absolutedU[0]
+#            absolutedU = np.array(inputs['PSCP_out']['absolutedU']).astype(float)
+#            refdU = absolutedU - absolutedU[0]
         else:
             # Pulling old data from Temperature Transformation paper 2017
             inputs['gen_in']['polymorph_num'], inputs['PSCP_in']['PSCP_temperature'], inputs['PSCP_out']['refdG'], \
             inputs['PSCP_out']['refddG'], refdU, absolutedU = \
                 old_systems_dictionary(inputs['gen_in']['potential'], inputs['gen_in']['molecule'])
-        inputs['PSCP_out']['absolutedU'] = absolutedU
+#        inputs['PSCP_out']['absolutedU'] = absolutedU
 
         # Writing out the input file with updated dG and ddG values
         with open(args.input_file, 'w') as yaml_file:
             yaml.dump(inputs, yaml_file, default_flow_style=False)
-    else:
-        absolutedU = np.array(inputs['PSCP_out']['absolutedU']).astype(float)
-        refdU = absolutedU - absolutedU[0]
+#    else:
+#        absolutedU = np.array(inputs['PSCP_out']['absolutedU']).astype(float)
+#        refdU = absolutedU - absolutedU[0]
 
     if inputs['temp_in']['run_temperature'] == True:
         dGvsT(Temperatures=np.array(inputs['temp_in']['temperatures'].split()).astype(float),
@@ -75,8 +75,9 @@ if __name__ == '__main__':
               Independent=independent, potential=inputs['gen_in']['potential'],
               simulation=inputs['temp_in']['simulation_package'], hinge=inputs['gen_in']['hinge'],
               Polymorphs=inputs['gen_in']['polymorph_num'].split(), refT=inputs['PSCP_in']['PSCP_temperature'],
-              refdG=inputs['PSCP_out']['refdG'], refddG=inputs['PSCP_out']['refddG'], refdU=refdU,
-              absolutedU=absolutedU)
+              refdG=inputs['PSCP_out']['refdG'], refddG=inputs['PSCP_out']['refddG'])
+        #,refdU=refdU,
+#              absolutedU=absolutedU)
 
 
 
