@@ -377,8 +377,8 @@ for potential in $potentials; do
     #sed -i "s/oplsaafakea.ff/${potential}.ff/g" reweighting_topology.top
     #sed -i "s/gromos54a7.ff/${potential}.ff/g" reweighting_topology.top
     #sed -i "s/drude.ff/${potential}.ff/g" reweighting_topology.top
-    sed -i "/forcefield.itp/c\\#include \"${potential}.ff\/forcefield.itp\"" reweighting_topology.top
-    sed -i "s/#include \"benzene.*/#include \"${potential}.itp\"/g" reweighting_topology.top
+    #sed -i "/forcefield.itp/c\\#include \"${potential}.ff\/forcefield.itp\"" reweighting_topology.top
+    #sed -i "s/#include \"benzene.*/#include \"${potential}.itp\"/g" reweighting_topology.top
 
     #Remove any symmetry averaging if it is included
     less production.mdp | grep -v "ave-group" | grep -v "ave-ngroup" | grep -v "symmetry-averaging" > production_reweighting.mdp
