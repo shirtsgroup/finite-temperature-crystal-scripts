@@ -16,7 +16,7 @@ import pdb
 
 
 def dA_Gamma_MBAR(plot_out=True, MINGAMMA=0, MAXGAMMA=100, GSPACING=10, LAMBDA=100, exponent=2, polymorphs='p1 p2', 
-                  Molecule='benzene', Molecules=72, Independent=4, Temp=200, Pressure=1, k=1000, ignoreframes=2000,
+                  Molecule='benzene', Molecules=72, Independent=4, Temp=200, Pressure=1, k=1000, ignoreframes=100,
                   includeframes=100000, potential='oplsaa',bonds='no', hinge='DefaultHinge'):
     Colors = ['b', 'r', 'g']
     
@@ -50,7 +50,7 @@ def dA_Gamma_MBAR(plot_out=True, MINGAMMA=0, MAXGAMMA=100, GSPACING=10, LAMBDA=1
         RawGamma = MINGAMMA
         Gammas = []
         Gamma_names = []
-        gamma_names = np.arange(MINGAMMA, MAXGAMMA, GSPACING)
+        gamma_names = np.arange(MINGAMMA, MAXGAMMA + GSPACING, GSPACING)
         while RawGamma < MAXGAMMA:
             Gamma = int(100 * float(RawGamma ** exponent) / float(MAXGAMMA ** exponent))
             Gammas.append(Gamma)
@@ -179,7 +179,7 @@ def dA_Gamma_MBAR(plot_out=True, MINGAMMA=0, MAXGAMMA=100, GSPACING=10, LAMBDA=1
 
     g_k = np.zeros([len(Gammas)], float)
     K = len(Gammas)  # How many states?
-    
+     
     # total number of states examined; 0 are unsampled if bonds are left on, 1 is unsampled if the bonds are removed
     if bonds != "no":
         Kbig = K + 1
@@ -248,9 +248,9 @@ def dA_Gamma_MBAR(plot_out=True, MINGAMMA=0, MAXGAMMA=100, GSPACING=10, LAMBDA=1
                         if ignorecounter <= ignoreframes:
                             ignorecounter += 1
                             continue
-                        # ignore the frames after the include frames
-                        if counter > includeframes:
-                            continue
+                        ## ignore the frames after the include frames
+                        #if counter > includeframes:
+                        #    continue
                         # Grab the dhdl information
                         tokens_dhdl = lines_dhdl[linenum_dhdl].split()
                         while tokens_dhdl[0] in ignore_symbols:

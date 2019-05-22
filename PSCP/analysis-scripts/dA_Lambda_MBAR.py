@@ -16,7 +16,7 @@ import pdb
 import tossconfigurationsFunc
 
 def dA_Lambda_MBAR(plot_out=True, MinL=0, MaxL=100, dL=5, GAMMA=100, exponent=4, Molecule='benzene', polymorphs='p1 p2', 
-                   Molecules=72, Independent=4, Temp=200, Pressure=1, k=1000, ignoreframes=2000, includeframes=100000, 
+                   Molecules=72, Independent=4, Temp=200, Pressure=1, k=1000, ignoreframes=100, includeframes=100000, 
                    potential='oplsaa', hinge='DefaultHinge'):
     if (plot_out):
         import matplotlib # for making plots, version 'matplotlib-1.1.0-1'; errors may pop up when using earlier versions
@@ -261,24 +261,29 @@ def dA_Lambda_MBAR(plot_out=True, MinL=0, MaxL=100, dL=5, GAMMA=100, exponent=4,
 
                     ignorecounter=0
                     symbolcounter=0
+
+                    u_kln_hold = np.zeros([Kbig, N_max], np.float64)
+                    dhdl_kln_hold = np.zeros([Kbig, N_max], np.float64)
+                    dhdl_kn_hold = np.zeros([N_max], np.float64)
+
                     for counter, line in enumerate(lines):
                         tokens_energy = line.split()
                         if tokens_energy[0] in ignore_symbols:
                             symbolcounter += 1
                             continue
     
-                        # ignore the first set of frames
-                        if ignorecounter <= ignoreframes:
-                            ignorecounter += 1
-                            continue
+                        ## ignore the first set of frames
+                        #if ignorecounter <= ignoreframes:
+                        #    ignorecounter += 1
+                        #    continue
     
                         # ignore the frames after the include frames
                         if counter > includeframes:
                             continue
     
-                        # ignore frames that are flipped and we are tossing
-                        if counter in tossconfigs:
-                            continue
+                        ## ignore frames that are flipped and we are tossing
+                        #if counter in tossconfigs:
+                        #    continue
 
                         # Grab the dhdl information (if possible)
                         tokens_dhdl = lines_dhdl[linenum_dhdl].split()
@@ -299,11 +304,11 @@ def dA_Lambda_MBAR(plot_out=True, MinL=0, MaxL=100, dL=5, GAMMA=100, exponent=4,
                                          (float(tokens_energy[1]) +
                                           np.asarray(np.array(tokens_dhdl)[5 + np.array(Lambda_indicies)], float)) \
                                           * convert_units[k]
-                        print(u_kln[k, :, n])
                         dhdl_kln[k, :, n] = np.asarray(np.array(tokens_dhdl)[5 + np.array(Lambda_indicies)], float) \
                                             * convert_units[k]
                         dhdl_kn[k, n] = (float(Independent) / Molecules) * float(tokens_dhdl[4]) * convert_units[k]
                         n += 1
+                    
 
                     # Truncate the kept configuration list to be less than n
                     keepconfigs = [j for j in keepconfigs if j < (counter-symbolcounter) and j >= ignoreframes]
