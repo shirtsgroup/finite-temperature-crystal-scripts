@@ -299,6 +299,7 @@ def dA_Lambda_MBAR(plot_out=True, MinL=0, MaxL=100, dL=5, GAMMA=100, exponent=4,
                                          (float(tokens_energy[1]) +
                                           np.asarray(np.array(tokens_dhdl)[5 + np.array(Lambda_indicies)], float)) \
                                           * convert_units[k]
+                        print(u_kln[k, :, n])
                         dhdl_kln[k, :, n] = np.asarray(np.array(tokens_dhdl)[5 + np.array(Lambda_indicies)], float) \
                                             * convert_units[k]
                         dhdl_kn[k, n] = (float(Independent) / Molecules) * float(tokens_dhdl[4]) * convert_units[k]
