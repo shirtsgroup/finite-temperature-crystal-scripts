@@ -16,7 +16,7 @@ import pdb
 
 
 def dA_Gamma_MBAR(plot_out=True, MINGAMMA=0, MAXGAMMA=100, GSPACING=10, LAMBDA=100, exponent=2, polymorphs='p1 p2', 
-                  Molecule='benzene', Molecules=72, Independent=4, Temp=200, Pressure=1, k=1000, ignoreframes=100,
+                  Molecule='benzene', Molecules=72, Independent=4, Temp=200, Pressure=1, k=1000, ignoreframes=500,
                   includeframes=100000, potential='oplsaa',bonds='no', hinge='DefaultHinge'):
     Colors = ['b', 'r', 'g']
     

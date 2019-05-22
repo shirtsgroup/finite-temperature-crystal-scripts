@@ -16,7 +16,7 @@ import pdb
 import tossconfigurationsFunc
 
 def dA_Lambda_MBAR(plot_out=True, MinL=0, MaxL=100, dL=5, GAMMA=100, exponent=4, Molecule='benzene', polymorphs='p1 p2', 
-                   Molecules=72, Independent=4, Temp=200, Pressure=1, k=1000, ignoreframes=100, includeframes=100000, 
+                   Molecules=72, Independent=4, Temp=200, Pressure=1, k=1000, ignoreframes=500, includeframes=100000,
                    potential='oplsaa', hinge='DefaultHinge'):
     if (plot_out):
         import matplotlib # for making plots, version 'matplotlib-1.1.0-1'; errors may pop up when using earlier versions
@@ -272,10 +272,10 @@ def dA_Lambda_MBAR(plot_out=True, MinL=0, MaxL=100, dL=5, GAMMA=100, exponent=4,
                             symbolcounter += 1
                             continue
     
-                        ## ignore the first set of frames
-                        #if ignorecounter <= ignoreframes:
-                        #    ignorecounter += 1
-                        #    continue
+                        # ignore the first set of frames
+                        if ignorecounter <= ignoreframes:
+                            ignorecounter += 1
+                            continue
     
                         # ignore the frames after the include frames
                         if counter > includeframes:

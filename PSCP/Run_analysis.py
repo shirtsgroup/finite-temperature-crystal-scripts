@@ -49,6 +49,8 @@ if __name__ == '__main__':
                                         Pressure=inputs['gen_in']['pressure'], k=inputs['PSCP_in']['k_max'],
                                         potential=inputs['gen_in']['potential'], hinge=inputs['gen_in']['hinge'])
 
+            print(dA_L)
+            print(dA_G)
             inputs['PSCP_out']['refdG'] = ((dA_L - dA_L[0]) + (dA_G - dA_G[0])).tolist()
             inputs['PSCP_out']['refddG'] = np.sqrt(ddA_L**2 + ddA_G**2).tolist()
 #            absolutedU = np.array(inputs['PSCP_out']['absolutedU']).astype(float)
