@@ -634,23 +634,17 @@ def setup_molecule(polymorph_num='p1', temperature=[], pressure=1, molecule='', 
                                    str(equil_output_frequency))
         replace_line_starting_with(jobpath + '/equilibration.mdp', 'nstxout', 'nstxout = ' +
                                    str(equil_trr_output_frequency))
-        replace_line_starting_with(jobpath + '/equilibration.mdp', 'nstxout-compressed', 'nstxout-compressed = ' +
-                                   str(equil_trr_output_frequency))
 
         replace_line_starting_with(jobpath + '/production.mdp', 'nstlog', 'nstlog = ' + str(prod_output_frequency))
         replace_line_starting_with(jobpath + '/production.mdp', 'nstenergy', 'nstenergy = ' +
                                    str(prod_output_frequency))
         replace_line_starting_with(jobpath + '/production.mdp', 'nstxout', 'nstxout = ' +
                                    str(prod_trr_output_frequency))
-        replace_line_starting_with(jobpath + '/production.mdp', 'nstxout-compressed', 'nstxout-compressed = ' +
-                                   str(prod_trr_output_frequency))
 
         replace_line_starting_with(jobpath + '/anneal.mdp', 'nstlog', 'nstlog = ' + str(prod_output_frequency))
         replace_line_starting_with(jobpath + '/anneal.mdp', 'nstenergy', 'nstenergy = ' +
                                    str(prod_output_frequency))
         replace_line_starting_with(jobpath + '/anneal.mdp', 'nstxout', 'nstxout = ' +
-                                   str(prod_trr_output_frequency))
-        replace_line_starting_with(jobpath + '/anneal.mdp', 'nstxout-compressed', 'nstxout-compressed = ' +
                                    str(prod_trr_output_frequency))
 
         # INTEGRATOR
@@ -726,10 +720,10 @@ def setup_molecule(polymorph_num='p1', temperature=[], pressure=1, molecule='', 
         else:
             subprocess.call(['cp', templatepath + '/' + molecule + '_' + polymorph_num + '_' + molnum + '.ndx', jobpath
                              + '/index.ndx'])
-            replace_line_starting_with(jobpath + '/equilibration.mdp', 'symmetry-averaging', 'symmetry-averaging = yes')
-            replace_line_starting_with(jobpath + '/production.mdp', 'symmetry-averaging', 'symmetry-averaging = yes')
-            replace_line_starting_with(jobpath + '/minimization.mdp', 'symmetry-averaging', 'symmetry-averaging = yes')
-            replace_line_starting_with(jobpath + '/relaxation.mdp', 'symmetry-averaging', 'symmetry-averaging = yes')
+            #replace_line_starting_with(jobpath + '/equilibration.mdp', 'symmetry-averaging', 'symmetry-averaging = yes')
+            #replace_line_starting_with(jobpath + '/production.mdp', 'symmetry-averaging', 'symmetry-averaging = yes')
+            #replace_line_starting_with(jobpath + '/minimization.mdp', 'symmetry-averaging', 'symmetry-averaging = yes')
+            #replace_line_starting_with(jobpath + '/relaxation.mdp', 'symmetry-averaging', 'symmetry-averaging = yes')
             append_files(jobpath + '/equilibration.mdp', templatepath + '/' + molecule + '_' + str(independent) + 'ind_symmetry_groups.txt')
             append_files(jobpath + '/production.mdp', templatepath + '/' + molecule + '_' + str(independent) + 'ind_symmetry_groups.txt')
             append_files(jobpath + '/minimization.mdp', templatepath + '/' + molecule + '_' + str(independent) + 'ind_symmetry_groups.txt')
