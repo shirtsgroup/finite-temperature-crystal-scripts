@@ -11,6 +11,7 @@ from scipy.optimize import fsolve
 from scipy.special import erf
 from pymbar.timeseries import detectEquilibration
 import panedr as pdr
+from scipy.special import erf
 
 path = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, path + '/setup-scripts')
@@ -50,17 +51,29 @@ def prob_diff(dT, P, T0, dmu, b_mu, dsig, b_sig):
     mu_2 = dmu * (T0 + dT) + b_mu
     sig_1 = dsig * T0 + b_sig
     sig_2 = dsig * (T0 + dT) + b_sig
-    return (P - compute_prob(mu_1, mu_2, sig_1, sig_2))**2
+#    return (P - compute_prob(mu_1, mu_2, sig_1, sig_2))**2
+    return (P - determine_exchange_overlap([T0+dT, T0], [mu_2, mu_1], [sig_2, sig_1]))**2
 
 def compute_prob(mu_1, mu_2, sig_1, sig_2):
     c = (mu_2 * sig_1**2 - sig_2*(mu_1*sig_2 + sig_1*np.sqrt((mu_1 - mu_2)**2 + 2*(sig_1**2 - sig_2**2)*np.log10(sig_1/sig_2)))) / (sig_1**2 - sig_2**2)
     P = 1 - 0.5*erf((c- mu_1) / (np.sqrt(2) *sig_1)) + 0.5*erf((c- mu_2) / (np.sqrt(2) *sig_2))
     return P
 
+def determine_exchange_overlap(T, mu, sigma):
+    k_b = 0.0019872041 # Units in kcal/(mol*K)
+    mu_12 = mu[0] - mu[1]
+    sigma_12 = np.sqrt(sigma[0]**2 + sigma[1]**2)
+    C = (1 / (k_b * T[0]) - 1 / (k_b * T[1]))
+    P = 0.5 * (1 + erf(-mu_12 / (sigma_12 * np.sqrt(2)))) + 0.5 * np.exp(C * mu_12 + 0.5 * C**2 * sigma_12**2) * (1 + erf((mu_12 + C * sigma_12**2) / (sigma_12 * np.sqrt(2))))
+    return P
 
 def return_dT(dmu, b_mu, dsig, b_sig, P, T0):
     # Finds the dT that provides the desired proability overlap
     x = fsolve(prob_diff, 0.001, args=(P, T0, dmu, b_mu, dsig, b_sig))
+    mus = [dmu * (T0 + x) + b_mu, dmu * T0 + b_mu]
+    sigmas = [dsig * (T0 + x) + b_sig, dsig * T0 + b_sig]
+    Ts = [T0 + x, T0]
+    print(determine_exchange_overlap(Ts, mus, sigmas), compute_prob(mus[1], mus[0], sigmas[1], sigmas[0]))
     return x
 
 def setup_ReplicaExchange_temperatures(inputs, check):
@@ -126,6 +139,8 @@ def setup_ReplicaExchange_temperatures(inputs, check):
     T = ""
     for i in T_out:
         T += str(i) + " "
+    print(T)
+    sys.exit()
     return T, nodes
     
 

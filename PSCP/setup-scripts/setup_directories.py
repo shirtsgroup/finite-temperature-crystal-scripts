@@ -105,98 +105,106 @@ def setup_replica_exchange(nodes, directories, process_number, exchange_number, 
 
 
 
-#def setup_mdp_lambdas(current_lambda, current_gamma, polymorph_num='all', min_lambda=0, max_lambda=100, lambda_spacing=-1, lambda_exponent=2, min_gamma=0, max_gamma=100,
-#                      gamma_spacing=-1, gamma_exponent=2, jobpath='DefaultPath'):
-#    # Python script to automatically set up the mdp files to take on multiple lambda values
-#    # Original script written in bash by: Eric Dybeck on 09/12/2014
-#    # Converted to python by: Nate Abraham on 01/23/2019
-#
-#    # Ensure that the parameters are properly entered
-#    # Lambda
-#    if (min_lambda < 0) or (max_lambda > 100) or (min_lambda > max_lambda):
-#        print('Minimum Lambda: ', min_lambda)
-#        print('Maximum Lambda: ', max_lambda)
-#        print('Is not a valid lambda range!')
-#        sys.exit()
-#
-#    if lambda_spacing <= 0:
-#        print('Invalid Lambda Spacing: ', lambda_spacing)
-#        sys.exit()
-#
-#    if (min_lambda == max_lambda) and (current_lambda!= max_lambda):
-#        print('Minimum Lambda: ', min_lambda, ' Maximum Lambda: ', max_lambda, ' and Lambda: ', current_lambda,
-#              ' are not the same!')
-#        sys.exit()
-#
-#    if not 1 <= lambda_exponent <= 4:
-#        print('Invalid Lambda Exponent: ', lambda_exponent)
-#        sys.exit()
-#
-#    # Gamma
-#    if (min_gamma < 0) or (max_gamma > 100) or (min_gamma > max_gamma):
-#        print('Minimum Gamma: ', min_gamma)
-#        print('Maximum Gamma: ', max_gamma)
-#        print('Is not a valid lambda range!')
-#        sys.exit()
-#
-#    if gamma_spacing <= 0:
-#        print('Invalid Gamma Spacing: ', gamma_spacing)
-#        sys.exit()
-#
-#    if (min_gamma == max_gamma) and (current_gamma != max_gamma):
-#        print('Minimum Gamma: ', min_gamma, ' Maximum Gamma: ', max_gamma, ' and Gamma: ', current_gamma,
-#              ' are not the same!')
-#        sys.exit()
-#
-#    if not 1 <= gamma_exponent <= 4:
-#        print('Invalid Gamma Exponent: ', gamma_exponent)
-#        sys.exit()
-#
-#    #JOBPATH
-#    if jobpath == 'DefaultPath':
-#        print('Enter the job path!')
-#        sys.exit()
-#
-#    #If we have no harmonic restraints and full interactions, no need to proceed further
-#    if (min_lambda == max_lambda) and (max_lambda == 0) and (min_gamma == max_gamma) and (max_gamma == 100):
-#        print('No lambda values added.')
-#        sys.exit()
-#
-#    #If we are adding harmonic restraints, we should not be changing gamma (and vice versa)
-#    if (min_lambda != max_lambda) and (min_gamma != max_gamma):
-#        print('Harmonic restraints and Interactions changing simultaneously!!')
-#        sys.exit(
-#
-#    # Change the free energy setting from 'no' to 'yes' and the output from 0 to nstxout
-#    replace_line_starting_with(jobpath + '/equilibration.mdp', 'free_energy', 'free_energy = yes')
-#    replace_line_starting_with(jobpath + '/production.mdp', 'free_energy', 'free_energy = yes')
-#    #log_equil =$(less ${JOBPATH} / equilibration.mdp | grep -m 1 'nstenergy' | awk '{print $3}')
-#    #log_prod =$(less ${JOBPATH} / production.mdp | grep -m 1 'nstenergy' | awk '{print $3}')
-#    replace_line_starting_with(jobpath + '/equilibration.mdp', 'nstdhdl', 'nstdhdl = ' + str(log_equil))
-#    replace_line_starting_with(jobpath + '/production.mdp', 'nstdhdl', 'nstdhdl = ' + str(log_equil))
-#
-#    lambda_indicies = ''
-#    lambda_vector = ''
-#    gamma_indicies = ''
-#    gamma_vector = ''
-#
-#    # If harmonic restraints are being added, loop over all lambda points and set up the lambda vector in the mdp files
-#    if min_lambda != max_lambda:
-#        raw_lambda = min_lambda
-#        lambda_hold = 0.
-#        i = 0
-#        while raw_lambda < max_lambda:
-#            if i < 10:
-#                lambda_indicies = lambda_indicies + '    ' + str(i) + '    '
-#            else:
-#                lambda_indicies = lambda_indicies + '    ' + str(i) + '   '
-#
-#            lambda_1 = np.around(raw_lambda ** lambda_exponent / (max_lambda ** (lambda_exponent -1))), 6)
-#            lambda_2 = np.around(lambda_1 / 100., 6)
-#            gamma_1 = np.around(max_gamma ** 2/ 100, 6)
-#            gamma_2 = np.around(gamma_1 / 100., 6)
-#            lambda_vector =
+def setup_mdp_lambdas(current_lambda, current_gamma, polymorph_num='all', min_lambda=0, max_lambda=100, lambda_spacing=-1, lambda_exponent=2, min_gamma=0, max_gamma=100,
+                      gamma_spacing=-1, gamma_exponent=2, jobpath='DefaultPath'):
+    # Python script to automatically set up the mdp files to take on multiple lambda values
+    # Original script written in bash by: Eric Dybeck on 09/12/2014
+    # Converted to python by: Nate Abraham on 01/23/2019
 
+    # Ensure that the parameters are properly entered
+    # Lambda
+    if (min_lambda < 0) or (max_lambda > 100) or (min_lambda > max_lambda):
+        print('Minimum Lambda: ', min_lambda)
+        print('Maximum Lambda: ', max_lambda)
+        print('Is not a valid lambda range!')
+        sys.exit()
+
+    if (lambda_spacing <= 0) or (lambda_spacing > 100):
+        print('Invalid Lambda Spacing: ', lambda_spacing)
+        sys.exit()
+
+    if (min_lambda == max_lambda) and (current_lambda != max_lambda):
+        print('Minimum Lambda: ', min_lambda, ' Maximum Lambda: ', max_lambda, ' and Lambda: ', current_lambda,
+              ' are not the same!')
+        sys.exit()
+
+    if not 1 <= lambda_exponent <= 4:
+        print('Invalid Lambda Exponent: ', lambda_exponent)
+        sys.exit()
+
+    # Gamma
+    if (min_gamma < 0) or (max_gamma > 100) or (min_gamma > max_gamma):
+        print('ERROR - ')
+        print('Minimum Gamma: ', min_gamma)
+        print('Maximum Gamma: ', max_gamma)
+        print('Is not a valid lambda range!')
+        sys.exit()
+
+    if gamma_spacing <= 0:
+        print('ERROR - Invalid Gamma Spacing: ', gamma_spacing)
+        sys.exit()
+
+    if (min_gamma == max_gamma) and (current_gamma != max_gamma):
+        print('ERROR - Minimum Gamma: ', min_gamma, ' Maximum Gamma: ', max_gamma, ' and Gamma: ', current_gamma,
+              ' are not the same!')
+        sys.exit()
+
+    if not 1 <= gamma_exponent <= 4:
+        print('ERROR - Invalid Gamma Exponent: ', gamma_exponent)
+        sys.exit()
+
+    #JOBPATH
+    if jobpath == 'DefaultPath':
+        print('ERROR - Enter the job path!')
+        sys.exit()
+
+    #If we have no harmonic restraints and full interactions, no need to proceed further
+    if (min_lambda == max_lambda) and (max_lambda == 0) and (min_gamma == max_gamma) and (max_gamma == 100):
+        print('ERROR - No lambda values added.')
+        sys.exit()
+
+    #If we are adding harmonic restraints, we should not be changing gamma (and vice versa)
+    if (min_lambda != max_lambda) and (min_gamma != max_gamma):
+        print('ERROR - Harmonic restraints and Interactions changing simultaneously!')
+        sys.exit()
+
+    # Change the free energy setting from 'no' to 'yes' and the output from 0 to nstxout
+    replace_line_starting_with(jobpath + '/equilibration.mdp', 'free_energy', 'free_energy = yes')
+    replace_line_starting_with(jobpath + '/production.mdp', 'free_energy', 'free_energy = yes')
+    replace_line_starting_with(jobpath + '/equilibration.mdp', 'nstdhdl', 'nstdhdl = ' + str(log_equil))
+    replace_line_starting_with(jobpath + '/production.mdp', 'nstdhdl', 'nstdhdl = ' + str(log_equil))
+
+    # Setting arrays for 
+    if min_lambda == max_lambda:
+        # Setting up vectors for turning off interactions
+        gammas = np.arange(min_gamma, max_gamma + 1, gamma_spacing)
+        indicies = np.arange(0, (max_gamma - min_gamma) / gamma_spacing + 1, 1)
+        lambda_points = np.ones(len(indicies))
+        gamma_points = (gammas / max_gamma) ** gamma_exponent
+        init_lambda = np.where(current_gamma == gammass)[0][0]
+
+        # Setting interaction end points
+        replace_string_in_text(jobpath + '/equilibration.mdp', 'couple-lambda0', 'couple-lambda0           = none') 
+        replace_string_in_text(jobpath + '/production.mdp', 'couple-lambda0', 'couple-lambda0           = none')
+        replace_string_in_text(jobpath + '/equilibration.mdp', 'couple-lambda1', 'couple-lambda1           = vdw-q') 
+        replace_string_in_text(jobpath + '/production.mdp', 'couple-lambda1', 'couple-lambda1           = vdw-q')
+        replace_string_in_text(jobpath + '/equilibration.mdp', 'couple-intramol', 'couple-intramol          = yes') 
+        replace_string_in_text(jobpath + '/production.mdp', 'couple-intramol', 'couple-intramol          = yes')
+
+    elif min_gamma == max_gamma:
+        # Setting up vectors for restraining atoms
+        lambdas = np.arange(min_lambda, max_lambda + 1, lambda_spacing)
+        indicies = np.arange(0, (max_lambda - min_lambda) / lambda_spacing + 1, 1)
+        gamma_points = np.ones(len(indicies))
+        lambda_points = (lambdas / max_lambda) ** lambda_exponent
+        init_lambda = np.where(current_lambda == lambdas)[0][0]
+
+    # Setting the initial lambda state
+    replace_string_in_text(jobpath + '/equilibration.mdp', 'init_lambda_state', 'init_lambda_state        = ' + str(init_lambda))
+    replace_string_in_text(jobpath + '/production.mdp', 'init_lambda_state', 'init_lambda_state        = ' + str(init_lambda))
+
+    
+   
 
 
 ################################################################################
@@ -634,23 +642,17 @@ def setup_molecule(polymorph_num='p1', temperature=[], pressure=1, molecule='', 
                                    str(equil_output_frequency))
         replace_line_starting_with(jobpath + '/equilibration.mdp', 'nstxout', 'nstxout = ' +
                                    str(equil_trr_output_frequency))
-        replace_line_starting_with(jobpath + '/equilibration.mdp', 'nstxout-compressed', 'nstxout-compressed = ' +
-                                   str(equil_trr_output_frequency))
 
         replace_line_starting_with(jobpath + '/production.mdp', 'nstlog', 'nstlog = ' + str(prod_output_frequency))
         replace_line_starting_with(jobpath + '/production.mdp', 'nstenergy', 'nstenergy = ' +
                                    str(prod_output_frequency))
         replace_line_starting_with(jobpath + '/production.mdp', 'nstxout', 'nstxout = ' +
                                    str(prod_trr_output_frequency))
-        replace_line_starting_with(jobpath + '/production.mdp', 'nstxout-compressed', 'nstxout-compressed = ' +
-                                   str(prod_trr_output_frequency))
 
         replace_line_starting_with(jobpath + '/anneal.mdp', 'nstlog', 'nstlog = ' + str(prod_output_frequency))
         replace_line_starting_with(jobpath + '/anneal.mdp', 'nstenergy', 'nstenergy = ' +
                                    str(prod_output_frequency))
         replace_line_starting_with(jobpath + '/anneal.mdp', 'nstxout', 'nstxout = ' +
-                                   str(prod_trr_output_frequency))
-        replace_line_starting_with(jobpath + '/anneal.mdp', 'nstxout-compressed', 'nstxout-compressed = ' +
                                    str(prod_trr_output_frequency))
 
         # INTEGRATOR
@@ -726,10 +728,10 @@ def setup_molecule(polymorph_num='p1', temperature=[], pressure=1, molecule='', 
         else:
             subprocess.call(['cp', templatepath + '/' + molecule + '_' + polymorph_num + '_' + molnum + '.ndx', jobpath
                              + '/index.ndx'])
-            replace_line_starting_with(jobpath + '/equilibration.mdp', 'symmetry-averaging', 'symmetry-averaging = yes')
-            replace_line_starting_with(jobpath + '/production.mdp', 'symmetry-averaging', 'symmetry-averaging = yes')
-            replace_line_starting_with(jobpath + '/minimization.mdp', 'symmetry-averaging', 'symmetry-averaging = yes')
-            replace_line_starting_with(jobpath + '/relaxation.mdp', 'symmetry-averaging', 'symmetry-averaging = yes')
+            #replace_line_starting_with(jobpath + '/equilibration.mdp', 'symmetry-averaging', 'symmetry-averaging = yes')
+            #replace_line_starting_with(jobpath + '/production.mdp', 'symmetry-averaging', 'symmetry-averaging = yes')
+            #replace_line_starting_with(jobpath + '/minimization.mdp', 'symmetry-averaging', 'symmetry-averaging = yes')
+            #replace_line_starting_with(jobpath + '/relaxation.mdp', 'symmetry-averaging', 'symmetry-averaging = yes')
             append_files(jobpath + '/equilibration.mdp', templatepath + '/' + molecule + '_' + str(independent) + 'ind_symmetry_groups.txt')
             append_files(jobpath + '/production.mdp', templatepath + '/' + molecule + '_' + str(independent) + 'ind_symmetry_groups.txt')
             append_files(jobpath + '/minimization.mdp', templatepath + '/' + molecule + '_' + str(independent) + 'ind_symmetry_groups.txt')
