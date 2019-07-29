@@ -22,12 +22,12 @@ LSPACING=-1
 MINGAMMA=0
 MAXGAMMA=100
 GSPACING=-1
-EXPONENT=2
+EXPONENTL=2
 EXPONENTG=2
 JOBPATH="DefaultPath"
 
 #options passed in from the users
-while getopts "L:W:S:s:A:B:G:g:f:d:" opt; do
+while getopts "L:W:S:s:A:B:G:g:f:F:d:" opt; do
         case $opt in
 	L )
 		LAMBDA=$OPTARG
@@ -54,7 +54,10 @@ while getopts "L:W:S:s:A:B:G:g:f:d:" opt; do
                 GSPACING=$OPTARG
                 ;;
 	f )
-		EXPONENT=$OPTARG
+		EXPONENTL=$OPTARG
+		;;
+	F )
+		EXPONENTG=$OPTARG
 		;;
 	d )
 		JOBPATH=$OPTARG
@@ -83,8 +86,8 @@ if [ $MINLAMBDA == $MAXLAMBDA ] && [ $LAMBDA != $MAXLAMBDA ]; then
 	exit 1
 fi
 
-if [ "$EXPONENT" -lt "1" ] || [ "$EXPONENT" -gt "4" ]; then
-        echo "Invalid Exponent: $EXPONENT"
+if [ "$EXPONENTL" -lt "1" ] || [ "$EXPONENTL" -gt "4" ]; then
+        echo "Invalid Exponent: $EXPONENTL"
         exit 1
 fi
 
@@ -103,6 +106,11 @@ fi
 
 if [ $MINGAMMA == $MAXGAMMA ] && [ $GAMMA != $MAXGAMMA ]; then
         echo "Minimum Gamma: $MINGAMMA Maximum Gamma: $MAXGAMMA and Gamma: $GAMMA are not the same!"
+        exit 1
+fi
+
+if [ "$EXPONENTG" -lt "1" ] || [ "$EXPONENTG" -gt "4" ]; then
+        echo "Invalid Exponent: $EXPONENTG"
         exit 1
 fi
 
@@ -150,7 +158,7 @@ while [ "$RawLambda" -lt "$MAXLAMBDA" ]; do
                 Lambda_indicies="${Lambda_indicies}    ${i}   "
         fi
 	
-	Lambda=$(echo "scale=6; ($RawLambda^$EXPONENT) / ($MAXLAMBDA^($EXPONENT-1))" | bc)
+	Lambda=$(echo "scale=6; ($RawLambda^$EXPONENTL) / ($MAXLAMBDA^($EXPONENTL-1))" | bc)
         lambda=$(echo "x=$Lambda*0.010000; if(x==0) print \"0.00000\"; if(x<1 && x>0) print 0; x" | bc)
 	Gamma=$(echo "scale=6; ($MAXGAMMA^2) / (100)" | bc)
 	gamma=$(echo "x=$Gamma*0.010000; if(x==0) print \"0.00000\"; if(x<1 && x>0) print 0; x" | bc)
@@ -212,7 +220,7 @@ while [ "$RawGamma" -lt "$MAXGAMMA" ]; do
 		Lambda_indicies="${Lambda_indicies}    ${i}   "
         fi
 
-        Gamma=$(echo "scale=6; ($RawGamma^$EXPONENT) / ($MAXGAMMA^($EXPONENT-1))" | bc)
+        Gamma=$(echo "scale=6; ($RawGamma^$EXPONENTG) / ($MAXGAMMA^($EXPONENTG-1))" | bc)
 	lambda=$(echo "x=$MAXLAMBDA*0.010000; if(x==0) print \"0.00000\"; if(x<1 && x>0) print 0; x" | bc)
         gamma=$(echo "x=$Gamma*0.010000; if(x==0) print \"0.00000\"; if(x<1 && x>0) print 0; x" | bc)
 	#gamma_bond=$(echo "x=1.000000-$gamma; if(x==0) print \"0.00000\"; if(x<1 && x>0) print 0; x" | bc)

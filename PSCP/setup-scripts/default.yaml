@@ -2,18 +2,19 @@
 
 # General input parameters
 gen_in:
-    polymorph_num: p1 p2
-    molecule: resora
+    template_path: none
+    polymorph_num: none
+    molecule: none
+    number_of_molecules: none
+    independent: same
     pressure: 1
     cores: 7
     cutoff: 8
     potential: oplsaa
-    hinge: 'DefaultHinge'
+    hinge: DefaultHinge
     integrator: sd
     thermostat: nose-hoover
-    number_of_molecules: 64
-    independent: same
-    template_path: /home/nabraham/crystals/NMA/runfiles
+    anneal_temp: 400
 
 PSCP_in:
     PSCP_temperature: 200
@@ -27,7 +28,6 @@ PSCP_in:
     lambda: 100
     gamma_equil_steps: 100000
     gamma_prod_steps: 1000000
-    k_max: 1000000
     
     # Input parameters for setop_Restraints
     run_restraints: False
@@ -41,12 +41,19 @@ PSCP_in:
     k_min: 0
     k_max: 1000
 
+PSCP_out:
+    refdG:
+    refddG:
+    absolutedU:
+
 temp_in:
     # Input parameters for setup_Temperature
-    run_temperature: True
+    run_temperature: False
     simulation_package: gromacs
-    temperatures: "50 100 200 300"
+    temperatures_unsampled: 
+    temperatures: 50 100 200 300
     charge: 0.1150
+    temp_anneal_steps: 500
     temp_equil_steps: 1000000
     temp_prod_steps: 10000000
     barostat: Parrinello-Rahman
@@ -54,5 +61,10 @@ temp_in:
     ensemble: NPT
     prodoutputs: 1000
 
-analysis_in:
-    potential_energy: -22.506 -22.784
+rep_exch_in:
+    # Settings for replica exchange
+    T_min: 10
+    T_max: 400
+    prob_overlap: 0.3
+    cores_per_replica: 1
+    cores_per_node: 28

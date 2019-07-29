@@ -1,0 +1,6 @@
+Cython==0.26.1
+mdtraj==1.9.2
+pymbar==3.0.3
+pytest==3.2.1
+PyYAML==3.12
+panedr==0.5.2

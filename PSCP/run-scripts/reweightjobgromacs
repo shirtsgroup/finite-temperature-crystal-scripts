@@ -169,6 +169,10 @@ elif [ "$molecule" == "bedmig" ]; then
     apermol=30
 elif [ "$molecule" == "qopbed" ]; then
     apermol=10
+elif [ "$molecule" == "pyrzin" ]; then
+    apermol=14
+elif [ "$molecule" == "melfit" ]; then
+    apermol=57
 else
     echo "Unrecognized molecule: $molecule"
     exit 1
@@ -346,7 +350,7 @@ for potential in $potentials; do
     #Copy over the appropriate itp file and topology file
     echo "Copying itp and topology file..."
 #    cp ${RUNFILES_LOC}/${molecule}_${potential}.itp ${potential}.itp
-    cp ../${molecule}_${potential}.itp ${potential}.itp
+    cp ../../../${molecule}_${potential}.itp ${potential}.itp
 
     if [ -f topology.top ]; then
         cp topology.top reweighting_topology.top
@@ -373,8 +377,8 @@ for potential in $potentials; do
     #sed -i "s/oplsaafakea.ff/${potential}.ff/g" reweighting_topology.top
     #sed -i "s/gromos54a7.ff/${potential}.ff/g" reweighting_topology.top
     #sed -i "s/drude.ff/${potential}.ff/g" reweighting_topology.top
-    sed -i "/forcefield.itp/c\\#include \"${potential}.ff\/forcefield.itp\"" reweighting_topology.top
-    sed -i "s/#include \"benzene.*/#include \"${potential}.itp\"/g" reweighting_topology.top
+    #sed -i "/forcefield.itp/c\\#include \"${potential}.ff\/forcefield.itp\"" reweighting_topology.top
+    #sed -i "s/#include \"benzene.*/#include \"${potential}.itp\"/g" reweighting_topology.top
 
     #Remove any symmetry averaging if it is included
     less production.mdp | grep -v "ave-group" | grep -v "ave-ngroup" | grep -v "symmetry-averaging" > production_reweighting.mdp
