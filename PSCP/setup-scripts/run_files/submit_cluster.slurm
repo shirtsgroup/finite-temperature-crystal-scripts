@@ -1,5 +1,7 @@
 #! /bin/bash
+
 #SBATCH --time=48:00:00
+#SBATCH -N 1
 #SBATCH --output=logfile
 #SBATCH --ntasks=aaaa
 #SBATCH --partition=RM-shared

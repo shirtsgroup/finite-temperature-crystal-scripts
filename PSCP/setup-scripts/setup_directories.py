@@ -32,7 +32,8 @@ def setup_temperature(inputs, run_production):
                            simulation=inputs['temp_in']['simulation_package'], jobpath=i + '/temperature/' + str(count),
                            templatepath=inputs['gen_in']['template_path'], anneal_temp=inputs['gen_in']['anneal_temp'],
                            anneal_steps=inputs['temp_in']['temp_anneal_steps'], run_production=run_production,
-                           charge=inputs['temp_in']['charge'], hinge=inputs['gen_in']['hinge'])
+                           charge=inputs['temp_in']['charge'], hinge=inputs['gen_in']['hinge'],
+                           submission_script=inputs['gen_in']['submission_script'])
             count += 1
 
 def setup_restraints(inputs):
@@ -59,7 +60,8 @@ def setup_restraints(inputs):
                            simulation=inputs['temp_in']['simulation_package'], ensemble='NVT',
                            jobpath=i + '/restraints/' + str(lambd), templatepath=inputs['gen_in']['template_path'],
                            anneal_temp=inputs['gen_in']['anneal_temp'], anneal_steps=0, run_production=True,
-                           charge=inputs['temp_in']['charge'], hinge=inputs['gen_in']['hinge'])
+                           charge=inputs['temp_in']['charge'], hinge=inputs['gen_in']['hinge'],
+                           submission_script=inputs['gen_in']['submission_script'])
             lambd += inputs['PSCP_in']['lambda_spacing']
 
 
@@ -88,7 +90,7 @@ def setup_interactions(inputs):
                             ensemble='NVT', jobpath=i + '/interactions/' + str(gamma),
                             templatepath=inputs['gen_in']['template_path'], anneal_temp=inputs['gen_in']['anneal_temp'],
                             anneal_steps=0, run_production=True, charge=inputs['temp_in']['charge'],
-                            hinge=inputs['gen_in']['hinge'])
+                            hinge=inputs['gen_in']['hinge'], submission_script=inputs['gen_in']['submission_script'])
              gamma += inputs['PSCP_in']['gamma_spacing']
 
 
@@ -253,7 +255,7 @@ def setup_molecule(polymorph_num='p1', temperature=[], pressure=1, molecule='', 
                    max_gamma=100, gamma_exponent=2, gamma_spacing=100, cutoff=8, potential='oplsaa',
                    simulation='gromacs', ensemble='NPT', jobpath='./', templatepath='', anneal_temp=400,
                    anneal_steps=10000, run_production=True, volume=-1, charge=0.1150, hinge='DefaultHinge', delta=0,
-                   SigmaH=100, SigmaC=100, drude_k=100):
+                   SigmaH=100, SigmaC=100, drude_k=100, submission_script='submit_cluster.slurm'):
     # =============================================================================================
     # ENSURE THAT INPUTS HAVE BEEN PROPERLY ENTERED
     # =============================================================================================
@@ -530,15 +532,15 @@ def setup_molecule(polymorph_num='p1', temperature=[], pressure=1, molecule='', 
         if polymorph_num == 'gas':
             subprocess.call(['cp', path + 'run_files/equilibration_gas.mdp', jobpath + '/equilibration.mdp'])
             subprocess.call(['cp', path + 'run_files/production_gas.mdp', jobpath + '/production.mdp'])
-            #subprocess.call(['cp', templatepath + '/minimization.mdp', jobpath + '/minimization.mdp'])
-            #subprocess.call(['cp', templatepath + '/relaxation.mdp', jobpath + '/relaxation.mdp'])
-            #subprocess.call(['cp', templatepath + '/anneal_gas.mdp', jobpath + '/anneal.mdp'])
+            subprocess.call(['cp', path + 'run_files/minimization.mdp', jobpath + '/minimization.mdp'])
+            subprocess.call(['cp', path + 'run_files/relaxation.mdp', jobpath + '/relaxation.mdp'])
+            subprocess.call(['cp', path + 'run_files/anneal.mdp', jobpath + '/anneal.mdp'])
         else:
             subprocess.call(['cp', path + 'run_files/equilibration.mdp', jobpath + '/equilibration.mdp'])
             subprocess.call(['cp', path + 'run_files/production.mdp', jobpath + '/production.mdp'])
             subprocess.call(['cp', path + 'run_files/anneal.mdp', jobpath + '/anneal.mdp'])
-            #subprocess.call(['cp', templatepath + '/minimization.mdp', jobpath + '/minimization.mdp'])
-            #subprocess.call(['cp', templatepath + '/relaxation.mdp', jobpath + '/relaxation.mdp'])
+            subprocess.call(['cp', path + 'run_files/minimization.mdp', jobpath + '/minimization.mdp'])
+            subprocess.call(['cp', path + 'run_files/relaxation.mdp', jobpath + '/relaxation.mdp'])
         replace_string_in_text(jobpath + '/minimization.mdp', 'MOLMOLMOLMOL', molecule)
         replace_string_in_text(jobpath + '/relaxation.mdp', 'MOLMOLMOLMOL', molecule)
         replace_string_in_text(jobpath + '/equilibration.mdp', 'MOLMOLMOLMOL', molecule)
@@ -787,7 +789,7 @@ def setup_molecule(polymorph_num='p1', temperature=[], pressure=1, molecule='', 
         #subprocess.call(['cp', templatepath + '/submit_relaxation.sh', jobpath + '/'])
         print(path)
         subprocess.call(['cp', path + 'run_files/submit_local.sh', jobpath + '/'])
-        subprocess.call(['cp', path + 'run_files/submit_cluster.slurm', jobpath + '/'])
+        subprocess.call(['cp', path + 'run_files/' + submission_script, jobpath + '/submit_cluster.slurm'])
 
         # if the number of Annealing steps is 0, skip the equilibration
         annealing = True

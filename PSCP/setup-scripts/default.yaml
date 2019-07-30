@@ -3,6 +3,7 @@
 # General input parameters
 gen_in:
     template_path: none
+    submission_script: submit_cluster.slurm
     polymorph_num: none
     molecule: none
     number_of_molecules: none
