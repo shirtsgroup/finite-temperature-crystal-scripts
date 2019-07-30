@@ -48,7 +48,7 @@ if check_bool(args.anneal) == True:
     subprocess.call("gmx mdrun -nt " + str(args.num_cores) + " -v -deffnm ANNEAL -dhdl dhdl_ANNEAL", shell=True)
 
     # Extracing the final frame from the checkpoint file
-    subprocess.call("echo '0' | gmx trjconv -f ANNEAL.cpt -s ANNEAL.tpr -o ANNEAL.gro -pbc whole -ndec 12", shell=True)
+    subprocess.call("echo '0' | gmx trjconv -f ANNEAL.cpt -s ANNEAL.tpr -o ANNEAL.gro -pbc whole -ndec 12 -vel yes", shell=True)
 
 # Run equilibration
 if check_bool(args.equilibration) == True:
@@ -66,7 +66,7 @@ if check_bool(args.equilibration) == True:
     subprocess.call("gmx mdrun -nt " + str(args.num_cores) + " -v -deffnm EQ -dhdl dhdl_EQ", shell=True)
 
     # Extracing the final frame from the checkpoint file
-    subprocess.call("echo '0' | gmx trjconv -f EQ.cpt -s EQ.tpr -o EQ.gro -pbc whole -ndec 12", shell=True)
+    subprocess.call("echo '0' | gmx trjconv -f EQ.cpt -s EQ.tpr -o EQ.gro -pbc whole -ndec 12 -vel yes", shell=True)
 
 # Running a production run
 if  check_bool(args.production) == True:
@@ -85,11 +85,11 @@ if  check_bool(args.production) == True:
     subprocess.call("gmx mdrun -nt " + str(args.num_cores) + " -v -deffnm PROD -dhdl dhdl_PROD", shell=True)
 
     # Extracing the final frame from the checkpoint file
-    subprocess.call("echo '0' | gmx trjconv -f PROD.cpt -s PROD.tpr -o PROD.gro -pbc whole -ndec 12", shell=True)
+    subprocess.call("echo '0' | gmx trjconv -f PROD.cpt -s PROD.tpr -o PROD.gro -pbc whole -ndec 12 -vel yes", shell=True)
 
-    # Calculate the configuration energies and ensemble averages
-    subprocess.call(path + '/run-scripts/crunchjobenergy')
-
+#    # Calculate the configuration energies and ensemble averages
+#    subprocess.call(path + '/run-scripts/crunchjobenergy')
+#
 #    # Relax the molecule and energy minimize the intramolecular interactions to create the restraint files
 #    if check_bool(args.indexing) == True:
 #        index = 'true'
