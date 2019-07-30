@@ -94,7 +94,7 @@ def setup_interactions(inputs):
 
 def setup_replica_exchange(nodes, directories, process_number, exchange_number, jobpath):
     # Copying submission script into temperature direcotry
-    subprocess.call(['cp', path + '/submit_cluster_REP.slurm', jobpath + '/'])
+    subprocess.call(['cp', path + '/run_files/submit_cluster_REP.slurm', jobpath + '/'])
 
     # Replacing specific strings in the submit script to match the user input
     replace_string_in_text(jobpath + '/submit_cluster_REP.slurm', 'NODES', nodes)
@@ -528,17 +528,17 @@ def setup_molecule(polymorph_num='p1', temperature=[], pressure=1, molecule='', 
         # Copy the template equilibration and production mdp file in to the new directory
         print('Copying .mdp files...')
         if polymorph_num == 'gas':
-            subprocess.call(['cp', templatepath + '/equilibration_gas.mdp', jobpath + '/equilibration.mdp'])
-            subprocess.call(['cp', templatepath + '/production_gas.mdp', jobpath + '/production.mdp'])
-            subprocess.call(['cp', templatepath + '/minimization.mdp', jobpath + '/minimization.mdp'])
-            subprocess.call(['cp', templatepath + '/relaxation.mdp', jobpath + '/relaxation.mdp'])
-            subprocess.call(['cp', templatepath + '/anneal_gas.mdp', jobpath + '/anneal.mdp'])
+            subprocess.call(['cp', path + 'run_files/equilibration_gas.mdp', jobpath + '/equilibration.mdp'])
+            subprocess.call(['cp', path + 'run_files/production_gas.mdp', jobpath + '/production.mdp'])
+            #subprocess.call(['cp', templatepath + '/minimization.mdp', jobpath + '/minimization.mdp'])
+            #subprocess.call(['cp', templatepath + '/relaxation.mdp', jobpath + '/relaxation.mdp'])
+            #subprocess.call(['cp', templatepath + '/anneal_gas.mdp', jobpath + '/anneal.mdp'])
         else:
-            subprocess.call(['cp', templatepath + '/equilibration.mdp', jobpath + '/equilibration.mdp'])
-            subprocess.call(['cp', templatepath + '/production.mdp', jobpath + '/production.mdp'])
-            subprocess.call(['cp', templatepath + '/minimization.mdp', jobpath + '/minimization.mdp'])
-            subprocess.call(['cp', templatepath + '/relaxation.mdp', jobpath + '/relaxation.mdp'])
-            subprocess.call(['cp', templatepath + '/anneal.mdp', jobpath + '/anneal.mdp'])
+            subprocess.call(['cp', path + 'run_files/equilibration.mdp', jobpath + '/equilibration.mdp'])
+            subprocess.call(['cp', path + 'run_files/production.mdp', jobpath + '/production.mdp'])
+            subprocess.call(['cp', path + 'run_files/anneal.mdp', jobpath + '/anneal.mdp'])
+            #subprocess.call(['cp', templatepath + '/minimization.mdp', jobpath + '/minimization.mdp'])
+            #subprocess.call(['cp', templatepath + '/relaxation.mdp', jobpath + '/relaxation.mdp'])
         replace_string_in_text(jobpath + '/minimization.mdp', 'MOLMOLMOLMOL', molecule)
         replace_string_in_text(jobpath + '/relaxation.mdp', 'MOLMOLMOLMOL', molecule)
         replace_string_in_text(jobpath + '/equilibration.mdp', 'MOLMOLMOLMOL', molecule)
@@ -632,9 +632,15 @@ def setup_molecule(polymorph_num='p1', temperature=[], pressure=1, molecule='', 
                 replace_line_starting_with(jobpath + '/anneal.mdp', 'rlist', 'rlist = ' + str(rvdw))
 
         # TIMESTEPS
+        replace_line_starting_with(jobpath + '/anneal.mdp', 'nsteps', 'nsteps = ' + str(anneal_steps))
         replace_line_starting_with(jobpath + '/equilibration.mdp', 'nsteps', 'nsteps = ' + str(equil_steps))
         replace_line_starting_with(jobpath + '/production.mdp', 'nsteps', 'nsteps = ' + str(prod_steps))
-        replace_line_starting_with(jobpath + '/anneal.mdp', 'nsteps', 'nsteps = ' + str(anneal_steps))
+
+        # GENERATE VELOCITIES
+        if anneal_steps > 0:
+            replace_line_starting_with(jobpath + '/equilibration.mdp', 'gen_vel', 'gen_vel = no')
+        if (anneal_steps > 0) or (equil_steps > 0):
+            replace_line_starting_with(jobpath + '/production.mdp', 'gen_vel', 'gen_vel = no')
 
         # OUTPUT FREQUENCY
         replace_line_starting_with(jobpath + '/equilibration.mdp', 'nstlog', 'nstlog = ' + str(equil_output_frequency))
@@ -780,8 +786,8 @@ def setup_molecule(polymorph_num='p1', temperature=[], pressure=1, molecule='', 
         #subprocess.call(['cp', templatepath + '/submit_minimization.sh', jobpath + '/'])
         #subprocess.call(['cp', templatepath + '/submit_relaxation.sh', jobpath + '/'])
         print(path)
-        subprocess.call(['cp', path + 'submit_local.sh', jobpath + '/'])
-        subprocess.call(['cp', path + 'submit_cluster.slurm', jobpath + '/'])
+        subprocess.call(['cp', path + 'run_files/submit_local.sh', jobpath + '/'])
+        subprocess.call(['cp', path + 'run_files/submit_cluster.slurm', jobpath + '/'])
 
         # if the number of Annealing steps is 0, skip the equilibration
         annealing = True
