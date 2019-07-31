@@ -70,10 +70,10 @@ def determine_exchange_overlap(T, mu, sigma):
 def return_dT(dmu, b_mu, dsig, b_sig, P, T0):
     # Finds the dT that provides the desired proability overlap
     x = fsolve(prob_diff, 0.001, args=(P, T0, dmu, b_mu, dsig, b_sig))
-    mus = [dmu * (T0 + x) + b_mu, dmu * T0 + b_mu]
-    sigmas = [dsig * (T0 + x) + b_sig, dsig * T0 + b_sig]
-    Ts = [T0 + x, T0]
-    print(determine_exchange_overlap(Ts, mus, sigmas), compute_prob(mus[1], mus[0], sigmas[1], sigmas[0]))
+    #mus = [dmu * (T0 + x) + b_mu, dmu * T0 + b_mu]
+    #sigmas = [dsig * (T0 + x) + b_sig, dsig * T0 + b_sig]
+    #Ts = [T0 + x, T0]
+    #print(determine_exchange_overlap(Ts, mus, sigmas), compute_prob(mus[1], mus[0], sigmas[1], sigmas[0]))
     return x
 
 def setup_ReplicaExchange_temperatures(inputs, check):
@@ -139,8 +139,6 @@ def setup_ReplicaExchange_temperatures(inputs, check):
     T = ""
     for i in T_out:
         T += str(i) + " "
-    print(T)
-    sys.exit()
     return T, nodes
     
 
