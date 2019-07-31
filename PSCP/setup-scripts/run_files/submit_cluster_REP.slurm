@@ -9,6 +9,6 @@
 module load mpi/intel_mpi
 module load gromacs/2018_cpu
 
-Run_REMD.py -n NNPP -r restraint.gro -i EQ.gro
+Run_REMD.py -n NNPP -r restraint.gro 
 
 
