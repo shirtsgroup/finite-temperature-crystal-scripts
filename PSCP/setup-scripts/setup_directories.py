@@ -669,10 +669,17 @@ def setup_molecule(polymorph_num='p1', temperature=[], pressure=1, molecule='', 
 
         # FREE ENERGY PARAMETERS
 #NSA: need to re-write setup_mdpLambdas as a python script
-        subprocess.call(['setup_mdpLambdas', '-L', str(lambd), '-W', str(min_lambda), '-S', str(max_lambda),
-                         '-s', str(lambda_spacing), '-A', str(max_gamma), '-B', str(min_gamma), '-G', str(gamma),
-                         '-g', str(gamma_spacing), '-f', str(lambda_exponent), '-F', str(gamma_exponent),
-                         '-d', jobpath])
+        setup_mdp_lambdas(lambd, gamma, polymorph_num=polymorph_num, 
+                          min_lambda=min_lambda, max_lambda=max_lambda, 
+                          lambda_spacing=lambda_spacing, 
+                          lambda_exponent=lambda_exponent, min_gamma=min_gamma, 
+                          max_gamma=max_gamma, gamma_spacing=gamma_spacing, 
+                          gamma_exponent=gamma_exponent, jobpath=jobpath)
+
+        #subprocess.call(['setup_mdpLambdas', '-L', str(lambd), '-W', str(min_lambda), '-S', str(max_lambda),
+        #                 '-s', str(lambda_spacing), '-A', str(max_gamma), '-B', str(min_gamma), '-G', str(gamma),
+        #                 '-g', str(gamma_spacing), '-f', str(lambda_exponent), '-F', str(gamma_exponent),
+        #                 '-d', jobpath])
 
         # Copy over the molecule itp file and make the necessary modifications to the bond lengths, charges, and sigma values
         print('Copying itp file...')
