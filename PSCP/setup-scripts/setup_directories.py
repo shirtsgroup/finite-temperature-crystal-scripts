@@ -869,9 +869,9 @@ def setup_molecule(polymorph_num='p1', temperature=[], pressure=1, molecule='', 
     print('Done!')
 
 
-def re_setup(polymorph_num='p1', temperature=0, pressure=1, molecule='', 
-             number_of_molecules=0, independent='same', potential='oplsaa', 
-             simulation='gromacs', templatepath=''):
+def re_setup(polymorph_num='p1', molecule='', number_of_molecules=0, 
+             independent='same', potential='oplsaa', simulation='gromacs', 
+             templatepath=''):
     # =============================================================================================
     # ENSURE THAT INPUTS HAVE BEEN PROPERLY ENTERED
     # =============================================================================================
@@ -915,19 +915,11 @@ def re_setup(polymorph_num='p1', temperature=0, pressure=1, molecule='',
     else:
         independenthinge = str(independent) + 'ind'
 
-    # Format the temperature name
-    tempname = number_to_string(int(float(temperature)))
-
     # Format the number of molecules
     if number_of_molecules == independent:
         molnum = str(number_of_molecules)
     else:
         molnum = str(number_of_molecules) + '_' + str(independent) + 'ind'
-
-    if pressure == '-1':
-        pname = ''
-    else:
-        pname = '_' + number_to_string(pressure) + 'P'
 
     # Format the potential
     if potential == 'oplsaa':
@@ -979,25 +971,13 @@ def re_setup(polymorph_num='p1', temperature=0, pressure=1, molecule='',
         if polymorph_num == 'gas':
             subprocess.call(['cp', templatepath + '/' + molecule + '_gas_1.gro', 're_setup/'])
         else:
-            if os.path.isfile(templatepath + '/' + molecule + '_' + polymorph_num + '_' + molnum + '_' + tempname + 'K_'
-                              + pname + 'bar_' + potname + '.gro'):
-                grofile = templatepath + '/' + molecule + '_' + polymorph_num + '_' + molnum + '_' + tempname + 'K_' + \
-                          pname + 'bar_' + potname
-            elif os.path.isfile(templatepath + '/' + molecule + '_' + polymorph_num + '_' + molnum + '_' + tempname +
-                                'K_1bar_' + potname + '.gro'):
-                grofile = templatepath + '/' + molecule + '_' + polymorph_num + '_' + molnum + '_' + tempname + \
-                          'K_1bar_' + potname
-            elif os.path.isfile(templatepath + '/' + molecule + '_' + polymorph_num + '_' + molnum + '_000K_' + potname
+            if os.path.isfile(templatepath + '/' + molecule + '_' + polymorph_num + '_' + molnum + '_000K_' + potname
                                 + '.gro'):
                 grofile = templatepath + '/' + molecule + '_' + polymorph_num + '_' + molnum + '_000K_' + potname
             elif os.path.isfile(templatepath + '/' + molecule + '_' + polymorph_num + '_' + molnum + '.gro'):
                 grofile = templatepath + '/' + molecule + '_' + polymorph_num + '_' + molnum
             else:
-                print(templatepath + '/' + molecule + '_' + polymorph_num + '_' + molnum + '_' + tempname + 'K_'
-                              + pname + 'bar_' + potname + '.gro',
-                      templatepath + '/' + molecule + '_' + polymorph_num + '_' + molnum + '_' + tempname + \
-                          'K_1bar_' + potname,
-                      templatepath + '/' + molecule + '_' + polymorph_num + '_' + molnum + '_000K_' + potname,
+                print(templatepath + '/' + molecule + '_' + polymorph_num + '_' + molnum + '_000K_' + potname,
                       templatepath + '/' + molecule + '_' + polymorph_num + '_' + molnum)
                 print("There are no available files in the runfiles directory for the combination: ")
                 print("Runfiles Directory: " + templatepath)
