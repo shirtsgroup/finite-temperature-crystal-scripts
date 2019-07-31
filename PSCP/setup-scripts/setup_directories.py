@@ -119,20 +119,20 @@ def setup_mdp_lambdas(current_lambda, current_gamma, polymorph_num='all', min_la
         print('Minimum Lambda: ', min_lambda)
         print('Maximum Lambda: ', max_lambda)
         print('Is not a valid lambda range!')
-        sys.exit()
+        return
 
     if (lambda_spacing <= 0) or (lambda_spacing > 100):
         print('Invalid Lambda Spacing: ', lambda_spacing)
-        sys.exit()
+        return
 
     if (min_lambda == max_lambda) and (current_lambda != max_lambda):
         print('Minimum Lambda: ', min_lambda, ' Maximum Lambda: ', max_lambda, ' and Lambda: ', current_lambda,
               ' are not the same!')
-        sys.exit()
+        return
 
     if not 1 <= lambda_exponent <= 4:
         print('Invalid Lambda Exponent: ', lambda_exponent)
-        sys.exit()
+        return
 
     # Gamma
     if (min_gamma < 0) or (max_gamma > 100) or (min_gamma > max_gamma):
@@ -140,35 +140,35 @@ def setup_mdp_lambdas(current_lambda, current_gamma, polymorph_num='all', min_la
         print('Minimum Gamma: ', min_gamma)
         print('Maximum Gamma: ', max_gamma)
         print('Is not a valid lambda range!')
-        sys.exit()
+        return
 
     if gamma_spacing <= 0:
         print('ERROR - Invalid Gamma Spacing: ', gamma_spacing)
-        sys.exit()
+        return
 
     if (min_gamma == max_gamma) and (current_gamma != max_gamma):
         print('ERROR - Minimum Gamma: ', min_gamma, ' Maximum Gamma: ', max_gamma, ' and Gamma: ', current_gamma,
               ' are not the same!')
-        sys.exit()
+        return
 
     if not 1 <= gamma_exponent <= 4:
         print('ERROR - Invalid Gamma Exponent: ', gamma_exponent)
-        sys.exit()
+        return
 
     #JOBPATH
     if jobpath == 'DefaultPath':
         print('ERROR - Enter the job path!')
-        sys.exit()
+        return
 
     #If we have no harmonic restraints and full interactions, no need to proceed further
     if (min_lambda == max_lambda) and (max_lambda == 0) and (min_gamma == max_gamma) and (max_gamma == 100):
         print('ERROR - No lambda values added.')
-        sys.exit()
+        return
 
     #If we are adding harmonic restraints, we should not be changing gamma (and vice versa)
     if (min_lambda != max_lambda) and (min_gamma != max_gamma):
         print('ERROR - Harmonic restraints and Interactions changing simultaneously!')
-        sys.exit()
+        return
 
     # Change the free energy setting from 'no' to 'yes' and the output from 0 to nstxout
     replace_line_starting_with(jobpath + '/equilibration.mdp', 'free_energy', 'free_energy = yes')
