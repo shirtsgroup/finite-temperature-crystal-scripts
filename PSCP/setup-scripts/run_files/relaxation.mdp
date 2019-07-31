@@ -1,0 +1,124 @@
+; TE - as written, this will only run in double.  Lines that need to be changed
+; to run in single precision are noted with alternates noted by SINGLE PRECISION
+; RUN CONTROL PARAMETERS = 
+integrator               = l-bfgs	; Algorithm (steep = steepest descent minimization)
+emtol			 = 0.01		; Stop minimization when the maximum force < 50.0 kJ/mol/nm
+emstep			 = 0.01 	; Energy step size
+; start time and timestep in ps = 
+tinit                    = 0
+dt                       = 0.0005
+nsteps                   = 100000
+; mode for center of mass motion removal = 
+
+; We remove center of mass motion.  In periodic boundary conditions, the center of mass motion is spurious; the periodic system is the same in all translational directions.
+comm-mode                = Linear
+; number of steps for center of mass motion removal = 
+nstcomm                  = 2
+
+; Output frequency for energies to log file and energy file = 
+nstlog                   = 10000
+nstenergy                = 10000
+nstcalcenergy            = 1
+
+; NEIGHBORSEARCHING PARAMETERS = 
+; cut-off scheme (Verlet: particle based cut-offs, group: using charge groups)
+cutoff-scheme            = Verlet
+; nblist update frequency = 
+nstlist                  = 10
+; ns algorithm (simple or grid) = 
+ns_type                  = grid
+; Periodic boundary conditions: xyz or no = 
+pbc                      = xyz
+
+; Output frequency and precision for .xtc file
+nstxout-compressed       = 10000
+compressed-x-precision   = 10000
+
+; Neighbor list should be at least 2 A greater than the either rcut or rvdw
+; nblist cut-off         = 
+rlist                    = 1.05
+
+; Method for doing electrostatics =
+coulombtype              = PME-Switch
+rcoulomb-switch          = 0.88
+rcoulomb                 = 0.9
+
+; Method for doing Van der Waals =
+vdw-type                 = PME
+vdw_modifier             = Potential-Shift
+;vdw-type                 = Cut-off
+;vdw_modifier             = Potential-switch
+; cut-off lengths        =
+;rvdw-switch              = 0.85
+rvdw                     = 0.9
+; Spacing for the PME/PPPM FFT grid =
+fourierspacing           = 0.13
+; EWALD/PME/PPPM parameters =
+pme_order                = 4
+ewald_rtol               = 1e-05
+ewald_geometry           = 3d
+epsilon_surface          = 0
+
+; Apply long range dispersion corrections for Energy and Pressure =
+DispCorr                 = no
+;DispCorr                 = EnerPres
+
+---------------
+; Slow temperature and pressure coupling that won't disturb the dynamics too much.  MTTK
+; gives very close to accurate volume distributions (Shirts, JCTC 2012)
+---------------
+
+nsttcouple =1
+nstpcouple =1
+
+; Groups to couple separately = 
+tc-grps                  = System
+; Time constant (ps) and reference temperature (K) = 
+tcoupl                   = no
+tau_t                    = 1.0
+ref_t                    = 400
+; pressure coupling
+pcoupl                   = no
+pcoupltype               = anisotropic
+; Time constant (ps) and reference P (bar)
+tau_p                    = 50.0
+ref_p                    = 1.0 1.0 1.0 0.0 0.0 0.0
+compressibility          = 4.5e-5 4.5e-5 4.5e-5 0 0 0; isothermal compressibility of water, bar^-1
+; Scaling of reference coordinates, No, All or COM
+refcoord-scaling         = No
+
+
+
+; We don't strictly need these, because it already has velocities
+; that are at the right temperature.  But including this is safer.
+----------
+gen_vel                  = yes
+gen_temp                 = 400
+gen_seed                 = 12  ; make sure you set the seed to be able to reproduce the simulation
+
+; no constraints so that normal modes analysis can be performed
+constraints              = none
+; Type of constraint algorithm = 
+constraint-algorithm     = lincs
+lincs-order              = 12
+lincs-iter               = 4
+
+; FREE ENERGY PARAMETERS
+free_energy              = yes
+init_lambda_state        = 0    ;Which lambda are we sampling from?
+delta_lambda             = 0    ;No change in lambda over time
+calc_lambda_neighbors    = -1   ;Calculate all energies and derivatives for use in MBAR
+nstdhdl                  = 0    ;How often do we output the dhdl information
+dhdl-print-energy        = yes  ;Print absolute energies as well as differences in dhdl file
+;Lambda Indicies         =  0
+coul-lambdas             = 0.000000
+vdw-lambdas              = 0.000000
+restraint_lambdas        = 0.000000
+couple-lambda0           = none
+couple-lambda1           = vdw-q
+couple-intramol          = yes
+couple-moltype           = MOLMOLMOLMOL
+
+; FORCE AVERAGING
+symmetry-averaging       = no
+
