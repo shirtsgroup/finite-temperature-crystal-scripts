@@ -51,8 +51,8 @@ def prob_diff(dT, P, T0, dmu, b_mu, dsig, b_sig):
     mu_2 = dmu * (T0 + dT) + b_mu
     sig_1 = dsig * T0 + b_sig
     sig_2 = dsig * (T0 + dT) + b_sig
-#    return (P - compute_prob(mu_1, mu_2, sig_1, sig_2))**2
-    return (P - determine_exchange_overlap([T0+dT, T0], [mu_2, mu_1], [sig_2, sig_1]))**2
+    return (P - compute_prob(mu_1, mu_2, sig_1, sig_2))**2
+#    return (P - determine_exchange_overlap([T0+dT, T0], [mu_2, mu_1], [sig_2, sig_1]))**2
 
 def compute_prob(mu_1, mu_2, sig_1, sig_2):
     c = (mu_2 * sig_1**2 - sig_2*(mu_1*sig_2 + sig_1*np.sqrt((mu_1 - mu_2)**2 + 2*(sig_1**2 - sig_2**2)*np.log10(sig_1/sig_2)))) / (sig_1**2 - sig_2**2)
@@ -122,6 +122,7 @@ def setup_ReplicaExchange_temperatures(inputs, check):
     while temp < float(inputs['rep_exch_in']['T_max']):
         dt = np.around(return_dT(dmu, b_mu, dsig, b_sig, inputs['rep_exch_in']['prob_overlap'], temp), 4)
         temp += np.absolute(dt[0])
+        print(temp)
         if temp < float(inputs['rep_exch_in']['T_max']):
             T_out.append(temp)
         else:
@@ -138,7 +139,7 @@ def setup_ReplicaExchange_temperatures(inputs, check):
     # Turning the desired temperatures into a string for the input file
     T = ""
     for i in T_out:
-        T += str(i) + " "
+        T += str(np.around(i, 4)) + " "
     return T, nodes
     
 
