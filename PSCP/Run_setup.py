@@ -185,6 +185,24 @@ if __name__ == '__main__':
         with open(args.input_file, 'w') as yaml_file:
             yaml.dump(inputs, yaml_file, default_flow_style=False)
 
+    # Setup a directory for re-setting up the simulations. 
+    # Instead of looking for a general template path directory, a re_setup directory will be created with all necessary input files
+    if (inputs['gen_in']['template_path'] != 're_setup'):
+        subprocess.call(['mkdir', 're_setup'])
+        for i in inputs['gen_in']['polymorph_num'].split():
+            setup.re_setup(polymorph_num=i, #temperature=inputs['temp_in']['temperatures'].split()[0], 
+                           #pressure=inputs['gen_in']['pressure'], 
+                           molecule=inputs['gen_in']['molecule'],
+                           number_of_molecules=inputs['gen_in']['number_of_molecules'], 
+                           independent=inputs['gen_in']['independent'], 
+                           potential=inputs['gen_in']['potential'],
+                           simulation=inputs['temp_in']['simulation_package'], 
+                           templatepath=inputs['gen_in']['template_path'])
+        inputs['gen_in']['template_path'] = 're_setup'
+        with open(args.input_file, 'w') as yaml_file:
+            yaml.dump(inputs, yaml_file, default_flow_style=False)
+
+
     # Creating a directory for each polymorph
     for i in inputs['gen_in']['polymorph_num'].split():
         if args.REP:

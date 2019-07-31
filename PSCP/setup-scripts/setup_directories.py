@@ -247,7 +247,6 @@ def append_files(file_1, file_2):
     f.write(f2.read())
     subprocess.call(['mv', 'hold', file_1])
 
-
 def setup_molecule(polymorph_num='p1', temperature=[], pressure=1, molecule='', number_of_molecules=0,
                    independent='same', equil_steps=100000, prod_steps=40000000, prodoutputs=20000, integrator='sd',
                    thermostat='nose-hoover', barostat='Parrinello-Rahman', cores=1, k_min=0, k_max=1000000, lambd=0,
@@ -869,174 +868,152 @@ def setup_molecule(polymorph_num='p1', temperature=[], pressure=1, molecule='', 
 #done
     print('Done!')
 
-"""
-NSA: SEE LINE 114 before implimenting this.
+
+def re_setup(polymorph_num='p1', molecule='', number_of_molecules=0, 
+             independent='same', potential='oplsaa', simulation='gromacs', 
+             templatepath=''):
+    # =============================================================================================
+    # ENSURE THAT INPUTS HAVE BEEN PROPERLY ENTERED
+    # =============================================================================================
+    # POTENTIAL
+    potentiallist = ["oplsaa", "gromos", "designedg", "oplsaatodesignedg", "designeda", "oplsaatodesigneda",
+                     "amoeba09", "DMA", "PCA", "amoeba09todesa", "amoeba09restraint", "amoeba09interactions",
+                     "amoeba09multinp", "amoeba09mononp", "amoeba09monoopls", "amoeba09opls", "day", "drude", "oplsaal"]
+
+    valid = False
+    for pot in potentiallist:
+        if potential == pot:
+            valid = True
+
+    if valid == False:
+        print("Unsupported potential: " + potential)
+        print("Supported potentials: " + potentiallist)
+        sys.exit()
+
+    # SIMULATION PACKAGE
+    if simulation not in ['gromacs', 'tinker']:
+        print("Invalid Simulation Package: " + simulation)
+        print("Supported Simulations: gromacs tinker")
+        sys.exit()
+
+    # =============================================================================================
+    # FORMAT INPUTS FOR THE NAME OF THE JOB
+    # =============================================================================================
+    def number_to_string(value):
+        if value < 10:
+            return_string = '00' + str(value)
+        elif value < 100:
+            return_string = '0' + str(value)
+        else:
+            return_string = str(value)
+        return return_string
+
+    # INDEPENDENT MOLECULES
+    if (independent == 'same') or (independent == number_of_molecules):
+        independent = number_of_molecules
+        independenthinge = str(number_of_molecules)
+    else:
+        independenthinge = str(independent) + 'ind'
+
+    # Format the number of molecules
+    if number_of_molecules == independent:
+        molnum = str(number_of_molecules)
+    else:
+        molnum = str(number_of_molecules) + '_' + str(independent) + 'ind'
+
+    # Format the potential
+    if potential == 'oplsaa':
+        potname = 'OPLS'
+    elif potential == 'gromos':
+        potname = 'GROM'
+    elif potential == 'designedg':
+        potname = 'DESG'
+    elif potential == 'oplsaatodesignedg':
+        potname = 'OPLSDESG'
+    elif potential == 'designeda':
+        potname = 'DESA'
+    elif potential == 'oplsaatodesigneda':
+        potname = 'OPLSDESA'
+    elif potential == 'DMA':
+        potname = 'DMA'
+    elif potential == 'PCA':
+        potname = 'PCA'
+    elif potential in ['amoeba09', 'amoeba09todesa', 'amoeba09restraint', 'amoeba09interactions']:
+        potname = 'AMO'
+    elif potential == 'amoeba09multinp':
+        potname = 'MULTI'
+    elif potential == 'amoeba09mononp':
+        potname = 'MONONP'
+    elif potential == 'amoeba09monoopls':
+        potname = 'MONOOPLS'
+    elif potential == 'amoeba09opls':
+        potname = 'AMOOPLS'
+    elif potential == 'day':
+        potname = 'DAY'
+    elif potential == 'drude':
+        potname = 'DRUDE'
+    elif potential == 'oplsaal':
+        potname = 'OPLSL'
+
+    # Format the simulation
+    if simulation == 'gromacs':
+        simname = 'GRO'
     elif simulation == 'tinker':
-        # Copy over the key and xyz file
+        simname = 'TIN'
+
+    # Name the job
+    gname = "pre_EQ"
+    tname = "topology"
+
+    if simulation == 'gromacs':
+        # COPY OVER THE INITIAL GRO FILE
+        print('Copying .gro file...')
         if polymorph_num == 'gas':
-            subprocess.call(['cp', templatepath + '/' + molecule + '_gas_1.key', jobpath + '/keyfile.key'])
-            subprocess.call(['cp', templatepath + '/' + molecule + '_gas_1.xyz', jobpath + '/molecule.xyz'])
-            xyzfile = molecule + '_gas_1'
+            subprocess.call(['cp', templatepath + '/' + molecule + '_gas_1.gro', 're_setup/'])
         else:
-            if os.path.isfile(templatepath + '/' + molecule + '_' + polymorph_num + '_' + str(number_of_molecules) +
-                              '_' + tempname + 'K_' + str(pressure) + 'bar_' + potname + '.xyz'):
-                xyzfile = molecule + '_' + polymorph_num + '_' + str(number_of_molecules) + '_' + tempname + 'K_' + \
-                          str(pressure) + 'bar_' + potname
-            elif os.path.isfile(templatepath + '/' + molecule + '_' + polymorph_num + '_' + str(number_of_molecules) +
-                                '_' + tempname + 'K_1bar_' + potname + '.xyz'):
-                xyzfile = molecule + '_' + polymorph_num + '_' + str(number_of_molecules) + '_' + tempname + 'K_1bar_' \
-                          + potname + '.xyz'
-            elif os.path.isfile(templatepath + '/' + molecule + '_' + polymorph_num + '_' + str(number_of_molecules) +
-                                '_000K_' + potname + '.xyz'):
-                xyzfile = molecule + '_' + polymorph_num + '_' + str(number_of_molecules) + '_000K_' + potname + '.xyz'
+            if os.path.isfile(templatepath + '/' + molecule + '_' + polymorph_num + '_' + molnum + '_000K_' + potname
+                                + '.gro'):
+                grofile = templatepath + '/' + molecule + '_' + polymorph_num + '_' + molnum + '_000K_' + potname
+            elif os.path.isfile(templatepath + '/' + molecule + '_' + polymorph_num + '_' + molnum + '.gro'):
+                grofile = templatepath + '/' + molecule + '_' + polymorph_num + '_' + molnum
             else:
-                xyzfile = molecule + '_' + polymorph_num + '_' + str(number_of_molecules)
-            subprocess.call(['cp', templatepath + '/' + xyzfile + '.xyz', jobpath + '/molecule.xyz'])
-            subprocess.call(['cp', templatepath + '/' + xyzfile + '.key', jobpath + '/keyfile.key'])
+                print(templatepath + '/' + molecule + '_' + polymorph_num + '_' + molnum + '_000K_' + potname,
+                      templatepath + '/' + molecule + '_' + polymorph_num + '_' + molnum)
+                print("There are no available files in the runfiles directory for the combination: ")
+                print("Runfiles Directory: " + templatepath)
+                print("Molecule: " + molecule)
+                print("Polymorph: " + polymorph_num)
+                print("Number: ", str(number_of_molecules))
+                print("Independent: ", str(independent))
+                sys.exit()
 
-        print('Using initial structure: ', xyzfile)
+            # Copying over pre-equilibrated structure from templatepaths
+            subprocess.call(['cp', grofile + '.gro', 're_setup/'])
 
-        # Modify the key and parameter file to match the potential
-        if potential in ['oplsaa', 'day']:
-            replace_string_in_text(jobpath + '/keyfile.key', 'amoeba09.prm', 'oplsaa.prm')
-            # ${SCRIPT_LOC} / addatomtypesindividual - p oplsaa - x ${JOBPATH} / molecule.xyz - M $MOLECULE
-        elif potential == 'oplsaafake':
-            replace_string_in_text(jobpath + '/keyfile.key', 'amoeba09.prm', 'oplsaafake.prm')
-            #${SCRIPT_LOC} / addatomtypesindividual - p oplsaa - x ${JOBPATH} / molecule.xyz - M $MOLECULE
-        elif potential == 'amoeba09todesa':
-            subprocess.call(['cp', templatepath + '/amoeba09todesa.prm', jobpath + '/param.prm'])
-            #python ${SCRIPT_LOC} / interpolate_itp.py - f ${JOBPATH} / param.prm - d $DELTA
-            #sed - i "s/PARAMETERS.*/PARAMETERS param.prm/g" ${JOBPATH} / keyfile.key
-            #${SCRIPT_LOC} / addatomtypesindividual - p amoeba09 - x ${JOBPATH} / molecule.xyz - M $MOLECULE
+        print('Using initial structure: ' + grofile)
+        # COPY OVER THE RESTRAINT GRO FILE
+        print('Copying restraint file...')
+        if polymorph_num == 'gas':
+            subprocess.call(['cp', templatepath + '/' + molecule + '_gas_1.gro', 're_setup/'])
         else:
-            pass
-            #sed - i "s/\/params.*/\/params\/${POTENTIAL}.prm/g" ${JOBPATH} / keyfile.key
-            #${SCRIPT_LOC} / addatomtypesindividual - p amoeba09 - x ${JOBPATH} / molecule.xyz - M $MOLECULE
+            if os.path.isfile(grofile + '_restraint.gro'):
+                subprocess.call(['cp', grofile + '_restraint.gro', 're_setup/'])
+            else:
+                subprocess.call(['cp', grofile + '.gro', 're_setup/'])
 
-        # Copy over the job specs file
-        subprocess.call(['cp', templatepath + '/job_specs.txt', jobpath + '/'])
-        replace_string_in_text(jobpath + '/job_specs.txt', 'SSSS', str(prod_steps))
-        replace_string_in_text(jobpath + '/job_specs.txt', 'dtdt', str(0.5))
+        # Copy over the molecule itp file
+        print('Copying itp file...')
+        subprocess.call(['cp', templatepath + '/' + molecule + '_' + potential + '.itp', 're_setup/'])
+        subprocess.call(['cp', templatepath + '/parameters.txt', 're_setup/'])
 
+        # COPY OVER THE INDEX FILE(for the force-averaging code)
+        if number_of_molecules == independent:
+            subprocess.call(['cp', templatepath + '/index.ndx', 're_setup/'])
+        else:
+            subprocess.call(['cp', templatepath + '/' + molecule + '_' + polymorph_num + '_' + molnum + '.ndx', 're_setup/'])
 
-cp ${TEMPLATEPATH} / job_specs.txt ${JOBPATH} / job_specs.txt
-sed - i
-"s/SSSS/$prod_steps/g" ${JOBPATH} / job_specs.txt
-sed - i
-"s/dtdt/0.5/g" ${JOBPATH} / job_specs.txt
-output_frac =$(echo "scale=8;x=1.0/${prod_output_frequency}; if(x<1) print 0; x" | bc)
-output_dt =$(echo "scale=4;x=${prod_output_frequency}*0.5*0.001; if(x<1) print 0; x" | bc)
-sed - i
-"s/XXXX/${output_dt}/g" ${JOBPATH} / job_specs.txt
-sed - i
-"s/TTTT/$TEMP/g" ${JOBPATH} / job_specs.txt
-if [ $ENSEMBLE == "NPT"]; then
-sed - i
-"s/EEEE/4   /g" ${JOBPATH} / job_specs.txt
-sed - i
-"s/(NVT)/(NPT)/g" ${JOBPATH} / job_specs.txt
-sed - i
-"s/PPPP/$PRESSURE/g" ${JOBPATH} / job_specs.txt
-else
-sed - i
-"s/EEEE/2   /g" ${JOBPATH} / job_specs.txt
-sed - i
-"s/PPPP//g" ${JOBPATH} / job_specs.txt
-fi
-
-# Add on the relevant supercell expansions to make the gromacs supercell
-less ${TEMPLATEPATH} /${MOLNAME}
-_${polymorph_num}
-_${MOLECULES}
-_expansion.txt >> ${JOBPATH} / job_specs.txt
-
-# Copy over local and cluster submission scripts
-echo
-"Copying local and cluster submission scripts..."
-cp ${TEMPLATEPATH} / submit_localitc_tinker.sh ${JOBPATH} / submit_localitc.sh
-cp ${TEMPLATEPATH} / submit_cluster_tinker.slurm ${JOBPATH} / submit_cluster.slurm
-
-# Modify the local and cluster submission scripts
-sed - i
-"s/SSSS/$prod_steps/g" ${JOBPATH} / submit_cluster.slurm
-sed - i
-"s/SSSS/$prod_steps/g" ${JOBPATH} / submit_localitc.sh
-sed - i
-"s/dtdt/0.5/g" ${JOBPATH} / submit_cluster.slurm
-sed - i
-"s/dtdt/0.5/g" ${JOBPATH} / submit_localitc.sh
-output_dt =$(echo "scale=4;x=${prod_output_frequency}*0.5*0.001; if(x<1) print 0; x" | bc)
-sed - i
-"s/XXXX/${output_dt}/g" ${JOBPATH} / submit_cluster.slurm
-sed - i
-"s/XXXX/${output_dt}/g" ${JOBPATH} / submit_localitc.sh
-sed - i
-"s/TTTT/$TEMP/g" ${JOBPATH} / submit_cluster.slurm
-sed - i
-"s/TTTT/$TEMP/g" ${JOBPATH} / submit_localitc.sh
-if [ $ENSEMBLE == "NPT"]; then
-sed - i
-"s/EEEE/4   /g" ${JOBPATH} / submit_cluster.slurm
-sed - i
-"s/EEEE/4   /g" ${JOBPATH} / submit_localitc.sh
-sed - i
-"s/PPPP/$PRESSURE/g" ${JOBPATH} / submit_cluster.slurm
-sed - i
-"s/PPPP/$PRESSURE/g" ${JOBPATH} / submit_localitc.sh
-else
-sed - i
-"s/EEEE/2   /g" ${JOBPATH} / submit_cluster.slurm
-sed - i
-"s/EEEE/2   /g" ${JOBPATH} / submit_localitc.sh
-sed - i
-"s/PPPP//g" ${JOBPATH} / submit_cluster.slurm
-sed - i
-"s/PPPP//g" ${JOBPATH} / submit_localitc.sh
-fi
-
-# Handle any special exceptions for the interpolated potential
-if ["$POTENTIAL" == "amoeba09todesa"]; then
-sed - i
-"s/reweightjobtinker.*/reweightjobtinker -s tinker -u amoeba09todesa -d 10/g" ${JOBPATH} / submit_cluster.slurm
-sed - i
-"s/reweightjobtinker.*/reweightjobtinker -s tinker -u amoeba09todesa -d 10/g" ${JOBPATH} / submit_localitc.sh
-elif ["$POTENTIAL" == "amoeba09restraint"];
-then
-sed - i
-"s/reweightjobtinker.*/reweightjobtinker -s tinker -u amoeba09 -d 10 -e 1/g" ${JOBPATH} / submit_cluster.slurm
-sed - i
-"s/reweightjobtinker.*/reweightjobtinker -s tinker -u amoeba09 -d 10 -e 1/g" ${JOBPATH} / submit_localitc.sh
-elif ["$POTENTIAL" == "amoeba09interactions"];
-then
-sed - i
-"s/reweightjobtinker.*/reweightjobtinker -s tinker -u amoeba09interactions -d 10 -e 1/g" ${
-                                                                                          JOBPATH} / submit_cluster.slurm
-sed - i
-"s/reweightjobtinker.*/reweightjobtinker -s tinker -u amoeba09interactions -d 10 -e 1/g" ${JOBPATH} / submit_localitc.sh
-elif ["$POTENTIAL" == "oplsaa"];
-then
-sed - i
-"s/reweightjobgromacs.*/reweightjobgromacs -s tinker -u oplsaa/g" ${JOBPATH} / submit_cluster.slurm
-sed - i
-"s/reweightjobgromacs.*/reweightjobgromacs -s tinker -u oplsaa/g" ${JOBPATH} / submit_localitc.sh
-sed - i
-"s/reweightjobtinker.*/reweightjobtinker -s tinker -u oplsaa/g" ${JOBPATH} / submit_cluster.slurm
-sed - i
-"s/reweightjobtinker.*/reweightjobtinker -s tinker -u oplsaa/g" ${JOBPATH} / submit_localitc.sh
-fi
-
-# Set the number of threads
-sed - i
-"s/-nt 1/-nt ${cores}/g" ${JOBPATH} / submit_localitc.sh
-sed - i
-"s/-nt 1/-nt ${cores}/g" ${JOBPATH} / submit_cluster.slurm
-sed - i
-"s/ntasks=1/ntasks=${cores}/g" ${JOBPATH} / submit_cluster.slurm
-
-fi
-
-"""
-
-
+        # COPY OVER THE TOPOLOGY FILE
+        print('Copying topology file...')
+        subprocess.call(['cp', templatepath + '/topology.top', 're_setup/'])
 
 
