@@ -159,13 +159,20 @@ if __name__ == '__main__':
     parser.add_argument('-n', '--num_replica', dest='num_replica', help="Number of replica in the simulation. WARNING: This code assumes the replica are in directories that go from {0,1,2,...N} ex. -n N+1")
     parser.add_argument('-o', '--output_string', dest='output_string', default='PROD', help='The string for the output trr and edr files ex. PROD.trr and PROD.edr')
     parser.add_argument('-m', '--mdp', dest='mdp', default='production.mdp', help='GROMACS .mdp file in each of the replcia directories')
-    parser.add_argument('-i', '--initial_structure', dest='initial_structure', default='EQ.gro', help='GROMACS .gro file to start from in each of the replica directories')
+    #parser.add_argument('-i', '--initial_structure', dest='initial_structure', default='EQ.gro', help='GROMACS .gro file to start from in each of the replica directories')
     parser.add_argument('-r', '--restraints', dest='restraints', help='GROMACS .gro file for the restraints to be applied to the simulation')
     parser.add_argument('-t', '--topology', dest='topology', default='topology.top', help='GROMACS topology file in each replica')
     parser.add_argument('-x', '--replex', dest='replex', default='50', help='Interval for replica exchange')
     parser.add_argument('-E', '--nex', dest='nex', default=True, help='True will set the number of random exchanges to (number of replica)^3, False will perform nearest neighbor exchange')
 
     args = parser.parse_args()
-    run_REMD_gromacs_multi(int(args.num_replica), output_string=args.output_string, mdp=args.mdp, initial_structure=args.initial_structure,
+    if os.path.isfile('EQ.gro'):
+        initial_structure == 'EQ.gro'
+    elif os.path.isfile('ANNEAL.gro'):
+        initial_structure == 'ANNEAL.gro'
+    else:
+        initial_structure == 'pre_EQ.gro'
+
+    run_REMD_gromacs_multi(int(args.num_replica), output_string=args.output_string, mdp=args.mdp, initial_structure=initial_structure,
                      restraints=args.restraints, topology=args.topology, replex=int(args.replex), nex=bool(args.nex))
 
