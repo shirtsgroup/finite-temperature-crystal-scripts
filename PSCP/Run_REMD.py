@@ -133,7 +133,6 @@ def run_REMD_gromacs_multi(num_replica, output_string='PROD', mdp='production.md
                                               '-o', str(i) + '/' + new_file + '.gro', 
                                               '-vel'], stdin=c.stdout)
             c.wait()
-            #subprocess.call("echo '0' | gmx_mpi trjconv -f " + str(i) + "/" + last_file + ".cpt -s " + str(i) + "/" + last_file + ".tpr -o " + str(i) + "/" + new_file + ".gro -vel", shell=True)
 
         # Running the simulation
         run_REMD_gromacs(num_replica, output_string=new_file, mdp=new_file + '.mdp', initial_structure=new_file + '.gro',
@@ -147,7 +146,12 @@ def run_REMD_gromacs_multi(num_replica, output_string='PROD', mdp='production.md
             for i in range(num_replica):
                 dirr = str(i) + '/' + output_string + '_' + str(j) 
                 subprocess.call("gmx trjconv -f " + dirr + ".trr -t0 " + str(start_t) + " -o " + dirr + ".trr", shell=True)
-                subprocess.call("echo " + str(start_t) + " | gmx eneconv -f " + dirr + ".edr -o " + dirr + ".edr -settime yes", shell=True)
+                c = subprocess.Popen(['echo', str(start_t)], stdout=subprocess.PIPE)
+                output = subprocess.check_output(['gmx', 'eneconv',
+                                                  '-f', dirr + '.edr',
+                                                  '-o', dirr + '.edr',
+                                                  '-settime', 'yes'], stdin=c.stdout)
+                c.wait()
 
         # Concatinating the edr and trr files together
         for i in range(num_replica):
