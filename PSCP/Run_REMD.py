@@ -167,11 +167,11 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
     if os.path.isfile('EQ.gro'):
-        initial_structure == 'EQ.gro'
+        initial_structure = 'EQ.gro'
     elif os.path.isfile('ANNEAL.gro'):
-        initial_structure == 'ANNEAL.gro'
+        initial_structure = 'ANNEAL.gro'
     else:
-        initial_structure == 'pre_EQ.gro'
+        initial_structure = 'pre_EQ.gro'
 
     run_REMD_gromacs_multi(int(args.num_replica), output_string=args.output_string, mdp=args.mdp, initial_structure=initial_structure,
                      restraints=args.restraints, topology=args.topology, replex=int(args.replex), nex=bool(args.nex))
