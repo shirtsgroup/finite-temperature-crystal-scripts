@@ -126,7 +126,14 @@ def run_REMD_gromacs_multi(num_replica, output_string='PROD', mdp='production.md
             new_mdp(last_t, str(i) + '/' + last_file + '.mdp', str(i) + '/' + new_file + '.mdp')
 
             # Creating a new gro file with the trajectories form the last checkpoint
-            subprocess.call("echo '0' | gmx_mpi trjconv -f " + str(i) + "/" + last_file + ".cpt -s " + str(i) + "/" + last_file + ".tpr -o " + str(i) + "/" + new_file + ".gro -vel", shell=True)
+            c = subprocess.Popen(['echo', '0'], stdout=subprocess.PIPE)
+            output = subprocess.check_output(['gmx', 'trjconv', 
+                                              '-f', str(i) + '/' + last_file + '.cpt', 
+                                              '-s', str(i) + '/' + last_file + '.tpr', 
+                                              '-o', str(i) + '/' + new_file + '.gro', 
+                                              '-vel'], stdin=c.stdout)
+            c.wait()
+            #subprocess.call("echo '0' | gmx_mpi trjconv -f " + str(i) + "/" + last_file + ".cpt -s " + str(i) + "/" + last_file + ".tpr -o " + str(i) + "/" + new_file + ".gro -vel", shell=True)
 
         # Running the simulation
         run_REMD_gromacs(num_replica, output_string=new_file, mdp=new_file + '.mdp', initial_structure=new_file + '.gro',
