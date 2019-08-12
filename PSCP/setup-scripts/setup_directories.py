@@ -107,8 +107,11 @@ def setup_replica_exchange(nodes, directories, process_number, exchange_number, 
 
 
 
-def setup_mdp_lambdas(current_lambda, current_gamma, polymorph_num='all', min_lambda=0, max_lambda=100, lambda_spacing=-1, lambda_exponent=2, min_gamma=0, max_gamma=100,
-                      gamma_spacing=-1, gamma_exponent=2, jobpath='DefaultPath'):
+def setup_mdp_lambdas(current_lambda, current_gamma, polymorph_num='all', min_lambda=0, max_lambda=100, 
+                      lambda_spacing=-1, lambda_exponent=2, min_gamma=0, max_gamma=100,
+                      gamma_spacing=-1, gamma_exponent=2, jobpath='DefaultPath', 
+                      remove_bonded_interactions=False, equil_output_frequency=1000,
+                      prod_output_frequency=1000):
     # Python script to automatically set up the mdp files to take on multiple lambda values
     # Original script written in bash by: Eric Dybeck on 09/12/2014
     # Converted to python by: Nate Abraham on 01/23/2019
@@ -173,8 +176,8 @@ def setup_mdp_lambdas(current_lambda, current_gamma, polymorph_num='all', min_la
     # Change the free energy setting from 'no' to 'yes' and the output from 0 to nstxout
     replace_line_starting_with(jobpath + '/equilibration.mdp', 'free_energy', 'free_energy = yes')
     replace_line_starting_with(jobpath + '/production.mdp', 'free_energy', 'free_energy = yes')
-    replace_line_starting_with(jobpath + '/equilibration.mdp', 'nstdhdl', 'nstdhdl = ' + str(log_equil))
-    replace_line_starting_with(jobpath + '/production.mdp', 'nstdhdl', 'nstdhdl = ' + str(log_equil))
+    replace_line_starting_with(jobpath + '/equilibration.mdp', 'nstdhdl', 'nstdhdl = ' + str(equil_output_frequency))
+    replace_line_starting_with(jobpath + '/production.mdp', 'nstdhdl', 'nstdhdl = ' + str(prod_output_frequency))
 
     # Setting arrays for 
     if min_lambda == max_lambda:
@@ -183,7 +186,7 @@ def setup_mdp_lambdas(current_lambda, current_gamma, polymorph_num='all', min_la
         indicies = np.arange(0, (max_gamma - min_gamma) / gamma_spacing + 1, 1)
         lambda_points = np.ones(len(indicies))
         gamma_points = (gammas / max_gamma) ** gamma_exponent
-        init_lambda = np.where(current_gamma == gammass)[0][0]
+        init_lambda = np.where(current_gamma == gammas)[0][0]
 
         # Setting interaction end points
         replace_string_in_text(jobpath + '/equilibration.mdp', 'couple-lambda0', 'couple-lambda0           = none') 
@@ -192,7 +195,7 @@ def setup_mdp_lambdas(current_lambda, current_gamma, polymorph_num='all', min_la
         replace_string_in_text(jobpath + '/production.mdp', 'couple-lambda1', 'couple-lambda1           = vdw-q')
         replace_string_in_text(jobpath + '/equilibration.mdp', 'couple-intramol', 'couple-intramol          = yes') 
         replace_string_in_text(jobpath + '/production.mdp', 'couple-intramol', 'couple-intramol          = yes')
-
+            
     elif min_gamma == max_gamma:
         # Setting up vectors for restraining atoms
         lambdas = np.arange(min_lambda, max_lambda + 1, lambda_spacing)
@@ -205,9 +208,24 @@ def setup_mdp_lambdas(current_lambda, current_gamma, polymorph_num='all', min_la
     replace_string_in_text(jobpath + '/equilibration.mdp', 'init_lambda_state', 'init_lambda_state        = ' + str(init_lambda))
     replace_string_in_text(jobpath + '/production.mdp', 'init_lambda_state', 'init_lambda_state        = ' + str(init_lambda))
 
+    # Write in the lambda states
+    replace_string_in_text(jobpath + '/equilibration.mdp', 'restraint_lambdas', 'restraint_lambdas   = ' + float_array_to_string(lambda_points))
+    replace_string_in_text(jobpath + '/equilibration.mdp', 'coul-lambdas', 'coul-lambdas   = ' + float_array_to_string(gamma_points))
+    replace_string_in_text(jobpath + '/equilibration.mdp', 'vdw-lambdas', 'vdw-lambdas   = ' + float_array_to_string(gamma_points))
+    replace_string_in_text(jobpath + '/production.mdp', 'restraint_lambdas', 'restraint_lambdas   = ' + float_array_to_string(lambda_points))
+    replace_string_in_text(jobpath + '/production.mdp', 'coul-lambdas', 'coul-lambdas   = ' + float_array_to_string(gamma_points))
+    replace_string_in_text(jobpath + '/production.mdp', 'vdw-lambdas', 'vdw-lambdas   = ' + float_array_to_string(gamma_points))
+
+    if remove_bonded_interactions == True:
+        replace_string_in_text(jobpath + '/equilibration.mdp', ';bonded-lambdas', 'bonded-lambdas   = ' + float_array_to_string(gamma_points))
+        replace_string_in_text(jobpath + '/production.mdp', ';bonded-lambdas', 'bonded-lambdas   = ' + float_array_to_string(gamma_points))
     
    
-
+def float_array_to_string(array_values):
+    string = ''
+    for i in array_values:
+        string += str(np.around(i, 6)) + ' '
+    return string
 
 ################################################################################
 #### Specific functions for setup_molecule
@@ -479,6 +497,9 @@ def setup_molecule(polymorph_num='p1', temperature=[], pressure=1, molecule='', 
     prod_trr_output_frequency = int(prod_steps / 100)
     anneal_output_frequency = int(anneal_steps / 10000)  # The 10000 could be a user specified variable
     anneal_trr_output_frequency = int(anneal_steps / 10000)
+
+    # For PSCP setting if an NPT equilibration should be run prior to NPT
+    NPT_equil = False
     if simulation == 'gromacs':
         # COPY OVER THE INITIAL GRO FILE
         print('Copying .gro file...')
@@ -491,13 +512,19 @@ def setup_molecule(polymorph_num='p1', temperature=[], pressure=1, molecule='', 
                           pname + 'bar_' + potname
             elif os.path.isfile(templatepath + '/' + molecule + '_' + polymorph_num + '_' + molnum + '_' + tempname +
                                 'K_1bar_' + potname + '.gro'):
-                grofile = templatepath + '/' + molecule + '_' + polymorph_num + '_' + molnum + '_' + tempname + \
+                 grofile = templatepath + '/' + molecule + '_' + polymorph_num + '_' + molnum + '_' + tempname + \
                           'K_1bar_' + potname
+                 if ensemble == 'NVT':
+                     NPT_equil = True
             elif os.path.isfile(templatepath + '/' + molecule + '_' + polymorph_num + '_' + molnum + '_000K_' + potname
                                 + '.gro'):
-                grofile = templatepath + '/' + molecule + '_' + polymorph_num + '_' + molnum + '_000K_' + potname
+                 grofile = templatepath + '/' + molecule + '_' + polymorph_num + '_' + molnum + '_000K_' + potname
+                 if ensemble == 'NVT':
+                     NPT_equil = True
             elif os.path.isfile(templatepath + '/' + molecule + '_' + polymorph_num + '_' + molnum + '.gro'):
-                grofile = templatepath + '/' + molecule + '_' + polymorph_num + '_' + molnum
+                 grofile = templatepath + '/' + molecule + '_' + polymorph_num + '_' + molnum
+                 if ensemble == 'NVT':
+                     NPT_equil = True
             else:
                 print("There are no available files in the runfiles directory for the combination: ")
                 print("Runfiles Directory: " + templatepath)
@@ -540,11 +567,15 @@ def setup_molecule(polymorph_num='p1', temperature=[], pressure=1, molecule='', 
             subprocess.call(['cp', path + 'run_files/anneal.mdp', jobpath + '/anneal.mdp'])
             subprocess.call(['cp', path + 'run_files/minimization.mdp', jobpath + '/minimization.mdp'])
             subprocess.call(['cp', path + 'run_files/relaxation.mdp', jobpath + '/relaxation.mdp'])
+            if NPT_equil == True:
+                subprocess.call(['cp', path + 'run_files/equilibration.mdp', jobpath + '/npt_equilibration.mdp'])
         replace_string_in_text(jobpath + '/minimization.mdp', 'MOLMOLMOLMOL', molecule)
         replace_string_in_text(jobpath + '/relaxation.mdp', 'MOLMOLMOLMOL', molecule)
         replace_string_in_text(jobpath + '/equilibration.mdp', 'MOLMOLMOLMOL', molecule)
         replace_string_in_text(jobpath + '/production.mdp', 'MOLMOLMOLMOL', molecule)
         replace_string_in_text(jobpath + '/anneal.mdp', 'MOLMOLMOLMOL', molecule)
+        if NPT_equil == True:
+            replace_string_in_text(jobpath + '/npt_equilibration.mdp', 'MOLMOLMOLMOL', molecule)
 
         print('Editing .mdp files...')
         # TEMPERATURE COUPLING
@@ -569,9 +600,15 @@ def setup_molecule(polymorph_num='p1', temperature=[], pressure=1, molecule='', 
                                    / 20000)
             replace_string_in_text(jobpath + '/anneal.mdp', 'STARTTEMP', anneal_temp)
             replace_string_in_text(jobpath + '/anneal.mdp', 'ENDTEMP', str(temperature))
+            if NPT_equil == True:
+                replace_line_starting_with(jobpath + '/npt_equilibration.mdp', 'tcoupl', 'tcoupl = ' + thermostat)
+                replace_line_starting_with(jobpath + '/npt_equilibration.mdp', 'ref_t', 'ref_t = ' + str(temperature))
+                replace_line_starting_with(jobpath + '/npt_equilibration.mdp', 'gen_temp', 'gen_temp = ' + str(temperature))
+                replace_line_starting_with(jobpath + '/npt_equilibration.mdp', 'pcoupl', 'pcoupl = berendsen')
+                replace_line_starting_with(jobpath + '/npt_equilibration.mdp', 'tau_p', 'tau_p = 1.0')
 
         # PRESSURE COUPLING
-        if ensemble == 'NPT':
+        if (ensemble == 'NPT'):
             # Updating the pressure coupling in the .mdp file
             replace_line_starting_with(jobpath + '/equilibration.mdp', 'pcoupl', 'pcoupl = berendsen')
             replace_line_starting_with(jobpath + '/production.mdp', 'pcoupl', 'pcoupl = ' + barostat)
@@ -636,6 +673,8 @@ def setup_molecule(polymorph_num='p1', temperature=[], pressure=1, molecule='', 
         replace_line_starting_with(jobpath + '/anneal.mdp', 'nsteps', 'nsteps = ' + str(anneal_steps))
         replace_line_starting_with(jobpath + '/equilibration.mdp', 'nsteps', 'nsteps = ' + str(equil_steps))
         replace_line_starting_with(jobpath + '/production.mdp', 'nsteps', 'nsteps = ' + str(prod_steps))
+        if NPT_equil == True:
+            replace_line_starting_with(jobpath + '/npt_equilibration.mdp', 'nsteps', 'nsteps = ' + str(equil_steps))
 
         # GENERATE VELOCITIES
         if anneal_steps > 0:
@@ -661,20 +700,28 @@ def setup_molecule(polymorph_num='p1', temperature=[], pressure=1, molecule='', 
                                    str(prod_output_frequency))
         replace_line_starting_with(jobpath + '/anneal.mdp', 'nstxout', 'nstxout = ' +
                                    str(prod_trr_output_frequency))
+        if NPT_equil == True:
+            replace_line_starting_with(jobpath + '/npt_equilibration.mdp', 'nstlog', 'nstlog = ' + str(equil_output_frequency))
+            replace_line_starting_with(jobpath + '/npt_equilibration.mdp', 'nstenergy', 'nstenergy = ' +
+                                       str(equil_output_frequency))
+            replace_line_starting_with(jobpath + '/npt_equilibration.mdp', 'nstxout', 'nstxout = ' +
+                                       str(equil_trr_output_frequency))
 
         # INTEGRATOR
         replace_line_starting_with(jobpath + '/equilibration.mdp', 'integrator', 'integrator = ' + integrator)
         replace_line_starting_with(jobpath + '/production.mdp', 'integrator', 'integrator = ' + integrator)
         replace_line_starting_with(jobpath + '/anneal.mdp', 'integrator', 'integrator = ' + integrator)
+        if NPT_equil == True:
+            replace_line_starting_with(jobpath + '/npt_equilibration.mdp', 'integrator', 'integrator = ' + integrator)
 
         # FREE ENERGY PARAMETERS
-#NSA: need to re-write setup_mdpLambdas as a python script
         setup_mdp_lambdas(lambd, gamma, polymorph_num=polymorph_num, 
                           min_lambda=min_lambda, max_lambda=max_lambda, 
                           lambda_spacing=lambda_spacing, 
                           lambda_exponent=lambda_exponent, min_gamma=min_gamma, 
                           max_gamma=max_gamma, gamma_spacing=gamma_spacing, 
-                          gamma_exponent=gamma_exponent, jobpath=jobpath)
+                          gamma_exponent=gamma_exponent, jobpath=jobpath, equil_output_frequency=equil_output_frequency,
+                          prod_output_frequency=prod_output_frequency)
 
         #subprocess.call(['setup_mdpLambdas', '-L', str(lambd), '-W', str(min_lambda), '-S', str(max_lambda),
         #                 '-s', str(lambda_spacing), '-A', str(max_gamma), '-B', str(min_gamma), '-G', str(gamma),

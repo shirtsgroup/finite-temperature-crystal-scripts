@@ -258,12 +258,12 @@ if __name__ == '__main__':
 #                                              + ' -h ' + str(inputs['gen_in']['hinge'])], shell=True)
 #
     if inputs['temp_in']['run_temperature'] == True:
-        run_production = "false"
+        run_production = False
 
         # Determining if there needs to be a production for individual temperatures
         # If replica exchange is occuring, the production run for the submit_cluster.slurm scripts is turned off
         if (inputs['temp_in']['temp_prod_steps'] > 0) and not args.REP:
-            run_production = "true"
+            run_production = True
 
         # Setting up the directories for the temperature run
         setup.setup_temperature(inputs, run_production)

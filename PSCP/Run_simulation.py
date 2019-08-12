@@ -33,6 +33,23 @@ def check_bool(val):
         print("Option not valid")
         sys.exit()
 
+# Run a NPT simulation if interactions are being turned off and not starting from the right T and P
+if os.path.isfile('npt_equilibration.npt'):
+    # Running annealing of crystal
+    subprocess.call(['mv', 'pre_EQ.gro', 'pre_NPT.gro'])
+
+    if check_bool(args.indexing) == True:
+        # For force averaging
+        subprocess.call('gmx grompp -f npt_equilibration.mdp -c pre_NPT.gro -r restraint.gro -p topology.top -o NPT_equil.tpr -n index.ndx -maxwarn 10', shell=True)
+    else:
+        subprocess.call('gmx grompp -f npt_equilibration.mdp -c pre_NPT.gro -r restraint.gro -p topology.top -o NPT_equil.tpr -maxwarn 10', shell=True)
+
+    # Running the annealing simulation
+    subprocess.call("gmx mdrun -nt " + str(args.num_cores) + " -v -deffnm NPT_equil -dhdl dhdl_NPT_equil", shell=True)
+
+    # Extracing the final frame from the checkpoint file
+    subprocess.call("echo '0' | gmx trjconv -f NPT_equil.cpt -s NPT_equil.tpr -o pre_EQ.gro -pbc whole -ndec 12", shell=True)
+
 # Run temperature annealing
 if check_bool(args.anneal) == True:
     # Running annealing of crystal
