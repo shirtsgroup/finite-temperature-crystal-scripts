@@ -177,7 +177,9 @@ if __name__ == '__main__':
     parser.add_argument('-E', '--nex', dest='nex', default=True, help='True will set the number of random exchanges to (number of replica)^3, False will perform nearest neighbor exchange')
 
     args = parser.parse_args()
-    if os.path.isfile('EQ.gro'):
+    if os.path.isfile('PROD.gro'):
+        initial_structure = 'PROD.gro'
+    elif os.path.isfile('EQ.gro'):
         initial_structure = 'EQ.gro'
     elif os.path.isfile('ANNEAL.gro'):
         initial_structure = 'ANNEAL.gro'
