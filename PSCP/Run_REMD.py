@@ -33,7 +33,7 @@ def run_REMD_gromacs(num_replica, output_string='PROD', mdp='production.mdp', in
     replica_dirs = '{'
     for i in range(num_replica):
         dir_string = str(i) + '/'
-        subprocess.call(['gmx', 'grompp', '-f', dir_string + mdp, '-c', dir_string + initial_structure, 
+        subprocess.call(['gmx_mpi', 'grompp', '-f', dir_string + mdp, '-c', dir_string + initial_structure, 
                          restraint_string[0], dir_string + restraint_string[1], '-p', dir_string + topology, 
                          '-o', dir_string + output_string + '.tpr', '-maxwarn', '10'])
         subprocess.call(['rm', 'mdout.mdp'])
@@ -127,7 +127,7 @@ def run_REMD_gromacs_multi(num_replica, output_string='PROD', mdp='production.md
 
             # Creating a new gro file with the trajectories form the last checkpoint
             c = subprocess.Popen(['echo', '0'], stdout=subprocess.PIPE)
-            output = subprocess.check_output(['gmx', 'trjconv', 
+            output = subprocess.check_output(['gmx_mpi', 'trjconv', 
                                               '-f', str(i) + '/' + last_file + '.cpt', 
                                               '-s', str(i) + '/' + last_file + '.tpr', 
                                               '-o', str(i) + '/' + new_file + '.gro', 
@@ -145,9 +145,9 @@ def run_REMD_gromacs_multi(num_replica, output_string='PROD', mdp='production.md
             start_t = get_checkpoint_time(' 0/' + output_string + '_' + str(j - 1) + '.cpt')
             for i in range(num_replica):
                 dirr = str(i) + '/' + output_string + '_' + str(j) 
-                subprocess.call("gmx trjconv -f " + dirr + ".trr -t0 " + str(start_t) + " -o " + dirr + ".trr", shell=True)
+                subprocess.call("gmx_mpi trjconv -f " + dirr + ".trr -t0 " + str(start_t) + " -o " + dirr + ".trr", shell=True)
                 c = subprocess.Popen(['echo', str(start_t)], stdout=subprocess.PIPE)
-                output = subprocess.check_output(['gmx', 'eneconv',
+                output = subprocess.check_output(['gmx_mpi', 'eneconv',
                                                   '-f', dirr + '.edr',
                                                   '-o', dirr + '.edr',
                                                   '-settime', 'yes'], stdin=c.stdout)
@@ -161,8 +161,8 @@ def run_REMD_gromacs_multi(num_replica, output_string='PROD', mdp='production.md
                 trr_list += str(i) + '/' + j + '.trr '
                 edr_list += str(i) + '/' + j + '.edr '
             dirr = str(i) + '/' + output_string 
-            subprocess.call("gmx trjcat -f " + trr_list + "-o " + dirr + ".trr -cat", shell=True)
-            subprocess.call("gmx eneconv -f " + edr_list + "-o " + dirr + ".edr", shell=True)
+            subprocess.call("gmx_mpi trjcat -f " + trr_list + "-o " + dirr + ".trr -cat", shell=True)
+            subprocess.call("gmx_mpi eneconv -f " + edr_list + "-o " + dirr + ".edr", shell=True)
 
 if __name__ == '__main__':
     import argparse
