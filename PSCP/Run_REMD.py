@@ -79,6 +79,7 @@ def new_mdp(last_t, mdp, new_mdp):
 def get_checkpoint_time(cpt_file):
     # runs gmx_mpi check on the input cpt_file to determine where the new simulation must start from
     hold = subprocess.check_output('gmx_mpi check -f ' + cpt_file, shell=True, stderr=subprocess.STDOUT).decode("utf-8").split('\n')
+  
     for i in hold:
         if len(i.split()) > 1:
             if i.split()[0] == 'Last':
@@ -127,7 +128,7 @@ def run_REMD_gromacs_multi(num_replica, output_string='PROD', mdp='production.md
 
             # Creating a new gro file with the trajectories form the last checkpoint
             c = subprocess.Popen(['echo', '0'], stdout=subprocess.PIPE)
-            output = subprocess.check_output(['gmx_mpi', 'trjconv', 
+            output = subprocess.check_output(['gmx', 'trjconv', 
                                               '-f', str(i) + '/' + last_file + '.cpt', 
                                               '-s', str(i) + '/' + last_file + '.tpr', 
                                               '-o', str(i) + '/' + new_file + '.gro', 
@@ -147,7 +148,7 @@ def run_REMD_gromacs_multi(num_replica, output_string='PROD', mdp='production.md
                 dirr = str(i) + '/' + output_string + '_' + str(j) 
                 subprocess.call("gmx_mpi trjconv -f " + dirr + ".trr -t0 " + str(start_t) + " -o " + dirr + ".trr", shell=True)
                 c = subprocess.Popen(['echo', str(start_t)], stdout=subprocess.PIPE)
-                output = subprocess.check_output(['gmx_mpi', 'eneconv',
+                output = subprocess.check_output(['gmx', 'eneconv',
                                                   '-f', dirr + '.edr',
                                                   '-o', dirr + '.edr',
                                                   '-settime', 'yes'], stdin=c.stdout)
@@ -185,7 +186,6 @@ if __name__ == '__main__':
         initial_structure = 'ANNEAL.gro'
     else:
         initial_structure = 'pre_EQ.gro'
-
     run_REMD_gromacs_multi(int(args.num_replica), output_string=args.output_string, mdp=args.mdp, initial_structure=initial_structure,
                      restraints=args.restraints, topology=args.topology, replex=int(args.replex), nex=bool(args.nex))
 
