@@ -385,7 +385,8 @@ def setup_molecule(polymorph_num='p1', temperature=[], pressure=1, molecule='', 
         sys.exit()
 
     # POTENTIAL
-    potentiallist = ["oplsaa", "gromos", "designedg", "oplsaatodesignedg", "designeda", "oplsaatodesigneda",
+    potentiallist = ["oplsaa", "amber", "smirnoff", 
+                     "gromos", "designedg", "oplsaatodesignedg", "designeda", "oplsaatodesigneda",
                      "amoeba09", "DMA", "PCA", "amoeba09todesa", "amoeba09restraint", "amoeba09interactions",
                      "amoeba09multinp", "amoeba09mononp", "amoeba09monoopls", "amoeba09opls", "day", "drude", "oplsaal"]
     valid = False
@@ -441,6 +442,10 @@ def setup_molecule(polymorph_num='p1', temperature=[], pressure=1, molecule='', 
     # Format the potential
     if potential == 'oplsaa':
         potname = 'OPLS'
+    elif potential == 'amber':
+        potname = 'AMBER'
+    elif potential == 'smirnoff':
+        potname = 'SMIRNOFF'
     elif potential == 'gromos':
         potname = 'GROM'
     elif potential == 'designedg':
@@ -820,8 +825,8 @@ def setup_molecule(polymorph_num='p1', temperature=[], pressure=1, molecule='', 
 
         if potential == 'gromos':
             replace_string_in_text(jobpath + '/' + tname + '.top', 'oplsaa.ff', 'gromos54a7.ff')
-        elif potential == 'day':
-            replace_string_in_text(jobpath + '/' + tname + '.top', 'oplsaa.ff', '')
+        elif potential in ['day', 'amber', 'smirnoff']:
+            replace_string_in_text(jobpath + '/' + tname + '.top', '#include "oplsaa.ff/forcefield.itp"', '')
         elif potential == 'designedg':
             replace_string_in_text(jobpath + '/' + tname + '.top', 'oplsaa.ff', molecule + '_designedg.ff')
         elif potential == molecule + '_oplsaatodesignedg':
@@ -900,14 +905,14 @@ def setup_molecule(polymorph_num='p1', temperature=[], pressure=1, molecule='', 
 
         replace_string_in_text(jobpath + '/submit_local.sh', 'rrrr', str(reweight))
         replace_string_in_text(jobpath + '/submit_local.sh', 'iiii', str(indexing))
-        replace_string_in_text(jobpath + '/submit_local.sh', 'uuuu', potential_to_pass)
+#        replace_string_in_text(jobpath + '/submit_local.sh', 'uuuu', potential_to_pass)
         replace_string_in_text(jobpath + '/submit_local.sh', 'AAAA', str(annealing))
         replace_string_in_text(jobpath + '/submit_local.sh', 'EEEE', str(equilibration))
         replace_string_in_text(jobpath + '/submit_local.sh', 'PPPP', str(production))
 
         replace_string_in_text(jobpath + '/submit_cluster.slurm', 'rrrr', str(reweight))
         replace_string_in_text(jobpath + '/submit_cluster.slurm', 'iiii', str(indexing))
-        replace_string_in_text(jobpath + '/submit_cluster.slurm', 'uuuu', potential_to_pass)
+#        replace_string_in_text(jobpath + '/submit_cluster.slurm', 'uuuu', potential_to_pass)
         replace_string_in_text(jobpath + '/submit_cluster.slurm', 'aaaa', str(cores))
         replace_string_in_text(jobpath + '/submit_cluster.slurm', 'AAAA', str(annealing))
         replace_string_in_text(jobpath + '/submit_cluster.slurm', 'EEEE', str(equilibration))
@@ -930,7 +935,8 @@ def re_setup(polymorph_num='p1', molecule='', number_of_molecules=0,
     # ENSURE THAT INPUTS HAVE BEEN PROPERLY ENTERED
     # =============================================================================================
     # POTENTIAL
-    potentiallist = ["oplsaa", "gromos", "designedg", "oplsaatodesignedg", "designeda", "oplsaatodesigneda",
+    potentiallist = ["oplsaa", "amber", "smirnoff",
+                     "gromos", "designedg", "oplsaatodesignedg", "designeda", "oplsaatodesigneda",
                      "amoeba09", "DMA", "PCA", "amoeba09todesa", "amoeba09restraint", "amoeba09interactions",
                      "amoeba09multinp", "amoeba09mononp", "amoeba09monoopls", "amoeba09opls", "day", "drude", "oplsaal"]
 
@@ -978,6 +984,10 @@ def re_setup(polymorph_num='p1', molecule='', number_of_molecules=0,
     # Format the potential
     if potential == 'oplsaa':
         potname = 'OPLS'
+    elif potential == 'amber':
+        potname = 'AMBER'
+    elif potential == 'smirnoff':
+        potname = 'SMIRNOFF'
     elif potential == 'gromos':
         potname = 'GROM'
     elif potential == 'designedg':
