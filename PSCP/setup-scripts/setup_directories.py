@@ -90,7 +90,8 @@ def setup_interactions(inputs):
                             ensemble='NVT', jobpath=i + '/interactions/' + str(gamma),
                             templatepath=inputs['gen_in']['template_path'], anneal_temp=inputs['gen_in']['anneal_temp'],
                             anneal_steps=0, run_production=True, charge=inputs['temp_in']['charge'],
-                            hinge=inputs['gen_in']['hinge'], submission_script=inputs['gen_in']['submission_script'])
+                            hinge=inputs['gen_in']['hinge'], submission_script=inputs['gen_in']['submission_script'], 
+                            remove_bonded_interactions=inputs['PSCP_in']['run_bonded_interactions'])
              gamma += inputs['PSCP_in']['gamma_spacing']
 
 
@@ -189,12 +190,12 @@ def setup_mdp_lambdas(current_lambda, current_gamma, polymorph_num='all', min_la
         init_lambda = np.where(current_gamma == gammas)[0][0]
 
         # Setting interaction end points
-        replace_string_in_text(jobpath + '/equilibration.mdp', 'couple-lambda0', 'couple-lambda0           = none') 
-        replace_string_in_text(jobpath + '/production.mdp', 'couple-lambda0', 'couple-lambda0           = none')
-        replace_string_in_text(jobpath + '/equilibration.mdp', 'couple-lambda1', 'couple-lambda1           = vdw-q') 
-        replace_string_in_text(jobpath + '/production.mdp', 'couple-lambda1', 'couple-lambda1           = vdw-q')
-        replace_string_in_text(jobpath + '/equilibration.mdp', 'couple-intramol', 'couple-intramol          = yes') 
-        replace_string_in_text(jobpath + '/production.mdp', 'couple-intramol', 'couple-intramol          = yes')
+        replace_line_starting_with(jobpath + '/equilibration.mdp', 'couple-lambda0', 'couple-lambda0           = none') 
+        replace_line_starting_with(jobpath + '/production.mdp', 'couple-lambda0', 'couple-lambda0           = none')
+        replace_line_starting_with(jobpath + '/equilibration.mdp', 'couple-lambda1', 'couple-lambda1           = vdw-q') 
+        replace_line_starting_with(jobpath + '/production.mdp', 'couple-lambda1', 'couple-lambda1           = vdw-q')
+        replace_line_starting_with(jobpath + '/equilibration.mdp', 'couple-intramol', 'couple-intramol          = yes') 
+        replace_line_starting_with(jobpath + '/production.mdp', 'couple-intramol', 'couple-intramol          = yes')
             
     elif min_gamma == max_gamma:
         # Setting up vectors for restraining atoms
@@ -205,20 +206,20 @@ def setup_mdp_lambdas(current_lambda, current_gamma, polymorph_num='all', min_la
         init_lambda = np.where(current_lambda == lambdas)[0][0]
 
     # Setting the initial lambda state
-    replace_string_in_text(jobpath + '/equilibration.mdp', 'init_lambda_state', 'init_lambda_state        = ' + str(init_lambda))
-    replace_string_in_text(jobpath + '/production.mdp', 'init_lambda_state', 'init_lambda_state        = ' + str(init_lambda))
+    replace_line_starting_with(jobpath + '/equilibration.mdp', 'init_lambda_state', 'init_lambda_state        = ' + str(init_lambda))
+    replace_line_starting_with(jobpath + '/production.mdp', 'init_lambda_state', 'init_lambda_state        = ' + str(init_lambda))
 
     # Write in the lambda states
-    replace_string_in_text(jobpath + '/equilibration.mdp', 'restraint_lambdas', 'restraint_lambdas   = ' + float_array_to_string(lambda_points))
-    replace_string_in_text(jobpath + '/equilibration.mdp', 'coul-lambdas', 'coul-lambdas   = ' + float_array_to_string(gamma_points))
-    replace_string_in_text(jobpath + '/equilibration.mdp', 'vdw-lambdas', 'vdw-lambdas   = ' + float_array_to_string(gamma_points))
-    replace_string_in_text(jobpath + '/production.mdp', 'restraint_lambdas', 'restraint_lambdas   = ' + float_array_to_string(lambda_points))
-    replace_string_in_text(jobpath + '/production.mdp', 'coul-lambdas', 'coul-lambdas   = ' + float_array_to_string(gamma_points))
-    replace_string_in_text(jobpath + '/production.mdp', 'vdw-lambdas', 'vdw-lambdas   = ' + float_array_to_string(gamma_points))
+    replace_line_starting_with(jobpath + '/equilibration.mdp', 'restraint_lambdas', 'restraint_lambdas   = ' + float_array_to_string(lambda_points))
+    replace_line_starting_with(jobpath + '/equilibration.mdp', 'coul-lambdas', 'coul-lambdas   = ' + float_array_to_string(gamma_points))
+    replace_line_starting_with(jobpath + '/equilibration.mdp', 'vdw-lambdas', 'vdw-lambdas   = ' + float_array_to_string(gamma_points))
+    replace_line_starting_with(jobpath + '/production.mdp', 'restraint_lambdas', 'restraint_lambdas   = ' + float_array_to_string(lambda_points))
+    replace_line_starting_with(jobpath + '/production.mdp', 'coul-lambdas', 'coul-lambdas   = ' + float_array_to_string(gamma_points))
+    replace_line_starting_with(jobpath + '/production.mdp', 'vdw-lambdas', 'vdw-lambdas   = ' + float_array_to_string(gamma_points))
 
-    if remove_bonded_interactions == True:
-        replace_string_in_text(jobpath + '/equilibration.mdp', ';bonded-lambdas', 'bonded-lambdas   = ' + float_array_to_string(gamma_points))
-        replace_string_in_text(jobpath + '/production.mdp', ';bonded-lambdas', 'bonded-lambdas   = ' + float_array_to_string(gamma_points))
+    if remove_bonded_interactions == 'true':
+        replace_line_starting_with(jobpath + '/equilibration.mdp', ';bonded-lambdas', 'bonded-lambdas   = ' + float_array_to_string(gamma_points))
+        replace_line_starting_with(jobpath + '/production.mdp', ';bonded-lambdas', 'bonded-lambdas   = ' + float_array_to_string(gamma_points))
     
    
 def float_array_to_string(array_values):
@@ -272,7 +273,7 @@ def setup_molecule(polymorph_num='p1', temperature=[], pressure=1, molecule='', 
                    max_gamma=100, gamma_exponent=2, gamma_spacing=100, cutoff=8, potential='oplsaa',
                    simulation='gromacs', ensemble='NPT', jobpath='./', templatepath='', anneal_temp=400,
                    anneal_steps=10000, run_production=True, volume=-1, charge=0.1150, hinge='DefaultHinge', delta=0,
-                   SigmaH=100, SigmaC=100, drude_k=100, submission_script='submit_cluster.slurm'):
+                   SigmaH=100, SigmaC=100, drude_k=100, submission_script='submit_cluster.slurm', remove_bonded_interactions=False):
     # =============================================================================================
     # ENSURE THAT INPUTS HAVE BEEN PROPERLY ENTERED
     # =============================================================================================
@@ -495,14 +496,6 @@ def setup_molecule(polymorph_num='p1', temperature=[], pressure=1, molecule='', 
     print('Making Directory: ', jobpath,'...')
     subprocess.call(['mkdir', jobpath])
 
-    # OUTPUT FREQUENCY
-    equil_output_frequency = int(equil_steps / 100)  # The 100 was eqoutput
-    equil_trr_output_frequency = int(equil_steps / 100)  # The 100 was emtroutputs
-    prod_output_frequency = int(prod_steps / prodoutputs)
-    prod_trr_output_frequency = int(prod_steps / 100)
-    anneal_output_frequency = int(anneal_steps / 10000)  # The 10000 could be a user specified variable
-    anneal_trr_output_frequency = int(anneal_steps / 10000)
-
     # For PSCP setting if an NPT equilibration should be run prior to NPT
     NPT_equil = False
     if simulation == 'gromacs':
@@ -519,6 +512,11 @@ def setup_molecule(polymorph_num='p1', temperature=[], pressure=1, molecule='', 
                                 'K_1bar_' + potname + '.gro'):
                  grofile = templatepath + '/' + molecule + '_' + polymorph_num + '_' + molnum + '_' + tempname + \
                           'K_1bar_' + potname
+                 if ensemble == 'NVT':
+                     NPT_equil = True
+            elif os.path.isfile(templatepath + '/' + molecule + '_' + polymorph_num + '_' + molnum + '_REMD_' + potname
+                                + '.gro'):
+                 grofile = templatepath + '/' + molecule + '_' + polymorph_num + '_' + molnum + '_REMD_' + potname
                  if ensemble == 'NVT':
                      NPT_equil = True
             elif os.path.isfile(templatepath + '/' + molecule + '_' + polymorph_num + '_' + molnum + '_000K_' + potname
@@ -688,29 +686,29 @@ def setup_molecule(polymorph_num='p1', temperature=[], pressure=1, molecule='', 
             replace_line_starting_with(jobpath + '/production.mdp', 'gen_vel', 'gen_vel = no')
 
         # OUTPUT FREQUENCY
-        replace_line_starting_with(jobpath + '/equilibration.mdp', 'nstlog', 'nstlog = ' + str(equil_output_frequency))
+        replace_line_starting_with(jobpath + '/equilibration.mdp', 'nstlog', 'nstlog = ' + str(prodoutputs))
         replace_line_starting_with(jobpath + '/equilibration.mdp', 'nstenergy', 'nstenergy = ' +
-                                   str(equil_output_frequency))
+                                   str(prodoutputs))
         replace_line_starting_with(jobpath + '/equilibration.mdp', 'nstxout', 'nstxout = ' +
-                                   str(equil_trr_output_frequency))
+                                   str(prodoutputs))
 
-        replace_line_starting_with(jobpath + '/production.mdp', 'nstlog', 'nstlog = ' + str(prod_output_frequency))
+        replace_line_starting_with(jobpath + '/production.mdp', 'nstlog', 'nstlog = ' + str(prodoutputs))
         replace_line_starting_with(jobpath + '/production.mdp', 'nstenergy', 'nstenergy = ' +
-                                   str(prod_output_frequency))
+                                   str(prodoutputs))
         replace_line_starting_with(jobpath + '/production.mdp', 'nstxout', 'nstxout = ' +
-                                   str(prod_trr_output_frequency))
+                                   str(prodoutputs))
 
-        replace_line_starting_with(jobpath + '/anneal.mdp', 'nstlog', 'nstlog = ' + str(prod_output_frequency))
+        replace_line_starting_with(jobpath + '/anneal.mdp', 'nstlog', 'nstlog = ' + str(prodoutputs))
         replace_line_starting_with(jobpath + '/anneal.mdp', 'nstenergy', 'nstenergy = ' +
-                                   str(prod_output_frequency))
+                                   str(prodoutputs))
         replace_line_starting_with(jobpath + '/anneal.mdp', 'nstxout', 'nstxout = ' +
-                                   str(prod_trr_output_frequency))
+                                   str(prodoutputs))
         if NPT_equil == True:
-            replace_line_starting_with(jobpath + '/npt_equilibration.mdp', 'nstlog', 'nstlog = ' + str(equil_output_frequency))
+            replace_line_starting_with(jobpath + '/npt_equilibration.mdp', 'nstlog', 'nstlog = ' + str(prodoutputs))
             replace_line_starting_with(jobpath + '/npt_equilibration.mdp', 'nstenergy', 'nstenergy = ' +
-                                       str(equil_output_frequency))
+                                       str(prodoutputs))
             replace_line_starting_with(jobpath + '/npt_equilibration.mdp', 'nstxout', 'nstxout = ' +
-                                       str(equil_trr_output_frequency))
+                                       str(prodoutputs))
 
         # INTEGRATOR
         replace_line_starting_with(jobpath + '/equilibration.mdp', 'integrator', 'integrator = ' + integrator)
@@ -725,8 +723,8 @@ def setup_molecule(polymorph_num='p1', temperature=[], pressure=1, molecule='', 
                           lambda_spacing=lambda_spacing, 
                           lambda_exponent=lambda_exponent, min_gamma=min_gamma, 
                           max_gamma=max_gamma, gamma_spacing=gamma_spacing, 
-                          gamma_exponent=gamma_exponent, jobpath=jobpath, equil_output_frequency=equil_output_frequency,
-                          prod_output_frequency=prod_output_frequency)
+                          gamma_exponent=gamma_exponent, jobpath=jobpath, equil_output_frequency=prodoutputs,
+                          prod_output_frequency=prodoutputs, remove_bonded_interactions=remove_bonded_interactions)
 
         #subprocess.call(['setup_mdpLambdas', '-L', str(lambd), '-W', str(min_lambda), '-S', str(max_lambda),
         #                 '-s', str(lambda_spacing), '-A', str(max_gamma), '-B', str(min_gamma), '-G', str(gamma),

@@ -122,7 +122,6 @@ def setup_ReplicaExchange_temperatures(inputs, check):
     while temp < float(inputs['rep_exch_in']['T_max']):
         dt = np.around(return_dT(dmu, b_mu, dsig, b_sig, inputs['rep_exch_in']['prob_overlap'], temp), 4)
         temp += np.absolute(dt[0])
-        print(temp)
         if temp < float(inputs['rep_exch_in']['T_max']):
             T_out.append(temp)
         else:

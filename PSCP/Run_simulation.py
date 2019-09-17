@@ -34,7 +34,7 @@ def check_bool(val):
         sys.exit()
 
 # Run a NPT simulation if interactions are being turned off and not starting from the right T and P
-if os.path.isfile('npt_equilibration.npt'):
+if os.path.isfile('npt_equilibration.mdp'):
     # Running annealing of crystal
     subprocess.call(['mv', 'pre_EQ.gro', 'pre_NPT.gro'])
 
