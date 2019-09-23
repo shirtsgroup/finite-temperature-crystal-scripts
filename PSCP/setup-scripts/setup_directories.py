@@ -186,22 +186,22 @@ def setup_mdp_lambdas(current_lambda, current_gamma, polymorph_num='all', min_la
         gammas = np.arange(min_gamma, max_gamma + 1, gamma_spacing)
         indicies = np.arange(0, (max_gamma - min_gamma) / gamma_spacing + 1, 1)
         lambda_points = np.ones(len(indicies))
-        gamma_points = (gammas / max_gamma) ** gamma_exponent
+        gamma_points = (gammas / max_gamma) ** gamma_exponent[::-1]
         init_lambda = np.where(current_gamma == gammas)[0][0]
 
         # Setting interaction end points
-        replace_line_starting_with(jobpath + '/equilibration.mdp', 'couple-lambda0', 'couple-lambda0           = none') 
-        replace_line_starting_with(jobpath + '/production.mdp', 'couple-lambda0', 'couple-lambda0           = none')
-        replace_line_starting_with(jobpath + '/equilibration.mdp', 'couple-lambda1', 'couple-lambda1           = vdw-q') 
-        replace_line_starting_with(jobpath + '/production.mdp', 'couple-lambda1', 'couple-lambda1           = vdw-q')
-        replace_line_starting_with(jobpath + '/equilibration.mdp', 'couple-intramol', 'couple-intramol          = yes') 
-        replace_line_starting_with(jobpath + '/production.mdp', 'couple-intramol', 'couple-intramol          = yes')
+#        replace_line_starting_with(jobpath + '/equilibration.mdp', 'couple-lambda0', ';couple-lambda0           = none') 
+#        replace_line_starting_with(jobpath + '/production.mdp', 'couple-lambda0', ';couple-lambda0           = none')
+#        replace_line_starting_with(jobpath + '/equilibration.mdp', 'couple-lambda1', ';couple-lambda1           = vdw-q') 
+#        replace_line_starting_with(jobpath + '/production.mdp', 'couple-lambda1', ';couple-lambda1           = vdw-q')
+#        replace_line_starting_with(jobpath + '/equilibration.mdp', 'couple-intramol', ';couple-intramol          = yes') 
+#        replace_line_starting_with(jobpath + '/production.mdp', 'couple-intramol', ';couple-intramol          = yes')
             
     elif min_gamma == max_gamma:
         # Setting up vectors for restraining atoms
         lambdas = np.arange(min_lambda, max_lambda + 1, lambda_spacing)
         indicies = np.arange(0, (max_lambda - min_lambda) / lambda_spacing + 1, 1)
-        gamma_points = np.ones(len(indicies))
+        gamma_points = np.zeros(len(indicies))
         lambda_points = (lambdas / max_lambda) ** lambda_exponent
         init_lambda = np.where(current_lambda == lambdas)[0][0]
 
@@ -665,12 +665,22 @@ def setup_molecule(polymorph_num='p1', temperature=[], pressure=1, molecule='', 
             replace_line_starting_with(jobpath + '/minimization.mdp', 'rvdw', 'rvdw = ' + str(rvdw))
             replace_line_starting_with(jobpath + '/relaxation.mdp', 'rvdw', 'rvdw = ' + str(rvdw))
             replace_line_starting_with(jobpath + '/anneal.mdp', 'rvdw', 'rvdw = ' + str(rvdw))
+
+            if NPT_equil == True:
+                replace_line_starting_with(jobpath + '/npt_equilibration.mdp', 'rcoulomb-switch', 'rcoulomb-switch = ' + str(coulombswitch))
+                replace_line_starting_with(jobpath + '/npt_equilibration.mdp', 'rcoulomb', 'rcoulomb = ' + str(rcoulomb))
+                replace_line_starting_with(jobpath + '/npt_equilibration.mdp', 'rvdw-switch', 'rvdw-switch = ' + str(vdwswitch))
+                replace_line_starting_with(jobpath + '/npt_equilibration.mdp', 'rvdw', 'rvdw = ' + str(rvdw))
+
             if cutoff > 10:
                 replace_line_starting_with(jobpath + '/equilibration.mdp', 'rlist', 'rlist = ' + str(rvdw))
                 replace_line_starting_with(jobpath + '/production.mdp', 'rlist', 'rlist = ' + str(rvdw))
                 replace_line_starting_with(jobpath + '/minimization.mdp', 'rlist', 'rlist = ' + str(rvdw))
                 replace_line_starting_with(jobpath + '/relaxation.mdp', 'rlist', 'rlist = ' + str(rvdw))
                 replace_line_starting_with(jobpath + '/anneal.mdp', 'rlist', 'rlist = ' + str(rvdw))
+
+                if NPT_equil == True:
+                    replace_line_starting_with(jobpath + '/npt_equilibration.mdp', 'rlist', 'rlist = ' + str(rvdw))
 
         # TIMESTEPS
         replace_line_starting_with(jobpath + '/anneal.mdp', 'nsteps', 'nsteps = ' + str(anneal_steps))

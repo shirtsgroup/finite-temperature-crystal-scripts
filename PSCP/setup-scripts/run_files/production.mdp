@@ -122,10 +122,10 @@ coul-lambdas             =
 vdw-lambdas              =
 restraint_lambdas        =
 ;bonded-lambdas           =
-couple-lambda0           =
-couple-lambda1           =
-couple-intramol		 =
-couple-moltype           = MOLMOLMOLMOL
+;couple-lambda0           =
+;couple-lambda1           =
+;couple-intramol		 =
+;couple-moltype           = MOLMOLMOLMOL
 
 
 
