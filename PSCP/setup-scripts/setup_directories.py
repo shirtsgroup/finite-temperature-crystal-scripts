@@ -186,7 +186,7 @@ def setup_mdp_lambdas(current_lambda, current_gamma, polymorph_num='all', min_la
         gammas = np.arange(min_gamma, max_gamma + 1, gamma_spacing)
         indicies = np.arange(0, (max_gamma - min_gamma) / gamma_spacing + 1, 1)
         lambda_points = np.ones(len(indicies))
-        gamma_points = (gammas / max_gamma) ** gamma_exponent[::-1]
+        gamma_points = (gammas / max_gamma) ** gamma_exponent
         init_lambda = np.where(current_gamma == gammas)[0][0]
 
         # Setting interaction end points
