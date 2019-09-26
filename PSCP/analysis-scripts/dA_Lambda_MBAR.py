@@ -267,10 +267,9 @@ def dA_Lambda_MBAR(plot_out=True, MinL=0, MaxL=100, dL=5, GAMMA=100, exponent=4,
 
 
                     # the energy of every configuration from each state evaluated at its sampled state
-                    n = len(potential_energy) + 1
-                    print(np.shape(u_kln[k, :, :n]), np.shape(potential_energy), np.shape(dhdl_energy[:, 5:]))
-                    u_kln[k, :, :n] = (float(Independent) / Molecules) * (potential_energy + dhdl_energy[:, 5:]) \
-                                      * convert_units[k]
+                    n = len(potential_energy)
+                    u_kln[k, :, :n] = (float(Independent) / Molecules) * (potential_energy.reshape((n, 1)) +
+                                                                          dhdl_energy[:, 5:]) * convert_units[k]
                     dhdl_kln[k, :, :n] = dhdl_energy[:, 5:] * convert_units[k]
                     dhdl_kn[k, :n] = (float(Independent) / Molecules) * dhdl_energy[:, 4] * convert_units[k]
 
