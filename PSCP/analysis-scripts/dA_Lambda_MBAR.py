@@ -254,10 +254,10 @@ def dA_Lambda_MBAR(plot_out=True, MinL=0, MaxL=100, dL=5, GAMMA=100, exponent=4,
 #                    infile = open(fname, 'r')
 #                    lines = infile.readlines()
 #                    infile.close()
-                    potential_energy = panedr.edr_to_df(fname)
+                    potential_energy = panedr.edr_to_df(fname)['Potential']
                     print("loading " + fname)
 
-                    dhdl_energy = np.loadtxt(dhdlname, comments=['#','$','@','!'])
+                    dhdl_energy = np.loadtxt(dhdlname, comments=['#', '$', '@', '!'])
                     print("loading " + dhdlname)
 
                     # Removing any non-equilibrated points of the simulation
