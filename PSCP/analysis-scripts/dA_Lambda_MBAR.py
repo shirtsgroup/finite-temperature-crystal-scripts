@@ -254,20 +254,21 @@ def dA_Lambda_MBAR(plot_out=True, MinL=0, MaxL=100, dL=5, GAMMA=100, exponent=4,
 #                    infile = open(fname, 'r')
 #                    lines = infile.readlines()
 #                    infile.close()
-                    potential_energy = panedr.edr_to_df(fname)['Potential']
+                    potential_energy = panedr.edr_to_df(fname)['Potential'].values
                     print("loading " + fname)
 
                     dhdl_energy = np.loadtxt(dhdlname, comments=['#', '$', '@', '!'])
                     print("loading " + dhdlname)
 
                     # Removing any non-equilibrated points of the simulation
-                    [start_production, _, _] = timeseries.detectEquilibration(potential_energy.values)
+                    [start_production, _, _] = timeseries.detectEquilibration(potential_energy)
                     potential_energy = potential_energy[start_production:]
                     dhdl_energy = dhdl_energy[start_production:]
 
 
                     # the energy of every configuration from each state evaluated at its sampled state
                     n = len(potential_energy) + 1
+                    print(np.shape(u_kln[k, :, :n]), np.shape(potential_energy), np.shape(dhdl_energy[:, 5:]))
                     u_kln[k, :, :n] = (float(Independent) / Molecules) * (potential_energy + dhdl_energy[:, 5:]) \
                                       * convert_units[k]
                     dhdl_kln[k, :, :n] = dhdl_energy[:, 5:] * convert_units[k]
