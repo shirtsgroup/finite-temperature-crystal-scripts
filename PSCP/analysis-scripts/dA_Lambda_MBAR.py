@@ -12,6 +12,7 @@ from optparse import OptionParser # for parsing command-line options
 import MBARBootstrap
 import os.path
 import sys
+import panedr
 import pdb
 import tossconfigurationsFunc
 
@@ -110,38 +111,38 @@ def dA_Lambda_MBAR(plot_out=True, MinL=0, MaxL=100, dL=5, GAMMA=100, exponent=4,
     # FORMAT INPUTS
     # =============================================================================================
     # TEMPERATURE
-    Tname = ""
-    if Temp < 10:
-        Tname = "00" + str(int(Temp)) + "K"
-    elif Temp < 100:
-        Tname = "0" + str(int(Temp)) + "K"
-    else:
-        Tname = str(int(Temp)) + "K"
+#    Tname = ""
+#    if Temp < 10:
+#        Tname = "00" + str(int(Temp)) + "K"
+#    elif Temp < 100:
+#        Tname = "0" + str(int(Temp)) + "K"
+#    else:
+#        Tname = str(int(Temp)) + "K"
     
     # PRESSURE
-    Pname = ""
-    if Pressure < 10:
-        Pname = "00" + str(int(Pressure)) + "P"
-    elif Pressure < 100:
-        Pname = "0" + str(int(Pressure)) + "P"
-    else:
-        Pname = str(int(Pressure)) + "P"
+#    Pname = ""
+#    if Pressure < 10:
+#        Pname = "00" + str(int(Pressure)) + "P"
+#    elif Pressure < 100:
+#        Pname = "0" + str(int(Pressure)) + "P"
+#    else:
+#        Pname = str(int(Pressure)) + "P"
     
     # GAMMA POINT
-    Gname = ""
-    if GAMMA < 10:
-        Gname = "00" + str(int(GAMMA)) + "G"
-    elif GAMMA < 100:
-        Gname = "0" + str(int(GAMMA)) + "G"
-    else:
-        Gname = str(int(GAMMA)) + "G"
+#    Gname = ""
+#    if GAMMA < 10:
+#        Gname = "00" + str(int(GAMMA)) + "G"
+#    elif GAMMA < 100:
+#        Gname = "0" + str(int(GAMMA)) + "G"
+#    else:
+#        Gname = str(int(GAMMA)) + "G"
     
     # NUMBER OF MOLECULES
-    Molname = ""
-    if Molecules == Independent:
-        Molname = str(Molecules) + '_'
-    else:
-        Molname = str(Molecules) + '_' + str(Independent) + 'ind_'
+#    Molname = ""
+#    if Molecules == Independent:
+#        Molname = str(Molecules) + '_'
+#    else:
+#        Molname = str(Molecules) + '_' + str(Independent) + 'ind_'
     
     
     # POTENTIAL
@@ -158,16 +159,16 @@ def dA_Lambda_MBAR(plot_out=True, MinL=0, MaxL=100, dL=5, GAMMA=100, exponent=4,
         PotNAME = "FAKEA"
     
     # CHARGE AND SIGMA HINGE
-    if potential == "oplsaa":
-        ChargeHinge = ""
-    elif potential == "gromos":
-        ChargeHinge = ""
-    elif potential == "designeda":
-        ChargeHinge = ""
-    elif potential == "oplsaafakeg":
-        ChargeHinge = "_C01150"
-    elif potential == "oplsaafakea":
-        ChargeHinge = "_C01150"
+#    if potential == "oplsaa":
+#        ChargeHinge = ""
+#    elif potential == "gromos":
+#        ChargeHinge = ""
+#    elif potential == "designeda":
+#        ChargeHinge = ""
+#    elif potential == "oplsaafakeg":
+#        ChargeHinge = "_C01150"
+#    elif potential == "oplsaafakea":
+#        ChargeHinge = "_C01150"
     
     # OPTIONAL HINGE
     if str(GAMMA) == "100":
@@ -235,83 +236,95 @@ def dA_Lambda_MBAR(plot_out=True, MinL=0, MaxL=100, dL=5, GAMMA=100, exponent=4,
         for k in range(K):
             n = 0
             for s, hinge in enumerate(hinges):
-                tossconfigs = []  # The index of each configuration to toss from the MBAR analysis
+#                tossconfigs = []  # The index of each configuration to toss from the MBAR analysis
                 keepconfigs = np.arange(N_max)  # The index of each configuration to keep in the MBAR analysis
-                linenum_energy = 0
+#                linenum_energy = 0
                 linenum_dhdl = 0
                 # cycle through all the input total energy data
                 # dirpath='../finishedJobs/' + poly + '/benzene_GRO_' + PotNAME + '_' + polymorph_short[i] + '_' + Molname + Tname + ChargeHinge + '_' + Lambda_names[k] + '_' + Gname + '_' + Pname + hinge
                 #dirpath = Molecule + '_GRO_' + PotNAME + '_' + polymorph_short[i] + '_' + Molname + Tname + ChargeHinge + \
                 #          '_' + Lambda_names[k] + '_' + Gname + '_' + Pname + hinge
                 dirpath = polymorph_short[i] + '/restraints/' + str(lambda_names[k])
-                fname = dirpath + '/potenergy.xvg'
+                fname = dirpath + '/PROD.edr'
                 dhdlname = dirpath + '/dhdl_PROD.xvg'
-                groname = dirpath + '/Traj.gro'
-                outname = dirpath + '/Flipless.gro'
-                restname = dirpath + '/restraint.gro'
+#                groname = dirpath + '/Traj.gro'
+#                outname = dirpath + '/Flipless.gro'
+#                restname = dirpath + '/restraint.gro'
                 if k not in omitK:
-                    infile = open(fname, 'r')
-                    lines = infile.readlines()
-                    infile.close()
+#                    infile = open(fname, 'r')
+#                    lines = infile.readlines()
+#                    infile.close()
+                    potential_energy = panedr.edr_to_df(fname)
                     print("loading " + fname)
-                    infile = open(dhdlname, 'r')
-                    lines_dhdl = infile.readlines()
-                    infile.close()
+
+                    dhdl_energy = np.loadtxt(dhdlname, comments=['#','$','@','!'])
                     print("loading " + dhdlname)
+
+                    # Removing any non-equilibrated points of the simulation
+                    [start_production, _, _] = timeseries.detectEquilibration(potential_energy.values)
+                    potential_energy = potential_energy[start_production:]
+                    dhdl_energy = dhdl_energy[start_production:]
+
+
+                    # the energy of every configuration from each state evaluated at its sampled state
+                    n = len(potential_energy) + 1
+                    u_kln[k, :, :n] = (float(Independent) / Molecules) * (potential_energy + dhdl_energy[:, 5:]) \
+                                      * convert_units[k]
+                    dhdl_kln[k, :, :n] = dhdl_energy[:, 5:] * convert_units[k]
+                    dhdl_kn[k, :n] = (float(Independent) / Molecules) * dhdl_energy[:, 4] * convert_units[k]
+
+
+
 
                     ignorecounter=0
                     symbolcounter=0
 
-                    u_kln_hold = np.zeros([Kbig, N_max], np.float64)
-                    dhdl_kln_hold = np.zeros([Kbig, N_max], np.float64)
-                    dhdl_kn_hold = np.zeros([N_max], np.float64)
+#                    u_kln_hold = np.zeros([Kbig, N_max], np.float64)
+#                    dhdl_kln_hold = np.zeros([Kbig, N_max], np.float64)
+#                    dhdl_kn_hold = np.zeros([N_max], np.float64)
 
-                    for counter, line in enumerate(lines):
-                        tokens_energy = line.split()
-                        if tokens_energy[0] in ignore_symbols:
-                            symbolcounter += 1
-                            continue
-    
-                        # ignore the first set of frames
-                        if ignorecounter <= ignoreframes:
-                            ignorecounter += 1
-                            continue
-    
-                        # ignore the frames after the include frames
-                        if counter > includeframes:
-                            continue
-    
-                        ## ignore frames that are flipped and we are tossing
-                        #if counter in tossconfigs:
-                        #    continue
-
-                        # Grab the dhdl information (if possible)
-                        tokens_dhdl = lines_dhdl[linenum_dhdl].split()
-                        while tokens_dhdl[0] in ignore_symbols:
-                            linenum_dhdl += 1
-                            tokens_dhdl = lines_dhdl[linenum_dhdl].split()
-
-                        while float(tokens_energy[0]) != float(tokens_dhdl[0]) and (linenum_dhdl+1) < len(lines_dhdl) \
-                                and linenum_dhdl < 1000000:
-                            linenum_dhdl += 1
-                            tokens_dhdl = lines_dhdl[linenum_dhdl].split()
-
-                        if float(tokens_energy[0]) != float(tokens_dhdl[0]):
-                            continue
-
-                        # the energy of every configuration from each state evaluated at its sampled state
-                        u_kln[k, :, n] = (float(Independent) / Molecules) * \
-                                         (float(tokens_energy[1]) +
-                                          np.asarray(np.array(tokens_dhdl)[5 + np.array(Lambda_indicies)], float)) \
-                                          * convert_units[k]
-                        dhdl_kln[k, :, n] = np.asarray(np.array(tokens_dhdl)[5 + np.array(Lambda_indicies)], float) \
-                                            * convert_units[k]
-                        dhdl_kn[k, n] = (float(Independent) / Molecules) * float(tokens_dhdl[4]) * convert_units[k]
-                        n += 1
+#                    for counter, line in enumerate(lines):
+#                        tokens_energy = line.split()
+#                        if tokens_energy[0] in ignore_symbols:
+#                            symbolcounter += 1
+#                            continue
+#
+#                        # ignore the first set of frames
+#                        if ignorecounter <= ignoreframes:
+#                            ignorecounter += 1
+#                            continue
+#
+#                        # ignore the frames after the include frames
+#                        if counter > includeframes:
+#                            continue
+#
+#                        # Grab the dhdl information (if possible)
+#                        tokens_dhdl = lines_dhdl[linenum_dhdl].split()
+#                        while tokens_dhdl[0] in ignore_symbols:
+#                            linenum_dhdl += 1
+#                            tokens_dhdl = lines_dhdl[linenum_dhdl].split()
+#
+#                        while float(tokens_energy[0]) != float(tokens_dhdl[0]) and (linenum_dhdl+1) < len(lines_dhdl) \
+#                                and linenum_dhdl < 1000000:
+#                            linenum_dhdl += 1
+#                            tokens_dhdl = lines_dhdl[linenum_dhdl].split()
+#
+#                        if float(tokens_energy[0]) != float(tokens_dhdl[0]):
+#                            continue
+#
+#                        # the energy of every configuration from each state evaluated at its sampled state
+#                        u_kln[k, :, n] = (float(Independent) / Molecules) * \
+#                                         (float(tokens_energy[1]) +
+#                                          np.asarray(np.array(tokens_dhdl)[5 + np.array(Lambda_indicies)], float)) \
+#                                          * convert_units[k]
+#                        dhdl_kln[k, :, n] = np.asarray(np.array(tokens_dhdl)[5 + np.array(Lambda_indicies)], float) \
+#                                            * convert_units[k]
+#                        dhdl_kn[k, n] = (float(Independent) / Molecules) * float(tokens_dhdl[4]) * convert_units[k]
+#                        n += 1
                     
 
                     # Truncate the kept configuration list to be less than n
-                    keepconfigs = [j for j in keepconfigs if j < (counter-symbolcounter) and j >= ignoreframes]
+                    keepconfigs = [j for j in keepconfigs if j < (len(potential_energy)-symbolcounter) and j >= 0]
     
                     # Split up the retained configurations into connected segments
                     j = 0
