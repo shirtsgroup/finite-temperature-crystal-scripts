@@ -134,10 +134,6 @@ def setup_mdp_lambdas(current_lambda, current_gamma, polymorph_num='all', min_la
               ' are not the same!')
         return
 
-    if not 1 <= lambda_exponent <= 4:
-        print('Invalid Lambda Exponent: ', lambda_exponent)
-        return
-
     # Gamma
     if (min_gamma < 0) or (max_gamma > 100) or (min_gamma > max_gamma):
         print('ERROR - ')
@@ -153,10 +149,6 @@ def setup_mdp_lambdas(current_lambda, current_gamma, polymorph_num='all', min_la
     if (min_gamma == max_gamma) and (current_gamma != max_gamma):
         print('ERROR - Minimum Gamma: ', min_gamma, ' Maximum Gamma: ', max_gamma, ' and Gamma: ', current_gamma,
               ' are not the same!')
-        return
-
-    if not 1 <= gamma_exponent <= 4:
-        print('ERROR - Invalid Gamma Exponent: ', gamma_exponent)
         return
 
     #JOBPATH
@@ -186,7 +178,7 @@ def setup_mdp_lambdas(current_lambda, current_gamma, polymorph_num='all', min_la
         gammas = np.arange(min_gamma, max_gamma + 1, gamma_spacing)
         indicies = np.arange(0, (max_gamma - min_gamma) / gamma_spacing + 1, 1)
         lambda_points = np.ones(len(indicies))
-        if gamm_exponent < 0:
+        if gamma_exponent < 0:
             gamma_points = 1 - ((max_gamma - gammas) / max_gamma) ** abs(gamma_exponent)
         else:
             gamma_points = (gammas / max_gamma) ** abs(gamma_exponent)
@@ -363,18 +355,18 @@ def setup_molecule(polymorph_num='p1', temperature=[], pressure=1, molecule='', 
         print("Invalid Lambda Spacing: ", lambda_spacing)
         sys.exit()
 
-    if (lambda_exponent < 0) or (lambda_exponent > 4):
-        print("Invalid Lambda Exponent: ", lambda_exponent)
-        sys.exit()
+#    if (lambda_exponent < 0) or (lambda_exponent > 4):
+#        print("Invalid Lambda Exponent: ", lambda_exponent)
+#        sys.exit()
 
     # GAMMA POINT
     if gamma_spacing < 0:
         print("Invalid Gambda Spacing: ", gamma_spacing)
         sys.exit()
 
-    if (gamma_exponent < 0) or (gamma_exponent > 4):
-        print("Invalid Lambda Exponent: ", gamma_exponent)
-        sys.exit()
+#    if (gamma_exponent < 0) or (gamma_exponent > 4):
+#        print("Invalid Gamma Exponent: ", gamma_exponent)
+#        sys.exit()
 
     # SIGMAC
     if SigmaC < 0:
