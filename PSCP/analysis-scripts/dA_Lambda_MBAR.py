@@ -67,7 +67,10 @@ def dA_Lambda_MBAR(plot_out=True, MinL=0, MaxL=100, dL=5, GAMMA=100, exponent=4,
                 index += 1
                 RawLambda = RawLambda + dL
                 continue
-            Lambda = int(100 * float(RawLambda ** exponent) / float(MaxL ** exponent))
+            if exponent >= 0:
+                Lambda = int(100 * (float(RawLambda) / float(MaxL)) ** abs(exponent))
+            else:
+                Lambda = int(100 * (1 - (float(MaxL - RawLambda) / float(maxL)) ** abs(exponent)))
             Lambdas.append(Lambda)
             # Format the lambda point name
             if RawLambda < 10:
