@@ -52,7 +52,10 @@ def dA_Gamma_MBAR(plot_out=True, MINGAMMA=0, MAXGAMMA=100, GSPACING=10, LAMBDA=1
         Gamma_names = []
         gamma_names = np.arange(MINGAMMA, MAXGAMMA + GSPACING, GSPACING)
         while RawGamma < MAXGAMMA:
-            Gamma = int(100 * float(RawGamma ** exponent) / float(MAXGAMMA ** exponent))
+            if exponent >= 0:
+                Gamma = int(100 * (float(RawGamma) / float(MAXGAMMA)) ** abs(exponent))
+            else:
+                Gamma = int(100 * (1 - (float(MAXGAMMA - RawGamma) / float(MAXGAMMA)) ** abs(exponent)))
             Gammas.append(Gamma)
             # Format the gamma point name
             if RawGamma < 10:
