@@ -276,9 +276,6 @@ def dA_Lambda_MBAR(plot_out=True, MinL=0, MaxL=100, dL=5, GAMMA=100, exponent=4,
                     dhdl_kln[k, :, :n] = dhdl_energy[:, 5:].T * convert_units[k]
                     dhdl_kn[k, :n] = (float(Independent) / Molecules) * dhdl_energy[:, 4].T * convert_units[k]
 
-
-
-
                     ignorecounter=0
                     symbolcounter=0
 

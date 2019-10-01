@@ -257,7 +257,7 @@ def dA_Gamma_MBAR(plot_out=True, MINGAMMA=0, MAXGAMMA=100, GSPACING=10, LAMBDA=1
                     # the energy of every configuration from each state evaluated at its sampled state
                     n = len(potential_energy)
                     u_kln[k, :K, :n] = (potential_energy.reshape((n, 1)) + dhdl_energy[:, 5:]).T * convert_units[k]
-                    dhdl_kn[k, :n] = (float(Independent) / Molecules) * (dhdl_energy[:, 2] + dhdl_energy[:, 3] + 0.0 *
+                    dhdl_kn[k, :n] = (float(Independent) / Molecules) * (dhdl_energy[:, 2] + dhdl_energy[:, 3] + 1.0 *
                                                                         dhdl_energy[:, 4]) * convert_units[k]
 
 #                    ignorecounter = 0

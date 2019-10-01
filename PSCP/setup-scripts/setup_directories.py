@@ -215,7 +215,7 @@ def setup_mdp_lambdas(current_lambda, current_gamma, polymorph_num='all', min_la
     replace_line_starting_with(jobpath + '/production.mdp', 'coul-lambdas', 'coul-lambdas   = ' + float_array_to_string(gamma_points))
     replace_line_starting_with(jobpath + '/production.mdp', 'vdw-lambdas', 'vdw-lambdas   = ' + float_array_to_string(gamma_points))
 
-    if remove_bonded_interactions == 'true':
+    if remove_bonded_interactions == True:
         replace_line_starting_with(jobpath + '/equilibration.mdp', ';bonded-lambdas', 'bonded-lambdas   = ' + float_array_to_string(gamma_points))
         replace_line_starting_with(jobpath + '/production.mdp', ';bonded-lambdas', 'bonded-lambdas   = ' + float_array_to_string(gamma_points))
     
