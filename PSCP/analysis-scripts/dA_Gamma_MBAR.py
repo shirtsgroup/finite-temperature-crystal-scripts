@@ -134,7 +134,7 @@ def dA_Gamma_MBAR(plot_out=True, MINGAMMA=0, MAXGAMMA=100, GSPACING=10, LAMBDA=1
      
     # total number of states examined; 0 are unsampled if bonds are left on, 1 is unsampled if the bonds are removed
     if bonds == True:
-        Kbig = K + 1
+        Kbig = K
         dhdl_placement = 6
     else:
         Kbig = K
