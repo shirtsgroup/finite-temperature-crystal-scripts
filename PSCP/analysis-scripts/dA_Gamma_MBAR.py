@@ -16,15 +16,11 @@ import pdb
 import panedr
 
 def dA_Gamma_MBAR(plot_out=True, MINGAMMA=0, MAXGAMMA=100, GSPACING=10, LAMBDA=100, exponent=2, polymorphs='p1 p2', 
-                  Molecule='benzene', Molecules=72, Independent=4, Temp=200, Pressure=1, k=1000, ignoreframes=500,
+                  Molecules=72, Independent=4, Temp=200, Pressure=1, k=1000, ignoreframes=500,
                   includeframes=100000, potential='oplsaa',bonds=False, hinge='DefaultHinge'):
-    Colors = ['b', 'r', 'g']
-    
     if (plot_out):
-        import matplotlib # for making plots, version 'matplotlib-1.1.0-1'; errors may pop up when using earlier versions
+        import matplotlib  # for making plots, version 'matplotlib-1.1.0-1'; errors may pop up when using earlier versions
         import matplotlib.pyplot as plt
-        import matplotlib.cm as cm
-        from matplotlib.font_manager import FontProperties as FP
         font = {'family': 'normal',
                 'weight': 'normal',
                 'size': 16}
@@ -97,40 +93,6 @@ def dA_Gamma_MBAR(plot_out=True, MINGAMMA=0, MAXGAMMA=100, GSPACING=10, LAMBDA=1
     # =============================================================================================
     # FORMAT INPUTS
     # =============================================================================================
-    # TEMPERATURE
-#    Tname = ""
-#    if Temp < 10:
-#        Tname = "00" + str(int(Temp)) + "K"
-#    elif Temp < 100:
-#        Tname = "0" + str(int(Temp)) + "K"
-#    else:
-#        Tname = str(int(Temp)) + "K"
-    
-    # PRESSURE
-#    Pname = ""
-#    if Pressure < 10:
-#        Pname = "00" + str(int(Pressure)) + "P"
-#    elif Pressure < 100:
-#        Pname = "0" + str(int(Pressure)) + "P"
-#    else:
-#        Pname = str(int(Pressure)) + "P"
-    
-    # LAMBDA
-#    Lname = ""
-#    if LAMBDA < 10:
-#        Lname = "00" + str(LAMBDA) + "L"
-#    elif LAMBDA < 100:
-#        Lname = "0" + str(LAMBDA) + "L"
-#    else:
-#        Lname = str(LAMBDA) + "L"
-    
-    # NUMBER OF MOLECULES
-#    Molname = ""
-#    if Molecules == Independent:
-#        Molname = str(Molecules) + '_'
-#    else:
-#        Molname = str(Molecules) + '_' + str(Independent) + 'ind_'
-    
     # POTENTIAL
     PotNAME = ""
     if potential == "oplsaa":
@@ -143,18 +105,6 @@ def dA_Gamma_MBAR(plot_out=True, MINGAMMA=0, MAXGAMMA=100, GSPACING=10, LAMBDA=1
         PotNAME = "FAKEG"
     elif potential == "oplsaafakea":
         PotNAME = "FAKEA"
-    
-    # CHARGE AND SIGMA HINGE
-    if potential == "oplsaa":
-        ChargeHinge = ""
-    elif potential == "gromos":
-        ChargeHinge = ""
-    elif potential == "designeda":
-        ChargeHinge = ""
-    elif potential == "oplsaafakeg":
-        ChargeHinge = "_C01150"
-    elif potential == "oplsaafakea":
-        ChargeHinge = "_C01150"
     
     # OPTIONAL HINGE
     if hinge == "DefaultHinge":
@@ -172,7 +122,6 @@ def dA_Gamma_MBAR(plot_out=True, MINGAMMA=0, MAXGAMMA=100, GSPACING=10, LAMBDA=1
     # =============================================================================================
     # Constants.
     kB = 1.3806488e-23 * 6.0221413e23 / (1000.0 * 4.184)  # Boltzmann constant in kcal/mol
-    
     omitT = []  # Temperatures to be omitted from the analysis
     
     # Parameters
@@ -199,8 +148,6 @@ def dA_Gamma_MBAR(plot_out=True, MINGAMMA=0, MAXGAMMA=100, GSPACING=10, LAMBDA=1
     dA = np.zeros([len(polymorph), Kbig], float)
     ddA = np.zeros([len(polymorph), Kbig], float)
     convert_units = 0.2390057 * np.ones(Kbig, float)  # Convert all energies to kcal/mol
-    #convert_units = (1.0)*np.ones(len(Gammas),float)  # Convert all energies to kcal/mol
-    ignore_symbols = ['#', '@', '@TYPE', 'STEP', '=====================']  # Lines to ignore when reading in energies
     
     # Allocate storage for simulation data
     for i, poly in enumerate(polymorph):
@@ -220,31 +167,14 @@ def dA_Gamma_MBAR(plot_out=True, MINGAMMA=0, MAXGAMMA=100, GSPACING=10, LAMBDA=1
         for k in range(K):
             n = 0
             for s, hinge in enumerate(hinges):
-#                linenum_energy = 0
-                linenum_dhdl = 0
+
                 # cycle through all the input total energy data
-#                dirpath = Molecule  + '_GRO_' + PotNAME + '_' + polymorph_short[i] + '_' + Molname + Tname + ChargeHinge + \
-#                          '_' + Lname + '_' + Gamma_names[k] + '_' + Pname + hinge
                 dirpath = polymorph_short[i] + '/interactions/' + str(gamma_names[k])
 
                 fname = dirpath + '/PROD.edr'
                 dhdlname = dirpath + '/dhdl_PROD.xvg'
-#                fname14 = dirpath + '/potenergy14.xvg'
-#                groname = dirpath + '/Traj.gro'
-#                outname = dirpath + '/Flipless.gro'
-#                restname = dirpath + '/restraint.gro'
-                if k not in omitT:
-                    #if not os.path.isfile(fname):
-                    #    continue
-#                    infile = open(fname, 'r')
-#                    lines = infile.readlines()
-#                    infile.close()
-#                    print("loading " + fname)
-#                    infile = open(dhdlname, 'r')
-#                    lines_dhdl = infile.readlines()
-#                    infile.close()
-#                    print("loading " + dhdlname)
 
+                if k not in omitT:
                     potential_energy = panedr.edr_to_df(fname)['Potential'].values
                     print("loading " + fname)
 
@@ -258,42 +188,11 @@ def dA_Gamma_MBAR(plot_out=True, MINGAMMA=0, MAXGAMMA=100, GSPACING=10, LAMBDA=1
 
                     # the energy of every configuration from each state evaluated at its sampled state
                     n = len(potential_energy)
-                    u_kln[k, :K, :n] = (potential_energy.reshape((n, 1)) + dhdl_energy[:, dhdl_placement:]).T * convert_units[k]
-                    dhdl_kn[k, :n] = (float(Independent) / Molecules) * (dhdl_energy[:, 2] + dhdl_energy[:, 3] + 1.0 *
-                                                                        dhdl_energy[:, 4]) * convert_units[k]
+                    u_kln[k, :K, :n] = (potential_energy.reshape((n, 1)) + dhdl_energy[:, dhdl_placement:]).T * \
+                                       convert_units[k]
+                    dhdl_kn[k, :n] = (float(Independent) / Molecules) * \
+                                     np.sum(dhdl_energy[:, 2:dhdl_placement], axis=1) * convert_units[k]
 
-#                    ignorecounter = 0
-#                    for counter, line in enumerate(lines):
-#                        tokens_energy = line.split()
-#                        if tokens_energy[0] in ignore_symbols:
-#                            continue
-#                        # ignore the first set of frames
-#                        if ignorecounter <= ignoreframes:
-#                            ignorecounter += 1
-#                            continue
-#                        ## ignore the frames after the include frames
-#                        #if counter > includeframes:
-#                        #    continue
-#                        # Grab the dhdl information
-#                        tokens_dhdl = lines_dhdl[linenum_dhdl].split()
-#                        while tokens_dhdl[0] in ignore_symbols:
-#                            linenum_dhdl += 1
-#                            tokens_dhdl = lines_dhdl[linenum_dhdl].split()
-#                        while float(tokens_energy[0]) != float(tokens_dhdl[0]) and (linenum_dhdl + 1) < len(lines_dhdl) \
-#                                and linenum_dhdl < 1000000:
-#                            linenum_dhdl += 1
-#                            tokens_dhdl = lines_dhdl[linenum_dhdl].split()
-#
-#                        # the energy of every configuration from each state evaluated at its sampled state
-#                        if float(tokens_energy[0]) != float(tokens_dhdl[0]):
-#                            continue
-#
-#                        # Use this one if this is a normal PSCP
-#                        u_kln[k, :K, n] = (float(tokens_energy[1]) + np.asarray(tokens_dhdl[5:], float)) * convert_units[k]
-#                        dhdl_kn[k, n] = (float(Independent) / Molecules) * (float(tokens_dhdl[2]) + float(tokens_dhdl[3])
-#                                                                            + 0.0 * float(tokens_dhdl[4])) \
-#                                        * convert_units[k]
-#                        n += 1
                 if s == 0:
                     N_k_s[k, s] = n
                 else:
@@ -331,9 +230,6 @@ def dA_Gamma_MBAR(plot_out=True, MINGAMMA=0, MAXGAMMA=100, GSPACING=10, LAMBDA=1
         for k in range(Kbig):
             w = np.exp(mbar.Log_W_nk[:, k])
             print("max weight in state %d is %12.7f" % (k, np.max(w)))
-            # using Kish (1965) formula.
-            # effective # of samples =  (\sum_{i=1}^N w_i)^2 / \sum_{i=1}^N w_i^2
-            #                        =  (\sum_{i=1}^N w_i^2)^-1
             neff = 1 / np.sum(w ** 2)
             print("Effective number of sample in state %d is %10.3f" % (k, neff))
             print("Efficiency for state %d is %d/%d = %10.4f" % (k, neff, len(w), neff / len(w)))
@@ -349,7 +245,6 @@ def dA_Gamma_MBAR(plot_out=True, MINGAMMA=0, MAXGAMMA=100, GSPACING=10, LAMBDA=1
     
         dA[i, :] = df_i[0]
 
-    
         # =============================================================================================
         # COMPUTE UNCERTAINTY USING THE UNCORRELATED DATA
         # =============================================================================================
@@ -395,8 +290,7 @@ def dA_Gamma_MBAR(plot_out=True, MINGAMMA=0, MAXGAMMA=100, GSPACING=10, LAMBDA=1
         print("Free Energy Difference (in units of kcal/mol)")
         for k in range(Kbig):
             print("%8.3f %8.3f" % (-df_i[k, 0], ddf_u[k, 0]))
-        
-    
+
     # =============================================================================================
     # PRINT THE FINAL DATA
     # =============================================================================================
@@ -406,7 +300,6 @@ def dA_Gamma_MBAR(plot_out=True, MINGAMMA=0, MAXGAMMA=100, GSPACING=10, LAMBDA=1
     for i, poly in enumerate(polymorph):
         out_dA[i] = dA[i, Kbig - 1]
         out_ddA[i] = ddA[i, Kbig - 1]
-
 
     # =============================================================================================
     # PLOT THE FINAL DATA
