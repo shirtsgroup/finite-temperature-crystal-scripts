@@ -33,7 +33,7 @@ def run_REMD_gromacs(num_replica, output_string='PROD', mdp='production.mdp', in
     replica_dirs = '{'
     for i in range(num_replica):
         dir_string = str(i) + '/'
-        subprocess.call(['gmx_mpi', 'grompp', '-f', dir_string + mdp, '-c', dir_string + initial_structure, 
+        subprocess.call(['mpirun', '-np', '1', 'gmx_mpi', 'grompp', '-f', dir_string + mdp, '-c', dir_string + initial_structure, 
                          restraint_string[0], dir_string + restraint_string[1], '-p', dir_string + topology, 
                          '-o', dir_string + output_string + '.tpr', '-maxwarn', '10'])
         subprocess.call(['rm', 'mdout.mdp'])
@@ -78,7 +78,8 @@ def new_mdp(last_t, mdp, new_mdp):
 
 def get_checkpoint_time(cpt_file):
     # runs gmx_mpi check on the input cpt_file to determine where the new simulation must start from
-    hold = subprocess.check_output('gmx_mpi check -f ' + cpt_file, shell=True, stderr=subprocess.STDOUT).decode("utf-8").split('\n')
+    hold = subprocess.check_output('mpirun -np 1 gmx_mpi check -f ' + cpt_file, shell=True, stderr=subprocess.STDOUT).decode("utf-8").split('\n')
+    print('here')
   
     for i in hold:
         if len(i.split()) > 1:
@@ -88,7 +89,7 @@ def get_checkpoint_time(cpt_file):
 
 
 def run_REMD_gromacs_multi(num_replica, output_string='PROD', mdp='production.mdp', initial_structure='EQ.gro',
-                           restraints=None, topology='topology.top', replex=50, nex=True):
+                           restraints=None, topology='topology.top', replex=50, nex=True, just_append=False):
     # Determine where the number of simulations run prior
     files = os.listdir('0/')
     check = False
@@ -114,7 +115,16 @@ def run_REMD_gromacs_multi(num_replica, output_string='PROD', mdp='production.md
             subprocess.call(['cp', str(i) + '/' + output_string + '_0.trr', str(i) + '/' + output_string + '.trr'])
             subprocess.call(['cp', str(i) + '/' + output_string + '_0.edr', str(i) + '/' + output_string + '.edr'])
 
+    elif just_append == True:
+        # Count is ahead by one because the program assumes we're starting a new run
+        append_REMD_files(output_string, count - 1, num_replica)
+        for i in range(count):
+            remove_excess_logfiles(output_string, i, num_replica)
+
     else:
+        # Cleaning up directories before starting new run
+        remove_excess_logfiles(output_string, count - 1, num_replica)
+
         # Getting the file names
         last_file = output_string + '_' + str(count - 1)
         new_file = output_string + '_' + str(count)
@@ -128,7 +138,7 @@ def run_REMD_gromacs_multi(num_replica, output_string='PROD', mdp='production.md
 
             # Creating a new gro file with the trajectories form the last checkpoint
             c = subprocess.Popen(['echo', '0'], stdout=subprocess.PIPE)
-            output = subprocess.check_output(['gmx', 'trjconv', 
+            output = subprocess.check_output(['mpirun', '-np', '1', 'gmx_mpi', 'trjconv', 
                                               '-f', str(i) + '/' + last_file + '.cpt', 
                                               '-s', str(i) + '/' + last_file + '.tpr', 
                                               '-o', str(i) + '/' + new_file + '.gro', 
@@ -139,31 +149,49 @@ def run_REMD_gromacs_multi(num_replica, output_string='PROD', mdp='production.md
         run_REMD_gromacs(num_replica, output_string=new_file, mdp=new_file + '.mdp', initial_structure=new_file + '.gro',
                          restraints=restraints, topology=topology, replex=replex, nex=nex) 
 
-        # Changing the start time of the trr and edr files
-        file_list = [output_string + '_0']
-        for j in range(1, count + 1):
-            file_list.append(output_string + '_' + str(j))
-            start_t = get_checkpoint_time(' 0/' + output_string + '_' + str(j - 1) + '.cpt')
-            for i in range(num_replica):
-                dirr = str(i) + '/' + output_string + '_' + str(j) 
-                subprocess.call("gmx_mpi trjconv -f " + dirr + ".trr -t0 " + str(start_t) + " -o " + dirr + ".trr", shell=True)
-                c = subprocess.Popen(['echo', str(start_t)], stdout=subprocess.PIPE)
-                output = subprocess.check_output(['gmx', 'eneconv',
-                                                  '-f', dirr + '.edr',
-                                                  '-o', dirr + '.edr',
-                                                  '-settime', 'yes'], stdin=c.stdout)
-                c.wait()
+        append_REMD_files(output_string, count, num_replica)
+        for i in range(count):
+            remove_excess_logfiles(output_string, i, num_replica)
 
-        # Concatinating the edr and trr files together
+
+def remove_excess_logfiles(output_string, count, num_replica):
+    # Removing REMD log files from the primary directory
+    for i in range(num_replica):
+        if os.path.isfile(str(i) + '/' + output_string + '_' + str(count) + '.log'):
+            if not os.path.isfile('REMD_' + str(count) + '.log'):
+                subprocess.call(['cp', str(i) + '/' + output_string + '_' + str(count) + '.log', './REMD_' + str(count) + '.log'])
+            subprocess.call(['rm', str(i) + '/' + output_string + '_' + str(count) + '.log'])        
+
+def append_REMD_files(output_string, count, num_replica):
+    # Changing the start time of the trr and edr files
+    file_list = [output_string + '_0']
+    start_t = 0.
+    for j in range(1, count + 1):
+        file_list.append(output_string + '_' + str(j))
+        start_t += get_checkpoint_time(' 0/' + output_string + '_' + str(j - 1) + '.cpt')
         for i in range(num_replica):
-            trr_list = ''
-            edr_list = ''
-            for j in file_list:
-                trr_list += str(i) + '/' + j + '.trr '
-                edr_list += str(i) + '/' + j + '.edr '
-            dirr = str(i) + '/' + output_string 
-            subprocess.call("gmx_mpi trjcat -f " + trr_list + "-o " + dirr + ".trr -cat", shell=True)
-            subprocess.call("gmx_mpi eneconv -f " + edr_list + "-o " + dirr + ".edr", shell=True)
+            dirr = str(i) + '/' + output_string + '_' + str(j)
+            subprocess.call("mpirun -np 1 gmx_mpi trjconv -f " + dirr + ".trr -t0 " + str(start_t) + " -o " + dirr + ".trr", shell=True)
+            c = subprocess.Popen(['echo', str(start_t)], stdout=subprocess.PIPE)
+            output = subprocess.check_output(['mpirun', '-np', '1', 'gmx_mpi', 'eneconv',
+                                              '-f', dirr + '.edr',
+                                              '-o', dirr + '.edr',
+                                              '-settime', 'yes'], stdin=c.stdout)
+            c.wait()
+    
+    # Concatinating the edr and trr files together
+    for i in range(num_replica):
+        trr_list = ''
+        edr_list = ''
+        for j in file_list:
+            trr_list += str(i) + '/' + j + '.trr '
+            edr_list += str(i) + '/' + j + '.edr '
+        dirr = str(i) + '/' + output_string
+        subprocess.call("mpirun -np 1 gmx_mpi trjcat -f " + trr_list + "-o " + dirr + ".trr -cat", shell=True)
+        subprocess.call("mpirun -np 1 gmx_mpi eneconv -f " + edr_list + "-o " + dirr + ".edr", shell=True)
+
+
+
 
 if __name__ == '__main__':
     import argparse
@@ -174,8 +202,9 @@ if __name__ == '__main__':
     #parser.add_argument('-i', '--initial_structure', dest='initial_structure', default='EQ.gro', help='GROMACS .gro file to start from in each of the replica directories')
     parser.add_argument('-r', '--restraints', dest='restraints', help='GROMACS .gro file for the restraints to be applied to the simulation')
     parser.add_argument('-t', '--topology', dest='topology', default='topology.top', help='GROMACS topology file in each replica')
-    parser.add_argument('-x', '--replex', dest='replex', default='50', help='Interval for replica exchange')
+    parser.add_argument('-x', '--replex', dest='replex', default='100', help='Interval for replica exchange')
     parser.add_argument('-E', '--nex', dest='nex', default=True, help='True will set the number of random exchanges to (number of replica)^3, False will perform nearest neighbor exchange')
+    parser.add_argument('--append', action='store_true')
 
     args = parser.parse_args()
     if os.path.isfile('0/PROD.gro'):
@@ -186,6 +215,7 @@ if __name__ == '__main__':
         initial_structure = 'ANNEAL.gro'
     else:
         initial_structure = 'pre_EQ.gro'
+
     run_REMD_gromacs_multi(int(args.num_replica), output_string=args.output_string, mdp=args.mdp, initial_structure=initial_structure,
-                     restraints=args.restraints, topology=args.topology, replex=int(args.replex), nex=bool(args.nex))
+                     restraints=args.restraints, topology=args.topology, replex=int(args.replex), nex=bool(args.nex), just_append=args.append)
 

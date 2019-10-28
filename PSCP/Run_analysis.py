@@ -47,7 +47,7 @@ if __name__ == '__main__':
                                         Molecules=inputs['gen_in']['number_of_molecules'], Independent=independent,
                                         Temp=inputs['PSCP_in']['PSCP_temperature'],
                                         Pressure=inputs['gen_in']['pressure'], k=inputs['PSCP_in']['k_max'],
-                                        potential=inputs['gen_in']['potential'], hinge=inputs['gen_in']['hinge'])
+                                        potential=inputs['gen_in']['potential'], hinge=inputs['gen_in']['hinge'], bonds=inputs['PSCP_in']['run_bonded_interactions'])
 
             print(dA_L)
             print(dA_G)

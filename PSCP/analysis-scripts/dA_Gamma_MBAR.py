@@ -17,7 +17,7 @@ import panedr
 
 def dA_Gamma_MBAR(plot_out=True, MINGAMMA=0, MAXGAMMA=100, GSPACING=10, LAMBDA=100, exponent=2, polymorphs='p1 p2', 
                   Molecule='benzene', Molecules=72, Independent=4, Temp=200, Pressure=1, k=1000, ignoreframes=500,
-                  includeframes=100000, potential='oplsaa',bonds='no', hinge='DefaultHinge'):
+                  includeframes=100000, potential='oplsaa',bonds=False, hinge='DefaultHinge'):
     Colors = ['b', 'r', 'g']
     
     if (plot_out):
@@ -184,10 +184,12 @@ def dA_Gamma_MBAR(plot_out=True, MINGAMMA=0, MAXGAMMA=100, GSPACING=10, LAMBDA=1
     K = len(Gammas)  # How many states?
      
     # total number of states examined; 0 are unsampled if bonds are left on, 1 is unsampled if the bonds are removed
-    if bonds != "no":
+    if bonds == True:
         Kbig = K + 1
+        dhdl_placement = 6
     else:
         Kbig = K
+        dhdl_placement = 5
     
     # maximum number of snapshots/simulation (could make this automated) - doesn't matter, as long as it's long enough.
     N_max = 200000
@@ -256,7 +258,7 @@ def dA_Gamma_MBAR(plot_out=True, MINGAMMA=0, MAXGAMMA=100, GSPACING=10, LAMBDA=1
 
                     # the energy of every configuration from each state evaluated at its sampled state
                     n = len(potential_energy)
-                    u_kln[k, :K, :n] = (potential_energy.reshape((n, 1)) + dhdl_energy[:, 5:]).T * convert_units[k]
+                    u_kln[k, :K, :n] = (potential_energy.reshape((n, 1)) + dhdl_energy[:, dhdl_placement:]).T * convert_units[k]
                     dhdl_kn[k, :n] = (float(Independent) / Molecules) * (dhdl_energy[:, 2] + dhdl_energy[:, 3] + 1.0 *
                                                                         dhdl_energy[:, 4]) * convert_units[k]
 
