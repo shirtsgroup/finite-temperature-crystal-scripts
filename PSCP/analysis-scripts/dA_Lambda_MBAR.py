@@ -318,7 +318,7 @@ def dA_Lambda_MBAR(plot_out=True, MinL=0, MaxL=100, dL=5, GAMMA=100, exponent=4,
         # Write out free energy differences
         print("Free Energy Difference (in units of kcal/mol)")
         for k in range(Kbig):
-            print("%8.3f %8.3f" % (-df_i[k, 0], ddf_u[k, 0]))
+            print("%8.3f %8.3f" % (df_i[k, 0], ddf_u[k, 0]))
 
     # =============================================================================================
     # PRINT THE FINAL DATA
@@ -326,7 +326,7 @@ def dA_Lambda_MBAR(plot_out=True, MinL=0, MaxL=100, dL=5, GAMMA=100, exponent=4,
     out_dA = np.zeros(len(polymorph))
     out_ddA = np.zeros(len(polymorph))
     for i, poly in enumerate(polymorph):
-         out_dA[i] = -dA[i, Kbig-1]
+         out_dA[i] = dA[i, Kbig - 1]
          out_ddA[i] = ddA[i, Kbig - 1]
 
     # =============================================================================================

@@ -289,7 +289,7 @@ def dA_Gamma_MBAR(plot_out=True, MINGAMMA=0, MAXGAMMA=100, GSPACING=10, LAMBDA=1
         # Write out free energy differences
         print("Free Energy Difference (in units of kcal/mol)")
         for k in range(Kbig):
-            print("%8.3f %8.3f" % (-df_i[k, 0], ddf_u[k, 0]))
+            print("%8.3f %8.3f" % (df_i[k, 0], ddf_u[k, 0]))
 
     # =============================================================================================
     # PRINT THE FINAL DATA
