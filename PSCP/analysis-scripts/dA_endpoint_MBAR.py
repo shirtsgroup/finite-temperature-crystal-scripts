@@ -15,7 +15,7 @@ def dA_endpoint_MBAR(polymorphs='p1 p2', Molecules=72, Independent=4, Temp=200):
     dA = np.zeros(len(polymorphs))
     ddA = np.zeros(len(polymorphs))
 
-    for i, poly enumerate(polymorphs)
+    for i, poly in enumerate(polymorphs):
         if os.path.isfile(poly + '/interactions/100/PROD.edr') and os.path.isfile(poly + '/interactions/100/END.edr'):
             # Loading in the difference between the endpoint and production files
             dU = panedr.edr_to_df(poly + '/interactions/100/PROD.edr')['Potential'].values - panedr.edr_to_df(poly + '/interactions/100/END.edr')['Potential'].values

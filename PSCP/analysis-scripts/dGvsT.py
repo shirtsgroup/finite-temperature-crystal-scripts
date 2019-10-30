@@ -19,6 +19,7 @@ import pdb
 import sys
 import panedr
 import matplotlib
+import subprocess 
 import matplotlib.pyplot as plt
 
 font = {'family': 'normal',
@@ -810,18 +811,21 @@ def dGvsT(plot_out=False, Temperatures=np.array([100,200,300]), Temperatures_uns
         a.set_xlabel(xlabel)
         a.set_ylabel(ylabel)
 
-    np.save('T_' + molecule + '_' + potential, Temperatures_P)
+    if not os.path.isdir('output'):
+        subprocess.call(['mkdir', 'output'])
+
+    np.save('output/T_' + molecule + '_' + potential, Temperatures_P)
     for p, Poly in enumerate(Polymorphs):
-        np.save('dGvT_' + molecule + '_' + Poly + '_' + potential, dG[p, spacing, Pressures == PlotPress])
-        np.save('ddGvT_' + molecule + '_' + Poly + '_' + potential, ddG[p, spacing, Pressures == PlotPress])
+        np.save('output/dGvT_' + molecule + '_' + Poly + '_' + potential, dG[p, spacing, Pressures == PlotPress])
+        np.save('output/ddGvT_' + molecule + '_' + Poly + '_' + potential, ddG[p, spacing, Pressures == PlotPress])
         if len(Potentials) > 1:
-            np.save('dGvT_' + molecule + '_' + Poly + '_' + potential + '_indirect', dG[p, 0, :])
-            np.save('ddGvT_' + molecule + '_' + Poly + '_' + potential + '_indirect', ddG[p, 0, :])
+            np.save('output/dGvT_' + molecule + '_' + Poly + '_' + potential + '_indirect', dG[p, 0, :])
+            np.save('output/ddGvT_' + molecule + '_' + Poly + '_' + potential + '_indirect', ddG[p, 0, :])
             if spacing > 1:
-                np.save('dGvT_' + molecule + '_' + Poly + '_' + potential + '_convergence', dG[p, :, :])
-                np.save('ddGvT_' + molecule + '_' + Poly + '_' + potential + '_convergence', ddG[p, :, :])
-        np.save('dS_' + molecule + '_' + Poly + '_' + potential, dS[p, spacing, :])
-        np.save('ddS_' + molecule + '_' + Poly + '_' + potential, ddS[p, spacing, :])
+                np.save('output/dGvT_' + molecule + '_' + Poly + '_' + potential + '_convergence', dG[p, :, :])
+                np.save('output/ddGvT_' + molecule + '_' + Poly + '_' + potential + '_convergence', ddG[p, :, :])
+        np.save('output/dS_' + molecule + '_' + Poly + '_' + potential, dS[p, spacing, :])
+        np.save('output/ddS_' + molecule + '_' + Poly + '_' + potential, ddS[p, spacing, :])
     
     # =============================================================================================
     # PLOT THE RELATIVE ENTROPY VS TEMPERATURE
@@ -852,7 +856,7 @@ def dGvsT(plot_out=False, Temperatures=np.array([100,200,300]), Temperatures_uns
         plt.legend(loc='upper left')
 
     for p, Poly in enumerate(Polymorphs):
-        np.save('UvT_' + molecule + '_' + Poly + '_' + potential, dU[p, :])
+        np.save('output/UvT_' + molecule + '_' + Poly + '_' + potential, dU[p, :])
     
     # =============================================================================================
     # PLOT THE AVERAGE BOX VOLUME VS TEMPERATURE
@@ -866,16 +870,16 @@ def dGvsT(plot_out=False, Temperatures=np.array([100,200,300]), Temperatures_uns
                        alpha=0.6, color=Colors[p], label=Polymorphs[p])
 
     for p, Poly in enumerate(Polymorphs):
-        np.save('VvT_' + molecule + '_' + Poly + '_' + potential, V_avg[p, :])
-        np.save('dVvT_' + molecule + '_' + Poly + '_' + potential, ddV_avg[p, :])
+        np.save('output/VvT_' + molecule + '_' + Poly + '_' + potential, V_avg[p, :])
+        np.save('output/dVvT_' + molecule + '_' + Poly + '_' + potential, ddV_avg[p, :])
 
     # =============================================================================================
     # SAVE THE AVERAGE BOX VECTORS AND ANGLES VS TEMPERATURE
     # =============================================================================================
 
     for p, Poly in enumerate(Polymorphs):
-        np.save('hvT_' + molecule + '_' + Poly + '_' + potential, h_avg[p, :])
-        np.save('dhvT_' + molecule + '_' + Poly + '_' + potential, dh[p, :])
+        np.save('output/hvT_' + molecule + '_' + Poly + '_' + potential, h_avg[p, :])
+        np.save('output/dhvT_' + molecule + '_' + Poly + '_' + potential, dh[p, :])
 
     # =============================================================================================
     # PLOT THE DIFFERENCE IN AVERAGE ENERGY VS TEMPERATURE
@@ -897,8 +901,8 @@ def dGvsT(plot_out=False, Temperatures=np.array([100,200,300]), Temperatures_uns
     
     # Save the data for future use.
     for p, Poly in enumerate(Polymorphs):
-        np.save('dUvT_' + molecule + '_' + Poly + '_' + potential, dU[p, :] - dU[0, :])
-        np.save('ddUvT_' + molecule + '_' + Poly + '_' + potential, (ddU[p, :] ** 2 + ddU[0, :] ** 2) ** 0.5)
+        np.save('output/dUvT_' + molecule + '_' + Poly + '_' + potential, dU[p, :] - dU[0, :])
+        np.save('output/ddUvT_' + molecule + '_' + Poly + '_' + potential, (ddU[p, :] ** 2 + ddU[0, :] ** 2) ** 0.5)
 
     if plot_out == True:
         plt.tight_layout()
