@@ -11,6 +11,7 @@ current_path = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, current_path + '/analysis-scripts')
 from dA_Lambda_MBAR import dA_Lambda_MBAR
 from dA_Gamma_MBAR import dA_Gamma_MBAR
+from dA_endpoint_MBAR import dA_endpoint_MBAR
 from dGvsT import dGvsT
 from dGvsT import old_systems_dictionary
 
@@ -34,6 +35,7 @@ if __name__ == '__main__':
     if (inputs['PSCP_out']['dG'] == None) or (inputs['PSCP_out']['ddG'] == None):
         if (inputs['PSCP_in']['run_restraints'] == True) and (inputs['PSCP_in']['run_interactions'] == True):
             # Computing the free energy to restrain the molecules
+            # Values are based on the restrained non-interacting state being the reference
             dA_L, ddA_L = dA_Lambda_MBAR(MinL=inputs['PSCP_in']['min_lambda'], MaxL=inputs['PSCP_in']['max_lambda'],
                                          dL=inputs['PSCP_in']['lambda_spacing'], GAMMA=inputs['PSCP_in']['gamma'],
                                          exponent=inputs['PSCP_in']['lambda_exponent'],
@@ -58,8 +60,16 @@ if __name__ == '__main__':
             inputs['PSCP_out']['dGamma'] = dA_G.tolist()
             inputs['PSCP_out']['ddGamma'] = ddA_G.tolist()
 
+            # Computing the free energy for the endpoints
+            dA_end, ddA_end = dA_endpoint_MBAR(polymorphs=inputs['gen_in']['polymorph_num'],
+                                               Molecules=inputs['gen_in']['number_of_molecules'], Independent=independent,
+                                               Temp=inputs['PSCP_in']['PSCP_temperature'])
+            inputs['PSCP_out']['dEnd'] = dA_end.tolist()
+            inputs['PSCP_out']['ddEnd'] = ddA_end.tolist()
+
             # Adding the free energy differences to the inputs to be saved
             inputs['PSCP_out']['dG'] = ((dA_L - dA_L[0]) + (dA_G - dA_G[0])).tolist()
+            ddG = np.sqrt 
             inputs['PSCP_out']['ddG'] = np.sqrt(ddA_L**2 + ddA_G**2).tolist()
 
         else:

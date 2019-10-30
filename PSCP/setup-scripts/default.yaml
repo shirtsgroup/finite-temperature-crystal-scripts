@@ -43,6 +43,8 @@ PSCP_in:
     k_max: 1000
 
 PSCP_out:
+    dEnd:
+    ddEnd:
     dGamma:
     ddGamma:
     dLambda:
