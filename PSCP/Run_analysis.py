@@ -31,7 +31,7 @@ if __name__ == '__main__':
         independent = inputs['gen_in']['independent']
 
     # Computing the free energy from PSCP
-    if (inputs['PSCP_out']['refdG'] == None) or (inputs['PSCP_out']['refddG'] == None):
+    if (inputs['PSCP_out']['dG'] == None) or (inputs['PSCP_out']['ddG'] == None):
         if (inputs['PSCP_in']['run_restraints'] == True) and (inputs['PSCP_in']['run_interactions'] == True):
             # Computing the free energy to restrain the molecules
             dA_L, ddA_L = dA_Lambda_MBAR(MinL=inputs['PSCP_in']['min_lambda'], MaxL=inputs['PSCP_in']['max_lambda'],
@@ -42,6 +42,8 @@ if __name__ == '__main__':
                                          Temp=inputs['PSCP_in']['PSCP_temperature'], Pressure=inputs['gen_in']['pressure'],
                                          potential=inputs['gen_in']['potential'],
                                          hinge=inputs['gen_in']['hinge'])
+            inputs['PSCP_out']['dLambda'] = dA_L.tolist()
+            inputs['PSCP_out']['ddLambda'] = ddA_L.tolist()
 
             # Computing the free energy to turn off the interactions
             dA_G, ddA_G = dA_Gamma_MBAR(MINGAMMA=inputs['PSCP_in']['min_gamma'], MAXGAMMA=inputs['PSCP_in']['max_gamma'],
@@ -53,17 +55,19 @@ if __name__ == '__main__':
                                         Pressure=inputs['gen_in']['pressure'], k=inputs['PSCP_in']['k_max'],
                                         potential=inputs['gen_in']['potential'], hinge=inputs['gen_in']['hinge'],
                                         bonds=inputs['PSCP_in']['run_bonded_interactions'])
+            inputs['PSCP_out']['dGamma'] = dA_G.tolist()
+            inputs['PSCP_out']['ddGamma'] = ddA_G.tolist()
 
             # Adding the free energy differences to the inputs to be saved
-            inputs['PSCP_out']['refdG'] = ((dA_L - dA_L[0]) + (dA_G - dA_G[0])).tolist()
-            inputs['PSCP_out']['refddG'] = np.sqrt(ddA_L**2 + ddA_G**2).tolist()
+            inputs['PSCP_out']['dG'] = ((dA_L - dA_L[0]) + (dA_G - dA_G[0])).tolist()
+            inputs['PSCP_out']['ddG'] = np.sqrt(ddA_L**2 + ddA_G**2).tolist()
 
         else:
             # Pulling old data from Temperature Transformation paper 2017
-            inputs['gen_in']['polymorph_num'], inputs['PSCP_in']['PSCP_temperature'], inputs['PSCP_out']['refdG'], \
-            inputs['PSCP_out']['refddG'], refdU, absolutedU = \
+            inputs['gen_in']['polymorph_num'], inputs['PSCP_in']['PSCP_temperature'], inputs['PSCP_out']['dG'], \
+            inputs['PSCP_out']['ddG'], refdU, absolutedU = \
                 old_systems_dictionary(inputs['gen_in']['potential'], inputs['gen_in']['molecule'])
-        print(inputs['PSCP_out']['refdG'], inputs['PSCP_out']['refddG'])
+        print(inputs['PSCP_out']['dG'], inputs['PSCP_out']['ddG'])
 
         # Writing out the input file with updated dG and ddG values
         with open(args.input_file, 'w') as yaml_file:
@@ -78,5 +82,5 @@ if __name__ == '__main__':
               Independent=independent, potential=inputs['gen_in']['potential'],
               simulation=inputs['temp_in']['simulation_package'], hinge=inputs['gen_in']['hinge'],
               Polymorphs=inputs['gen_in']['polymorph_num'].split(), refT=inputs['PSCP_in']['PSCP_temperature'],
-              refdG=inputs['PSCP_out']['refdG'], refddG=inputs['PSCP_out']['refddG'])
+              refdG=inputs['PSCP_out']['dG'], refddG=inputs['PSCP_out']['ddG'])
 

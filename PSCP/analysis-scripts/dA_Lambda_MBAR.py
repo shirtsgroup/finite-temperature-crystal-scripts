@@ -259,7 +259,8 @@ def dA_Lambda_MBAR(plot_out=True, MinL=0, MaxL=100, dL=5, GAMMA=100, exponent=4,
     
         # extract self-consistent weights and uncertainties
         (df_i, ddf_i, theta_i) = mbar.getFreeEnergyDifferences()
-    
+        df_i = - df_i
+ 
         print("Free Energies Optained...")
     
         # convert PMF to kcal/mol and normalize by the number of molecules

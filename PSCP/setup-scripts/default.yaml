@@ -43,9 +43,12 @@ PSCP_in:
     k_max: 1000
 
 PSCP_out:
-    refdG:
-    refddG:
-    absolutedU:
+    dGamma:
+    ddGamma:
+    dLambda:
+    ddLambda:
+    dG:
+    ddG:
 
 temp_in:
     # Input parameters for setup_Temperature
