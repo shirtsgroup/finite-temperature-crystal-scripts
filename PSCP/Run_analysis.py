@@ -68,9 +68,8 @@ if __name__ == '__main__':
             inputs['PSCP_out']['ddEnd'] = ddA_end.tolist()
 
             # Adding the free energy differences to the inputs to be saved
-            inputs['PSCP_out']['dG'] = ((dA_L - dA_L[0]) + (dA_G - dA_G[0])).tolist()
-            ddG = np.sqrt 
-            inputs['PSCP_out']['ddG'] = np.sqrt(ddA_L**2 + ddA_G**2).tolist()
+            inputs['PSCP_out']['dG'] = ((dA_L - dA_L[0]) + (dA_G - dA_G[0]) + (dA_end - dA_end[0])).tolist()
+            inputs['PSCP_out']['ddG'] = np.sqrt(ddA_L**2 + ddA_G**2 + ddA_end**2).tolist()
 
         else:
             # Pulling old data from Temperature Transformation paper 2017
