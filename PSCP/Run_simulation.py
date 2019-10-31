@@ -100,7 +100,7 @@ if check_bool(args.equilibration) and eq_run:
     subprocess.call("echo '0' | gmx trjconv -f EQ.cpt -s EQ.tpr -o EQ.gro -pbc whole -ndec 12 -vel yes", shell=True)
 
 # Running a production run
-if  check_bool(args.production):
+if check_bool(args.production):
     # Determine the starting structure
     if (check_bool(args.anneal) == True) and (check_bool(args.equilibration) == False):
         starting_structure = 'ANNEAL.gro'
@@ -134,6 +134,14 @@ if  check_bool(args.production):
 #        subprocess.call([path + '/run-scripts/reweightjobgromacs', '-s', 'gromacs', '-u', args.potential])
 #        if args.potential == 'designeda':
 #            subprocess.call([path + '/run-scripts/reweightjobtinker', '-s', 'gromacs', '-u', 'amoeba09todesa', '-d', '10'])
+
+    if os.path.isfile('endpoint.itp') and os.path.isfile('endpoint.top'):
+        # Setting up production run
+        subprocess.call("gmx grompp -f production.mdp -c " + starting_structure + " -r restraint.gro -p endpoint.top -o END  -maxwarn 10", shell=True)
+
+        # Runnning production run
+        subprocess.call("gmx mdrun -nt " + str(args.num_cores) + " -v -deffnm END -dhdl dhdl_END -rerun PROD.trr", shell=True)
+
 
 
 

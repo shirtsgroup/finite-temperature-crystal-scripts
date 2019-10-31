@@ -91,7 +91,8 @@ def setup_interactions(inputs):
                             templatepath=inputs['gen_in']['template_path'], anneal_temp=inputs['gen_in']['anneal_temp'],
                             anneal_steps=0, run_production=True, charge=inputs['temp_in']['charge'],
                             hinge=inputs['gen_in']['hinge'], submission_script=inputs['gen_in']['submission_script'], 
-                            remove_bonded_interactions=inputs['PSCP_in']['run_bonded_interactions'])
+                            remove_bonded_interactions=inputs['PSCP_in']['run_bonded_interactions'], 
+                            endpoint_itp=inputs['PSCP_in']['endpoint_itp'])
              gamma += inputs['PSCP_in']['gamma_spacing']
 
 
@@ -271,7 +272,8 @@ def setup_molecule(polymorph_num='p1', temperature=[], pressure=1, molecule='', 
                    max_gamma=100, gamma_exponent=2, gamma_spacing=100, cutoff=8, potential='oplsaa',
                    simulation='gromacs', ensemble='NPT', jobpath='./', templatepath='', anneal_temp=400,
                    anneal_steps=10000, run_production=True, volume=-1, charge=0.1150, hinge='DefaultHinge', delta=0,
-                   SigmaH=100, SigmaC=100, drude_k=100, submission_script='submit_cluster.slurm', remove_bonded_interactions=False):
+                   SigmaH=100, SigmaC=100, drude_k=100, submission_script='submit_cluster.slurm', 
+                   remove_bonded_interactions=False, endpoint_itp=None):
     # =============================================================================================
     # ENSURE THAT INPUTS HAVE BEEN PROPERLY ENTERED
     # =============================================================================================
@@ -742,7 +744,11 @@ def setup_molecule(polymorph_num='p1', temperature=[], pressure=1, molecule='', 
         # Copy over the molecule itp file and make the necessary modifications to the bond lengths, charges, and sigma values
         print('Copying itp file...')
         subprocess.call(['cp', templatepath + '/' + molecule + '_' + potential + '.itp', jobpath + '/molecule.itp'])
+        if lambd == 100:
+            subprocess.call(['cp', endpoint_itp, jobpath + '/endpoint.itp'])
+            
         subprocess.call(['cp', templatepath + '/' + molecule + '_' + potential + '.itp', './'])
+        
 
         # Conduct any interpolations in the itp file
         if potential in ['oplsaatofakeg', 'oplsaatofakea']:
@@ -824,6 +830,9 @@ def setup_molecule(polymorph_num='p1', temperature=[], pressure=1, molecule='', 
         # COPY OVER THE TOPOLOGY FILE
         print('Copying topology file...')
         subprocess.call(['cp', templatepath + '/topology.top', jobpath + '/' + tname + '.top'])
+        if lambd == 100:
+            subprocess.call(['cp', templatepath + '/topology.top', jobpath + '/endpoint.top'])
+            replace_string_in_text(jobpath + '/endpoint.top', 'molecule.itp', 'endpoint.itp')
 
         # Edit the topology file based on the potential and system inputs
         replace_string_in_text(jobpath + '/topology.top', 'MOLMOLMOL', molecule)
