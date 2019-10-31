@@ -19,6 +19,7 @@ gen_in:
 
 PSCP_in:
     PSCP_temperature: 200
+    endpoint_itp:
 
     # Input parameters for setup_Interactions
     run_interactions: False
