@@ -259,7 +259,6 @@ def dA_Lambda_MBAR(plot_out=True, MinL=0, MaxL=100, dL=5, GAMMA=100, exponent=4,
     
         # extract self-consistent weights and uncertainties
         (df_i, ddf_i, theta_i) = mbar.getFreeEnergyDifferences()
-        df_i = - df_i
  
         print("Free Energies Optained...")
     
@@ -267,7 +266,7 @@ def dA_Lambda_MBAR(plot_out=True, MinL=0, MaxL=100, dL=5, GAMMA=100, exponent=4,
         df_i /= (beta_k[0] * float(Independent))
         ddf_i /= (beta_k[0] * float(Independent))
     
-        dA[i, :] = df_i[0]
+        dA[i, :] = df_i[-1]
 
         # =============================================================================================
         # COMPUTE UNCERTAINTY USING THE UNCORRELATED DATA
@@ -314,12 +313,13 @@ def dA_Lambda_MBAR(plot_out=True, MinL=0, MaxL=100, dL=5, GAMMA=100, exponent=4,
         df_u /= (beta_k[0] * float(Independent))
         ddf_u /= (beta_k[0] * float(Independent))
     
-        ddA[i, :] = ddf_u[0]
+        ddA[i, :] = ddf_u[-1]
     
         # Write out free energy differences
         print("Free Energy Difference (in units of kcal/mol)")
+        print("  dA(Lambda) = A(Lambda) - A(Fully Restrained)")
         for k in range(Kbig):
-            print("%8.3f %8.3f" % (df_i[k, 0], ddf_u[k, 0]))
+            print("%8.3f %8.3f" % (df_i[k, -1], ddf_u[k, -1]))
 
     # =============================================================================================
     # PRINT THE FINAL DATA
@@ -327,8 +327,8 @@ def dA_Lambda_MBAR(plot_out=True, MinL=0, MaxL=100, dL=5, GAMMA=100, exponent=4,
     out_dA = np.zeros(len(polymorph))
     out_ddA = np.zeros(len(polymorph))
     for i, poly in enumerate(polymorph):
-         out_dA[i] = dA[i, Kbig - 1]
-         out_ddA[i] = ddA[i, Kbig - 1]
+         out_dA[i] = dA[i, 0] #Kbig - 1]
+         out_ddA[i] = ddA[i, 0] #Kbig - 1]
 
     # =============================================================================================
     # PLOT THE FINAL DATA

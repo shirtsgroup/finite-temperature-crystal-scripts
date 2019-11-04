@@ -55,7 +55,7 @@ def setup_restraints(inputs):
                            k_max=inputs['PSCP_in']['k_max'], lambd=lambd,
                            min_lambda=inputs['PSCP_in']['min_lambda'], max_lambda=inputs['PSCP_in']['max_lambda'],
                            lambda_spacing=inputs['PSCP_in']['lambda_spacing'],
-                           lambda_exponent=inputs['PSCP_in']['lambda_exponent'], gamma=inputs['PSCP_in']['gamma'],
+                           lambda_exponent=inputs['PSCP_in']['lambda_exponent'], gamma=0,
                            cutoff=inputs['gen_in']['cutoff'], potential=inputs['gen_in']['potential'],
                            simulation=inputs['temp_in']['simulation_package'], ensemble='NVT',
                            jobpath=i + '/restraints/' + str(lambd), templatepath=inputs['gen_in']['template_path'],
@@ -82,7 +82,7 @@ def setup_interactions(inputs):
                             thermostat=inputs['gen_in']['thermostat'], barostat=inputs['temp_in']['barostat'],
                             cores=inputs['gen_in']['cores'], k_min=inputs['PSCP_in']['k_min'],
                             k_max=inputs['PSCP_in']['k_max'], lambd=inputs['PSCP_in']['lambda'], gamma=gamma,
-                            min_lambda=inputs['PSCP_in']['lambda'], max_lambda=inputs['PSCP_in']['lambda'],
+                            min_lambda=100, max_lambda=inputs['PSCP_in']['lambda'],
                             min_gamma=inputs['PSCP_in']['min_gamma'], max_gamma=inputs['PSCP_in']['max_gamma'],
                             gamma_exponent=inputs['PSCP_in']['gamma_exponent'],
                             gamma_spacing=inputs['PSCP_in']['gamma_spacing'], cutoff=inputs['gen_in']['cutoff'],
@@ -744,7 +744,7 @@ def setup_molecule(polymorph_num='p1', temperature=[], pressure=1, molecule='', 
         # Copy over the molecule itp file and make the necessary modifications to the bond lengths, charges, and sigma values
         print('Copying itp file...')
         subprocess.call(['cp', templatepath + '/' + molecule + '_' + potential + '.itp', jobpath + '/molecule.itp'])
-        if lambd == 100:
+        if gamma == 100:
             subprocess.call(['cp', endpoint_itp, jobpath + '/endpoint.itp'])
             
         subprocess.call(['cp', templatepath + '/' + molecule + '_' + potential + '.itp', './'])
@@ -830,9 +830,13 @@ def setup_molecule(polymorph_num='p1', temperature=[], pressure=1, molecule='', 
         # COPY OVER THE TOPOLOGY FILE
         print('Copying topology file...')
         subprocess.call(['cp', templatepath + '/topology.top', jobpath + '/' + tname + '.top'])
-        if lambd == 100:
+        if gamma == 100:
             subprocess.call(['cp', templatepath + '/topology.top', jobpath + '/endpoint.top'])
             replace_string_in_text(jobpath + '/endpoint.top', 'molecule.itp', 'endpoint.itp')
+
+            # Edit the topology file based on the potential and system inputs
+            replace_string_in_text(jobpath + '/endpoint.top', 'MOLMOLMOL', molecule)
+            replace_string_in_text(jobpath + '/endpoint.top', 'NUMNUMNUM', number_of_molecules)
 
         # Edit the topology file based on the potential and system inputs
         replace_string_in_text(jobpath + '/topology.top', 'MOLMOLMOL', molecule)

@@ -236,7 +236,6 @@ def dA_Gamma_MBAR(plot_out=True, MINGAMMA=0, MAXGAMMA=100, GSPACING=10, LAMBDA=1
     
         # extract self-consistent weights and uncertainties
         (df_i, ddf_i, theta_i) = mbar.getFreeEnergyDifferences()
-        df_i = - df_i
  
         print("Free Energies Optained...")
     
@@ -244,7 +243,7 @@ def dA_Gamma_MBAR(plot_out=True, MINGAMMA=0, MAXGAMMA=100, GSPACING=10, LAMBDA=1
         df_i /= (beta_k[0] * float(Independent))
         ddf_i /= (beta_k[0] * float(Independent))
     
-        dA[i, :] = df_i[0]
+        dA[i, :] = df_i[-1]
 
         # =============================================================================================
         # COMPUTE UNCERTAINTY USING THE UNCORRELATED DATA
@@ -285,12 +284,13 @@ def dA_Gamma_MBAR(plot_out=True, MINGAMMA=0, MAXGAMMA=100, GSPACING=10, LAMBDA=1
         df_u /= (beta_k[0] * float(Independent))
         ddf_u /= (beta_k[0] * float(Independent))
     
-        ddA[i, :] = ddf_u[0]
+        ddA[i, :] = ddf_u[-1]
         
         # Write out free energy differences
         print("Free Energy Difference (in units of kcal/mol)")
+        print("  dA(Gamma) = A(Gamma) - A(Interactions Off)")
         for k in range(Kbig):
-            print("%8.3f %8.3f" % (df_i[k, 0], ddf_u[k, 0]))
+            print("%8.3f %8.3f" % (df_i[k, -1], ddf_u[k, -1]))
 
     # =============================================================================================
     # PRINT THE FINAL DATA
@@ -299,46 +299,46 @@ def dA_Gamma_MBAR(plot_out=True, MINGAMMA=0, MAXGAMMA=100, GSPACING=10, LAMBDA=1
     out_dA = np.zeros(len(polymorph))
     out_ddA = np.zeros(len(polymorph))
     for i, poly in enumerate(polymorph):
-        out_dA[i] = dA[i, Kbig - 1]
-        out_ddA[i] = ddA[i, Kbig - 1]
+        out_dA[i] = dA[i, 0] #Kbig - 1]
+        out_ddA[i] = ddA[i, 0] #Kbig - 1]
 
     # =============================================================================================
     # PLOT THE FINAL DATA
     # =============================================================================================
     
-    if (plot_out) and polymorphs == 'all':
-        # now plot the free energy change as a function of temperature
-        fig = plt.figure(4)
-        ax = fig.add_subplot(111)
-        xlabel = 'Interaction Strength, $\gamma$'
-        ylabel = 'Relative Free Energy (kcal/mol)'
-        plt.xlabel(xlabel)
-        plt.ylabel(ylabel)
-        Xaxis = [float(j / 100.0) for j in Gammas]
-       
-        if os.path.isfile('BootstrapStd_' + PotNAME + '_Polymorph1_' + str(Molecules) + '_' + Tname + '_' + Pname +
-                                  '_dAvsG_All'):
-            ddA[0, :] = MBARBootstrap.ExtractBootstrap('BootstrapStd_' + PotNAME + '_Polymorph1_' + str(Molecules) + '_' +
-                                                       Tname + '_' + Pname + '_dAvsG_All')
-        elif os.path.isfile('BootstrapStd_' + PotNAME + '_Polymorph2_' + str(Molecules) + '_' + Tname + '_' + Pname +
-                                    '_dAvsG_All'):
-            ddA[1, :] = MBARBootstrap.ExtractBootstrap('BootstrapStd_' + PotNAME + '_Polymorph2_' + str(Molecules) + '_' +
-                                                       Tname + '_' + Pname + '_dAvsG_All')
-        elif os.path.isfile('BootstrapStd_' + PotNAME + '_Polymorph2_' + str(Molecules) + '_' + Tname + '_' + Pname +
-                                    '_dAvsG_All'):
-            ddA[2, :] = MBARBootstrap.ExtractBootstrap('BootstrapStd_' + PotNAME + '_Polymorph3_' + str(Molecules) + '_' +
-                                                       Tname + '_' + Pname + '_dAvsG_All')
-    
-        ax.errorbar(Xaxis, dA[0, :], color='b', yerr=ddA[0, :], label='Benzene I')
-        ax.errorbar(Xaxis, dA[1, :], color='g', yerr=ddA[1, :], label='Benzene II')
-        ax.errorbar(Xaxis, dA[2, :], color='r', yerr=ddA[2, :], label='Benzene III')
-        plt.legend(loc='upper right')
-
-        if len(hinges) > 1:
-            filename = PotNAME + '_' + str(Molecules) + '_' + Tname + '_dAvsG.pdf'
-        else:
-            filename = PotNAME + '_' + str(Molecules) + '_' + Tname + hinge + '_dAvsG.pdf'
-        plt.savefig(filename, bbox_inches='tight')
+#    if (plot_out) and polymorphs == 'all':
+#        # now plot the free energy change as a function of temperature
+#        fig = plt.figure(4)
+#        ax = fig.add_subplot(111)
+#        xlabel = 'Interaction Strength, $\gamma$'
+#        ylabel = 'Relative Free Energy (kcal/mol)'
+#        plt.xlabel(xlabel)
+#        plt.ylabel(ylabel)
+#        Xaxis = [float(j / 100.0) for j in Gammas]
+#       
+#        if os.path.isfile('BootstrapStd_' + PotNAME + '_Polymorph1_' + str(Molecules) + '_' + Tname + '_' + Pname +
+#                                  '_dAvsG_All'):
+#            ddA[0, :] = MBARBootstrap.ExtractBootstrap('BootstrapStd_' + PotNAME + '_Polymorph1_' + str(Molecules) + '_' +
+#                                                       Tname + '_' + Pname + '_dAvsG_All')
+#        elif os.path.isfile('BootstrapStd_' + PotNAME + '_Polymorph2_' + str(Molecules) + '_' + Tname + '_' + Pname +
+#                                    '_dAvsG_All'):
+#            ddA[1, :] = MBARBootstrap.ExtractBootstrap('BootstrapStd_' + PotNAME + '_Polymorph2_' + str(Molecules) + '_' +
+#                                                       Tname + '_' + Pname + '_dAvsG_All')
+#        elif os.path.isfile('BootstrapStd_' + PotNAME + '_Polymorph2_' + str(Molecules) + '_' + Tname + '_' + Pname +
+#                                    '_dAvsG_All'):
+#            ddA[2, :] = MBARBootstrap.ExtractBootstrap('BootstrapStd_' + PotNAME + '_Polymorph3_' + str(Molecules) + '_' +
+#                                                       Tname + '_' + Pname + '_dAvsG_All')
+#    
+#        ax.errorbar(Xaxis, dA[0, :], color='b', yerr=ddA[0, :], label='Benzene I')
+#        ax.errorbar(Xaxis, dA[1, :], color='g', yerr=ddA[1, :], label='Benzene II')
+#        ax.errorbar(Xaxis, dA[2, :], color='r', yerr=ddA[2, :], label='Benzene III')
+#        plt.legend(loc='upper right')
+#
+#        if len(hinges) > 1:
+#            filename = PotNAME + '_' + str(Molecules) + '_' + Tname + '_dAvsG.pdf'
+#        else:
+#            filename = PotNAME + '_' + str(Molecules) + '_' + Tname + hinge + '_dAvsG.pdf'
+#        plt.savefig(filename, bbox_inches='tight')
     return out_dA, out_ddA
 
 

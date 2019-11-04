@@ -18,7 +18,7 @@ def dA_endpoint_MBAR(polymorphs='p1 p2', Molecules=72, Independent=4, Temp=200):
     for i, poly in enumerate(polymorphs):
         if os.path.isfile(poly + '/interactions/100/PROD.edr') and os.path.isfile(poly + '/interactions/100/END.edr'):
             # Loading in the difference between the endpoint and production files
-            dU = panedr.edr_to_df(poly + '/interactions/100/PROD.edr')['Potential'].values - panedr.edr_to_df(poly + '/interactions/100/END.edr')['Potential'].values
+            dU = panedr.edr_to_df(poly + '/interactions/100/END.edr')['Potential'].values - panedr.edr_to_df(poly + '/interactions/100/PROD.edr')['Potential'].values
 
             # Converting the energy differences to go into pymbar
             dW = dU / Molecules * kJ_to_kcal / (kB * Temp)
@@ -26,7 +26,7 @@ def dA_endpoint_MBAR(polymorphs='p1 p2', Molecules=72, Independent=4, Temp=200):
             # Getting the energy differences with MBAR using Exponential Averaging
             da = np.array(pymbar.EXP(dW)) * kB * Temp
 
-            dA[i] = da[0]
+            dA[i] = -da[0]
             ddA[i] = da[1]
         else:
             dA[i] = np.nan
