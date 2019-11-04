@@ -59,7 +59,7 @@ if os.path.isfile('npt_equilibration.mdp') and npt_run:
         subprocess.call('gmx grompp -f npt_equilibration.mdp -c pre_NPT.gro -r restraint.gro -p topology.top -o NPT_equil.tpr -maxwarn 10', shell=True)
 
     # Running the annealing simulation
-    subprocess.call("gmx mdrun -nt " + str(args.num_cores) + " -v -deffnm NPT_equil -dhdl dhdl_NPT_equil", shell=True)
+    subprocess.call("gmx mdrun -nt " + str(args.num_cores) + " -v -deffnm NPT_equil -dhdl dhdl_NPT_equil -cpi NPT_equil.cpt", shell=True)
 
     # Extracing the final frame from the checkpoint file
     subprocess.call("echo '0' | gmx trjconv -f NPT_equil.cpt -s NPT_equil.tpr -o pre_EQ.gro -pbc whole -ndec 12", shell=True)
@@ -76,7 +76,7 @@ if check_bool(args.anneal) and anneal_run:
         subprocess.call('gmx grompp -f anneal.mdp -c pre_ANNEAL.gro -r restraint.gro -p topology.top -o ANNEAL.tpr -maxwarn 10', shell=True)
 
     # Running the annealing simulation
-    subprocess.call("gmx mdrun -nt " + str(args.num_cores) + " -v -deffnm ANNEAL -dhdl dhdl_ANNEAL", shell=True)
+    subprocess.call("gmx mdrun -nt " + str(args.num_cores) + " -v -deffnm ANNEAL -dhdl dhdl_ANNEAL -cpi ANNEAL.cpt", shell=True)
 
     # Extracing the final frame from the checkpoint file
     subprocess.call("echo '0' | gmx trjconv -f ANNEAL.cpt -s ANNEAL.tpr -o ANNEAL.gro -pbc whole -ndec 12 -vel yes", shell=True)
@@ -94,7 +94,7 @@ if check_bool(args.equilibration) and eq_run:
         subprocess.call('gmx grompp -f equilibration.mdp -c pre_EQ.gro -r restraint.gro -p topology.top -o EQ.tpr -maxwarn 10', shell=True)
  
     # Running the annealing simulation
-    subprocess.call("gmx mdrun -nt " + str(args.num_cores) + " -v -deffnm EQ -dhdl dhdl_EQ", shell=True)
+    subprocess.call("gmx mdrun -nt " + str(args.num_cores) + " -v -deffnm EQ -dhdl dhdl_EQ -cpi EQ.cpt", shell=True)
 
     # Extracing the final frame from the checkpoint file
     subprocess.call("echo '0' | gmx trjconv -f EQ.cpt -s EQ.tpr -o EQ.gro -pbc whole -ndec 12 -vel yes", shell=True)
