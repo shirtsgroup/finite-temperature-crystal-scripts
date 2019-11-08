@@ -150,7 +150,7 @@ def run_REMD_gromacs_multi(num_replica, output_string='PROD', mdp='production.md
                          restraints=restraints, topology=topology, replex=replex, nex=nex) 
 
         append_REMD_files(output_string, count, num_replica)
-        for i in range(count):
+        for i in range(count + 1):
             remove_excess_logfiles(output_string, i, num_replica)
 
 
