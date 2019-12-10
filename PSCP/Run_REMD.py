@@ -79,7 +79,6 @@ def new_mdp(last_t, mdp, new_mdp):
 def get_checkpoint_time(cpt_file):
     # runs gmx_mpi check on the input cpt_file to determine where the new simulation must start from
     hold = subprocess.check_output('mpirun -np 1 gmx_mpi check -f ' + cpt_file, shell=True, stderr=subprocess.STDOUT).decode("utf-8").split('\n')
-    print('here')
   
     for i in hold:
         if len(i.split()) > 1:
@@ -171,7 +170,16 @@ def append_REMD_files(output_string, count, num_replica):
         start_t += get_checkpoint_time(' 0/' + output_string + '_' + str(j - 1) + '.cpt')
         for i in range(num_replica):
             dirr = str(i) + '/' + output_string + '_' + str(j)
-            subprocess.call("mpirun -np 1 gmx_mpi trjconv -f " + dirr + ".trr -t0 " + str(start_t) + " -o " + dirr + ".trr", shell=True)
+            c = subprocess.Popen(['echo', str(0)], stdout=subprocess.PIPE)
+#            subprocess.call("mpirun -np 1 gmx_mpi trjconv -f " + dirr + ".trr -t0 " + str(start_t) + " -o " + dirr + ".trr", shell=True)
+            output = subprocess.check_output(['mpirun', '-np', '1', 'gmx_mpi', 'trjconv', 
+                                              '-f', dirr + '.trr', 
+                                              '-t0', str(start_t), 
+                                              '-o', dirr + '.trr', 
+                                              '-s', dirr + '.tpr', 
+                                              '-pbc', 'whole'], stdin=c.stdout)
+            c.wait()
+
             c = subprocess.Popen(['echo', str(start_t)], stdout=subprocess.PIPE)
             output = subprocess.check_output(['mpirun', '-np', '1', 'gmx_mpi', 'eneconv',
                                               '-f', dirr + '.edr',
