@@ -205,7 +205,9 @@ if __name__ == '__main__':
     for i in inputs['gen_in']['polymorph_num'].split():
         if args.REP:
             subprocess.call(['mv', i, i + '_prep'])
-        subprocess.call(['mkdir', i])
+
+        if not os.path.isdir(i):
+            subprocess.call(['mkdir', i])
 
     if inputs['PSCP_in']['run_restraints'] == True:
         setup.setup_restraints(inputs)
