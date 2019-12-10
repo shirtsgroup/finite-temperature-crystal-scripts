@@ -54,6 +54,7 @@ def setup_restraints(inputs):
                            cores=inputs['gen_in']['cores'], k_min=inputs['PSCP_in']['k_min'],
                            k_max=inputs['PSCP_in']['k_max'], lambd=lambd,
                            min_lambda=inputs['PSCP_in']['min_lambda'], max_lambda=inputs['PSCP_in']['max_lambda'],
+                           gamma_spacing=inputs['PSCP_in']['gamma_spacing'], 
                            lambda_spacing=inputs['PSCP_in']['lambda_spacing'],
                            lambda_exponent=inputs['PSCP_in']['lambda_exponent'], gamma=0,
                            cutoff=inputs['gen_in']['cutoff'], potential=inputs['gen_in']['potential'],
@@ -85,7 +86,9 @@ def setup_interactions(inputs):
                             min_lambda=100, max_lambda=inputs['PSCP_in']['lambda'],
                             min_gamma=inputs['PSCP_in']['min_gamma'], max_gamma=inputs['PSCP_in']['max_gamma'],
                             gamma_exponent=inputs['PSCP_in']['gamma_exponent'],
-                            gamma_spacing=inputs['PSCP_in']['gamma_spacing'], cutoff=inputs['gen_in']['cutoff'],
+                            gamma_spacing=inputs['PSCP_in']['gamma_spacing'], 
+                            lambda_spacing=inputs['PSCP_in']['lambda_spacing'],
+                            cutoff=inputs['gen_in']['cutoff'],
                             potential=inputs['gen_in']['potential'], simulation=inputs['temp_in']['simulation_package'],
                             ensemble='NVT', jobpath=i + '/interactions/' + str(gamma),
                             templatepath=inputs['gen_in']['template_path'], anneal_temp=inputs['gen_in']['anneal_temp'],
@@ -268,8 +271,8 @@ def append_files(file_1, file_2):
 def setup_molecule(polymorph_num='p1', temperature=[], pressure=1, molecule='', number_of_molecules=0,
                    independent='same', equil_steps=100000, prod_steps=40000000, prodoutputs=20000, integrator='sd',
                    thermostat='nose-hoover', barostat='Parrinello-Rahman', cores=1, k_min=0, k_max=1000000, lambd=0,
-                   min_lambda=0, max_lambda=0, lambda_spacing=100, lambda_exponent=2, gamma=0, min_gamma=0,
-                   max_gamma=0, gamma_exponent=2, gamma_spacing=100, cutoff=8, potential='oplsaa',
+                   min_lambda=0, max_lambda=0, lambda_spacing=0, lambda_exponent=2, gamma=0, min_gamma=0,
+                   max_gamma=0, gamma_exponent=2, gamma_spacing=0, cutoff=8, potential='oplsaa',
                    simulation='gromacs', ensemble='NPT', jobpath='./', templatepath='', anneal_temp=400,
                    anneal_steps=10000, run_production=True, volume=-1, charge=0.1150, hinge='DefaultHinge', delta=0,
                    SigmaH=100, SigmaC=100, drude_k=100, submission_script='submit_cluster.slurm', 
@@ -342,29 +345,29 @@ def setup_molecule(polymorph_num='p1', temperature=[], pressure=1, molecule='', 
         print("Drude spring constant too weak: ", drude_k)
         sys.exit()
 
-    # LAMBDA POINT
-    if (lambd < 0) or (lambd > 100):
-        print("Invalid Lambda point: ", lambd)
-        sys.exit()
-
-    if (min_lambda < 0) or (max_lambda > 100) or (min_lambda > max_lambda):
-        print("Minimum Lambda: ", min_lambda)
-        print("Maximum Lambda: ", max_lambda)
-        print("Is not a valid lambda range!")
-        sys.exit()
-
-    if lambda_spacing <= 0:
-        print("Invalid Lambda Spacing: ", lambda_spacing)
-        sys.exit()
+#    # LAMBDA POINT
+#    if (lambd < 0) or (lambd > 100):
+#        print("Invalid Lambda point: ", lambd)
+#        sys.exit()
+#
+#    if (min_lambda < 0) or (max_lambda > 100) or (min_lambda > max_lambda):
+#        print("Minimum Lambda: ", min_lambda)
+#        print("Maximum Lambda: ", max_lambda)
+#        print("Is not a valid lambda range!")
+#        sys.exit()
+#
+#    if lambda_spacing <= 0:
+#        print("Invalid Lambda Spacing: ", lambda_spacing)
+#        sys.exit()
 
 #    if (lambda_exponent < 0) or (lambda_exponent > 4):
 #        print("Invalid Lambda Exponent: ", lambda_exponent)
 #        sys.exit()
 
-    # GAMMA POINT
-    if gamma_spacing < 0:
-        print("Invalid Gambda Spacing: ", gamma_spacing)
-        sys.exit()
+#    # GAMMA POINT
+#    if gamma_spacing < 0:
+#        print("Invalid Gambda Spacing: ", gamma_spacing)
+#        sys.exit()
 
 #    if (gamma_exponent < 0) or (gamma_exponent > 4):
 #        print("Invalid Gamma Exponent: ", gamma_exponent)
@@ -846,6 +849,8 @@ def setup_molecule(polymorph_num='p1', temperature=[], pressure=1, molecule='', 
             replace_string_in_text(jobpath + '/' + tname + '.top', 'oplsaa.ff', 'gromos54a7.ff')
         elif potential in ['day', 'amber', 'smirnoff']:
             replace_string_in_text(jobpath + '/' + tname + '.top', '#include "oplsaa.ff/forcefield.itp"', '')
+            if gamma == 100:
+                replace_string_in_text(jobpath + '/endpoint.top', '#include "oplsaa.ff/forcefield.itp"', '')
         elif potential == 'designedg':
             replace_string_in_text(jobpath + '/' + tname + '.top', 'oplsaa.ff', molecule + '_designedg.ff')
         elif potential == molecule + '_oplsaatodesignedg':
