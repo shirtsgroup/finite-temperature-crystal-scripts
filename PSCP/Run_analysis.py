@@ -32,55 +32,58 @@ if __name__ == '__main__':
         independent = inputs['gen_in']['independent']
 
     # Computing the free energy from PSCP
-    if (inputs['PSCP_out']['dG'] == None) or (inputs['PSCP_out']['ddG'] == None):
-        if (inputs['PSCP_in']['run_restraints'] == True) and (inputs['PSCP_in']['run_interactions'] == True):
-            # Computing the free energy to restrain the molecules
-            # Values are based on the restrained non-interacting state being the reference
-            dA_L, ddA_L = dA_Lambda_MBAR(MinL=inputs['PSCP_in']['min_lambda'], MaxL=inputs['PSCP_in']['max_lambda'],
-                                         dL=inputs['PSCP_in']['lambda_spacing'], GAMMA=inputs['PSCP_in']['gamma'],
-                                         exponent=inputs['PSCP_in']['lambda_exponent'],
-                                         polymorphs=inputs['gen_in']['polymorph_num'],
-                                         Molecules=inputs['gen_in']['number_of_molecules'], Independent=independent,
-                                         Temp=inputs['PSCP_in']['PSCP_temperature'], Pressure=inputs['gen_in']['pressure'],
-                                         potential=inputs['gen_in']['potential'],
-                                         hinge=inputs['gen_in']['hinge'])
-            inputs['PSCP_out']['dLambda'] = dA_L.tolist()
-            inputs['PSCP_out']['ddLambda'] = ddA_L.tolist()
+    if inputs['PSCP_in']['run_restraints']:
+        # Computing the free energy to restrain the molecules
+        # Values are based on the restrained non-interacting state being the reference
+        dA_L, ddA_L = dA_Lambda_MBAR(MinL=inputs['PSCP_in']['min_lambda'], MaxL=inputs['PSCP_in']['max_lambda'],
+                                     dL=inputs['PSCP_in']['lambda_spacing'], GAMMA=inputs['PSCP_in']['gamma'],
+                                     exponent=inputs['PSCP_in']['lambda_exponent'],
+                                     polymorphs=inputs['gen_in']['polymorph_num'],
+                                     Molecules=inputs['gen_in']['number_of_molecules'], Independent=independent,
+                                     Temp=inputs['PSCP_in']['PSCP_temperature'], Pressure=inputs['gen_in']['pressure'],
+                                     potential=inputs['gen_in']['potential'],
+                                     hinge=inputs['gen_in']['hinge'])
+        inputs['PSCP_out']['dLambda'] = dA_L.tolist()
+        inputs['PSCP_out']['ddLambda'] = ddA_L.tolist()
 
-            # Computing the free energy to turn off the interactions
-            dA_G, ddA_G = dA_Gamma_MBAR(MINGAMMA=inputs['PSCP_in']['min_gamma'], MAXGAMMA=inputs['PSCP_in']['max_gamma'],
-                                        GSPACING=inputs['PSCP_in']['gamma_spacing'], LAMBDA=inputs['PSCP_in']['lambda'],
-                                        exponent=inputs['PSCP_in']['gamma_exponent'],
-                                        polymorphs=inputs['gen_in']['polymorph_num'],
-                                        Molecules=inputs['gen_in']['number_of_molecules'], Independent=independent,
-                                        Temp=inputs['PSCP_in']['PSCP_temperature'],
-                                        Pressure=inputs['gen_in']['pressure'], k=inputs['PSCP_in']['k_max'],
-                                        potential=inputs['gen_in']['potential'], hinge=inputs['gen_in']['hinge'],
-                                        bonds=inputs['PSCP_in']['run_bonded_interactions'])
-            inputs['PSCP_out']['dGamma'] = dA_G.tolist()
-            inputs['PSCP_out']['ddGamma'] = ddA_G.tolist()
+    if inputs['PSCP_in']['run_interactions']:
+        # Computing the free energy to turn off the interactions
+        dA_G, ddA_G = dA_Gamma_MBAR(MINGAMMA=inputs['PSCP_in']['min_gamma'], MAXGAMMA=inputs['PSCP_in']['max_gamma'],
+                                    GSPACING=inputs['PSCP_in']['gamma_spacing'], LAMBDA=inputs['PSCP_in']['lambda'],
+                                    exponent=inputs['PSCP_in']['gamma_exponent'],
+                                    polymorphs=inputs['gen_in']['polymorph_num'],
+                                    Molecules=inputs['gen_in']['number_of_molecules'], Independent=independent,
+                                    Temp=inputs['PSCP_in']['PSCP_temperature'],
+                                    Pressure=inputs['gen_in']['pressure'], k=inputs['PSCP_in']['k_max'],
+                                    potential=inputs['gen_in']['potential'], hinge=inputs['gen_in']['hinge'],
+                                    bonds=inputs['PSCP_in']['run_bonded_interactions'])
+        inputs['PSCP_out']['dGamma'] = dA_G.tolist()
+        inputs['PSCP_out']['ddGamma'] = ddA_G.tolist()
 
-            # Computing the free energy for the endpoints
-            dA_end, ddA_end = dA_endpoint_MBAR(polymorphs=inputs['gen_in']['polymorph_num'],
-                                               Molecules=inputs['gen_in']['number_of_molecules'], Independent=independent,
-                                               Temp=inputs['PSCP_in']['PSCP_temperature'])
-            inputs['PSCP_out']['dEnd'] = dA_end.tolist()
-            inputs['PSCP_out']['ddEnd'] = ddA_end.tolist()
+        # Computing the free energy for the endpoints
+        dA_end, ddA_end = dA_endpoint_MBAR(polymorphs=inputs['gen_in']['polymorph_num'],
+                                           Molecules=inputs['gen_in']['number_of_molecules'], Independent=independent,
+                                           Temp=inputs['PSCP_in']['PSCP_temperature'])
+        inputs['PSCP_out']['dEnd'] = dA_end.tolist()
+        inputs['PSCP_out']['ddEnd'] = ddA_end.tolist()
 
-            # Adding the free energy differences to the inputs to be saved
-            inputs['PSCP_out']['dG'] = ((dA_L - dA_L[0]) + (dA_G - dA_G[0]) + (dA_end - dA_end[0])).tolist()
-            inputs['PSCP_out']['ddG'] = np.sqrt(ddA_L**2 + ddA_G**2 + ddA_end**2).tolist()
+    if (inputs['PSCP_out']['dGamma'] == None) or (inputs['PSCP_out']['dLambda'] == None):
+       if inputs['PSCP_out']['dG'] == None:
+           print("ERROR - No reference free energy difference given!")
+           sys.exit()
+       else:
+           pass
 
-        else:
-            # Pulling old data from Temperature Transformation paper 2017
-            inputs['gen_in']['polymorph_num'], inputs['PSCP_in']['PSCP_temperature'], inputs['PSCP_out']['dG'], \
-            inputs['PSCP_out']['ddG'], refdU, absolutedU = \
-                old_systems_dictionary(inputs['gen_in']['potential'], inputs['gen_in']['molecule'])
-        print(inputs['PSCP_out']['dG'], inputs['PSCP_out']['ddG'])
+    else:
+       # Adding the free energy differences to the inputs to be saved
+       inputs['PSCP_out']['dG'] = ((dA_L - dA_L[0]) + (dA_G - dA_G[0]) + (dA_end - dA_end[0])).tolist()
+       inputs['PSCP_out']['ddG'] = np.sqrt(ddA_L**2 + ddA_G**2 + ddA_end**2).tolist()
 
-        # Writing out the input file with updated dG and ddG values
-        with open(args.input_file, 'w') as yaml_file:
-            yaml.dump(inputs, yaml_file, default_flow_style=False)
+    print(inputs['PSCP_out']['dG'], inputs['PSCP_out']['ddG'])
+
+    # Writing out the input file with updated dG and ddG values
+    with open(args.input_file, 'w') as yaml_file:
+       yaml.dump(inputs, yaml_file, default_flow_style=False)
 
     # Determing the free energy across the entire temperature range
     if inputs['temp_in']['run_temperature'] == True:
