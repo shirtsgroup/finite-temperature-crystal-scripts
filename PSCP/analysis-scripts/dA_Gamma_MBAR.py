@@ -4,6 +4,7 @@ from __future__ import print_function
 # 
 # Copyright Eric Dybeck and Michael R. Shirts, University of Virginia, 2014
 #
+import sys
 import numpy as np
 import pymbar  # multistate Bennett acceptance ratio
 from pymbar import timeseries  # timeseries analysis
@@ -18,6 +19,7 @@ import panedr
 def dA_Gamma_MBAR(plot_out=True, MINGAMMA=0, MAXGAMMA=100, GSPACING=10, LAMBDA=100, exponent=2, polymorphs='p1 p2', 
                   Molecules=72, Independent=4, Temp=200, Pressure=1, k=1000, ignoreframes=500,
                   includeframes=100000, potential='oplsaa',bonds=False, hinge='DefaultHinge'):
+
     if (plot_out):
         import matplotlib  # for making plots, version 'matplotlib-1.1.0-1'; errors may pop up when using earlier versions
         import matplotlib.pyplot as plt
@@ -25,7 +27,7 @@ def dA_Gamma_MBAR(plot_out=True, MINGAMMA=0, MAXGAMMA=100, GSPACING=10, LAMBDA=1
                 'weight': 'normal',
                 'size': 16}
         matplotlib.rc('font', **font)
-    
+
     # =============================================================================================
     # ENSURE THAT USER INPUTS ARE SENSIBLE
     # =============================================================================================
@@ -339,7 +341,11 @@ def dA_Gamma_MBAR(plot_out=True, MINGAMMA=0, MAXGAMMA=100, GSPACING=10, LAMBDA=1
 #        else:
 #            filename = PotNAME + '_' + str(Molecules) + '_' + Tname + hinge + '_dAvsG.pdf'
 #        plt.savefig(filename, bbox_inches='tight')
-    return out_dA, out_ddA
+
+
+    print(out_dA, out_ddA)
+    sys.exit()
+#    return out_dA, out_ddA
 
 
 if __name__ == '__main__':
