@@ -209,55 +209,14 @@ if __name__ == '__main__':
         if not os.path.isdir(i):
             subprocess.call(['mkdir', i])
 
-    if inputs['PSCP_in']['run_restraints'] == True:
-        setup.setup_restraints(inputs)
+#    if inputs['PSCP_in']['run_restraints'] == True:
+#        setup.setup_restraints(inputs)
 
-#        subprocess.call([path + '/setup-scripts/setup_Restraints -n "' + (inputs['gen_in']['polymorph_num']) + '"'
-#                                            + ' -M ' + str(inputs['gen_in']['molecule'])
-#                                            + ' -U ' + str(inputs['PSCP_in']['min_lambda'])
-#                                            + ' -R ' + str(inputs['PSCP_in']['max_lambda'])
-#                                            + ' -L ' + str(inputs['PSCP_in']['lambda_spacing'])
-#                                            + ' -f ' + str(inputs['PSCP_in']['lambda_exponent'])
-#                                            + ' -G ' + str(inputs['PSCP_in']['gamma'])
-#                                            + ' -T ' + str(inputs['PSCP_in']['PSCP_temperature'])
-#                                            + ' -P ' + str(inputs['gen_in']['pressure'])
-#                                            + ' -N ' + str(inputs['gen_in']['number_of_molecules'])
-#                                            + ' -I ' + str(inputs['gen_in']['independent'])
-#                                            + ' -e ' + str(inputs['PSCP_in']['lambda_equil_steps'])
-#                                            + ' -p ' + str(inputs['PSCP_in']['lambda_prod_steps'])
-#                                            + ' -i ' + str(inputs['gen_in']['integrator'])
-#                                            + ' -t ' + str(inputs['gen_in']['thermostat'])
-#                                            + ' -a ' + str(inputs['gen_in']['cores'])
-#                                            + ' -k ' + str(inputs['PSCP_in']['k_min'])
-#                                            + ' -K ' + str(inputs['PSCP_in']['k_max'])
-#                                            + ' -r ' + str(inputs['gen_in']['cutoff'])
-#                                            + ' -u ' + str(inputs['gen_in']['potential'])
-#                                            + ' -h ' + str(inputs['gen_in']['hinge'])], shell=True)
-#
+#    if inputs['PSCP_in']['run_interactions'] == True:
+#        setup.setup_interactions(inputs)
 
-    if inputs['PSCP_in']['run_interactions'] == True:
-        setup.setup_interactions(inputs)
-#        subprocess.call([path + '/setup-scripts/setup_Interactions -n "' + str(inputs['gen_in']['polymorph_num']) + '"'
-#                                              + ' -M ' + str(inputs['gen_in']['molecule'])
-#                                              + ' -A ' + str(inputs['PSCP_in']['max_gamma'])
-#                                              + ' -B ' + str(inputs['PSCP_in']['min_gamma'])
-#                                              + ' -g ' + str(inputs['PSCP_in']['gamma_spacing'])
-#                                              + ' -f ' + str(inputs['PSCP_in']['gamma_exponent'])
-#                                              + ' -L ' + str(inputs['PSCP_in']['lambda'])
-#                                              + ' -T ' + str(inputs['PSCP_in']['PSCP_temperature'])
-#                                              + ' -P ' + str(inputs['gen_in']['pressure'])
-#                                              + ' -N ' + str(inputs['gen_in']['number_of_molecules'])
-#                                              + ' -I ' + str(inputs['gen_in']['independent'])
-#                                              + ' -e ' + str(inputs['PSCP_in']['gamma_equil_steps'])
-#                                              + ' -p ' + str(inputs['PSCP_in']['gamma_prod_steps'])
-#                                              + ' -i ' + str(inputs['gen_in']['integrator'])
-#                                              + ' -t ' + str(inputs['gen_in']['thermostat'])
-#                                              + ' -a ' + str(inputs['gen_in']['cores'])
-#                                              + ' -K ' + str(inputs['PSCP_in']['k_max'])
-#                                              + ' -r ' + str(inputs['gen_in']['cutoff'])
-#                                              + ' -u ' + str(inputs['gen_in']['potential'])
-#                                              + ' -h ' + str(inputs['gen_in']['hinge'])], shell=True)
-#
+    setup.setup_PSCP(inputs)
+
     if inputs['temp_in']['run_temperature'] == True:
         run_production = False
 
