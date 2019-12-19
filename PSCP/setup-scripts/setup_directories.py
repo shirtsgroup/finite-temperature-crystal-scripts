@@ -512,11 +512,13 @@ def setup_molecule(run_PSCP=False, polymorph_num='p1', temperature=[], pressure=
                 grofile = templatepath + '/' + molecule + '_' + polymorph_num + '_' + molnum + '_' + tempname + 'K_' + \
                           pname + 'bar_' + potname
             elif os.path.isfile(templatepath + '/' + molecule + '_' + polymorph_num + '_' + molnum + '_' + tempname +
+                                'K_' + potname + '.gro'):
+                 grofile = templatepath + '/' + molecule + '_' + polymorph_num + '_' + molnum + '_' + tempname + \
+                          'K_' + potname
+            elif os.path.isfile(templatepath + '/' + molecule + '_' + polymorph_num + '_' + molnum + '_' + tempname +
                                 'K_1bar_' + potname + '.gro'):
                  grofile = templatepath + '/' + molecule + '_' + polymorph_num + '_' + molnum + '_' + tempname + \
                           'K_1bar_' + potname
-                 if ensemble == 'NVT':
-                     NPT_equil = True
             elif os.path.isfile(templatepath + '/' + molecule + '_' + polymorph_num + '_' + molnum + '_REMD_' + potname
                                 + '.gro'):
                  grofile = templatepath + '/' + molecule + '_' + polymorph_num + '_' + molnum + '_REMD_' + potname
