@@ -389,7 +389,7 @@ def setup_molecule(run_PSCP=False, polymorph_num='p1', temperature=[], pressure=
         sys.exit()
 
     # POTENTIAL
-    potentiallist = ["oplsaa", "amber", "smirnoff", 
+    potentiallist = ["oplsaa", "amber", "smirnoff", "charmm", 
                      "gromos", "designedg", "oplsaatodesignedg", "designeda", "oplsaatodesigneda",
                      "amoeba09", "DMA", "PCA", "amoeba09todesa", "amoeba09restraint", "amoeba09interactions",
                      "amoeba09multinp", "amoeba09mononp", "amoeba09monoopls", "amoeba09opls", "day", "drude", "oplsaal"]
@@ -400,7 +400,7 @@ def setup_molecule(run_PSCP=False, polymorph_num='p1', temperature=[], pressure=
 
     if valid == False:
         print("Unsupported potential: " + potential)
-        print("Supported potentials: " + potentiallist)
+        print("Supported potentials: ", potentiallist)
         sys.exit()
 
     # SIMULATION PACKAGE
@@ -441,8 +441,6 @@ def setup_molecule(run_PSCP=False, polymorph_num='p1', temperature=[], pressure=
     else:
         pname = '_' + number_to_string(pressure) + 'P'
 
-    print(potential)
-
     # Format the potential
     if potential == 'oplsaa':
         potname = 'OPLS'
@@ -450,6 +448,8 @@ def setup_molecule(run_PSCP=False, polymorph_num='p1', temperature=[], pressure=
         potname = 'AMBER'
     elif potential == 'smirnoff':
         potname = 'SMIRNOFF'
+    elif potential == 'charmm':
+        potname = 'CHARMM'
     elif potential == 'gromos':
         potname = 'GROM'
     elif potential == 'designedg':
@@ -847,7 +847,7 @@ def setup_molecule(run_PSCP=False, polymorph_num='p1', temperature=[], pressure=
 
         if potential == 'gromos':
             replace_string_in_text(jobpath + '/' + tname + '.top', 'oplsaa.ff', 'gromos54a7.ff')
-        elif potential in ['day', 'amber', 'smirnoff']:
+        elif potential in ['day', 'amber', 'smirnoff', 'charmm']:
             replace_string_in_text(jobpath + '/' + tname + '.top', '#include "oplsaa.ff/forcefield.itp"', '')
             if gamma == 100:
                 replace_string_in_text(jobpath + '/endpoint.top', '#include "oplsaa.ff/forcefield.itp"', '')
@@ -959,7 +959,7 @@ def re_setup(polymorph_num='p1', molecule='', number_of_molecules=0,
     # ENSURE THAT INPUTS HAVE BEEN PROPERLY ENTERED
     # =============================================================================================
     # POTENTIAL
-    potentiallist = ["oplsaa", "amber", "smirnoff",
+    potentiallist = ["oplsaa", "amber", "smirnoff", "charmm",
                      "gromos", "designedg", "oplsaatodesignedg", "designeda", "oplsaatodesigneda",
                      "amoeba09", "DMA", "PCA", "amoeba09todesa", "amoeba09restraint", "amoeba09interactions",
                      "amoeba09multinp", "amoeba09mononp", "amoeba09monoopls", "amoeba09opls", "day", "drude", "oplsaal"]
@@ -971,7 +971,7 @@ def re_setup(polymorph_num='p1', molecule='', number_of_molecules=0,
 
     if valid == False:
         print("Unsupported potential: " + potential)
-        print("Supported potentials: " + potentiallist)
+        print("Supported potentials: ", potentiallist)
         sys.exit()
 
     # SIMULATION PACKAGE
@@ -1012,6 +1012,8 @@ def re_setup(polymorph_num='p1', molecule='', number_of_molecules=0,
         potname = 'AMBER'
     elif potential == 'smirnoff':
         potname = 'SMIRNOFF'
+    elif potential == 'charmm':
+        potname = 'CHARMM'
     elif potential == 'gromos':
         potname = 'GROM'
     elif potential == 'designedg':
