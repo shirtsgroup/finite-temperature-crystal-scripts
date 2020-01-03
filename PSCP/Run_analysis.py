@@ -37,16 +37,9 @@ if __name__ == '__main__':
         dA = np.zeros((len(inputs['gen_in']['polymorph_num'].split()), len(inputs['PSCP_in']['run_PSCP'])))
         dA[:, :] = np.nan
         ddA = np.zeros((len(inputs['gen_in']['polymorph_num'].split()), len(inputs['PSCP_in']['run_PSCP'])))
-
-        dA_connect = np.zeros((len(inputs['gen_in']['polymorph_num'].split()), len(inputs['PSCP_in']['run_PSCP']) - 1))
-        dA[:, :] = np.nan
-        ddA_connect = np.zeros((len(inputs['gen_in']['polymorph_num'].split()), len(inputs['PSCP_in']['run_PSCP']) - 1))
     else:
-        dA = np.array(inputs['PSCP_out']['dA'])
-        ddA = np.array(inputs['PSCP_out']['ddA'])
-
-        dA_connect = np.array(inputs['PSCP_out']['dA_connect'])
-        ddA_connect = np.array(inputs['PSCP_out']['ddA_connect'])
+        dA = np.array(inputs['PSCP_out']['dA']).astype(float)
+        ddA = np.array(inputs['PSCP_out']['ddA']).astype(float)
 
     interactions_count = 0
     restraints_count = 0
@@ -70,26 +63,16 @@ if __name__ == '__main__':
             restraints_count += 1
 
         # Running the analysis for this PSCP step
-        if run and np.any(dA[:, i] == np.nan):
+        if run and np.any(np.isnan(dA[:, i])):
             dA[:, i], ddA[:, i] = dA_MBAR(spacing=inputs['PSCP_in']['spacing'][i], exponent=inputs['PSCP_in']['exponent'][i],
                                           polymorphs=inputs['gen_in']['polymorph_num'],
                                           Molecules=inputs['gen_in']['number_of_molecules'], Independent=independent,
                                           Temp=inputs['PSCP_in']['PSCP_temperature'],
                                           bonds=inputs['PSCP_in']['run_bonded_interactions'],
                                           primary_directory=directory_name)
-        else:
-            print('passing')
-
-        # Running the connections between PSCP steps
-        if (previous_directory != '') and run and inputs['PSCP_in']['run_PSCP'][i - 1]:
-            dA_connect[:, i - 1], ddA_connect[:, i - 1] = \
-                dA_MBAR_connect(directory_name, previous_directory, Temperature=inputs['PSCP_in']['PSCP_temperature'],
-                                Molecules=inputs['gen_in']['number_of_molecules'], Independent=independent,
-                                Polymorphs=inputs['gen_in']['polymorph_num'].split())
-        else:
-            print('passing 2')
-
         previous_directory = directory_name
+
+    print(dA, ddA)
 
     sys.exit()
 
