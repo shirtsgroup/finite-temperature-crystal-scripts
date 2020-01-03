@@ -14,7 +14,6 @@ from dA_Gamma_MBAR import dA_Gamma_MBAR
 from dA_endpoint_MBAR import dA_endpoint_MBAR
 from dA_MBAR import dA_MBAR
 from dGvsT import dGvsT
-from dA_MBAR_connect import dA_MBAR_connect
 
 if __name__ == '__main__':
     # Importing user specified input .yaml file
@@ -37,13 +36,14 @@ if __name__ == '__main__':
         dA = np.zeros((len(inputs['gen_in']['polymorph_num'].split()), len(inputs['PSCP_in']['run_PSCP'])))
         dA[:, :] = np.nan
         ddA = np.zeros((len(inputs['gen_in']['polymorph_num'].split()), len(inputs['PSCP_in']['run_PSCP'])))
+        save_dA = True
     else:
         dA = np.array(inputs['PSCP_out']['dA']).astype(float)
         ddA = np.array(inputs['PSCP_out']['ddA']).astype(float)
+        save_dA = False
 
     interactions_count = 0
     restraints_count = 0
-    previous_directory = ''
 
     for i, run in enumerate(inputs['PSCP_in']['run_PSCP']):
         # Getting the correct directory name
@@ -64,26 +64,20 @@ if __name__ == '__main__':
 
         # Running the analysis for this PSCP step
         if run and np.any(np.isnan(dA[:, i])):
+            save_dA = True
             dA[:, i], ddA[:, i] = dA_MBAR(spacing=inputs['PSCP_in']['spacing'][i], exponent=inputs['PSCP_in']['exponent'][i],
                                           polymorphs=inputs['gen_in']['polymorph_num'],
                                           Molecules=inputs['gen_in']['number_of_molecules'], Independent=independent,
                                           Temp=inputs['PSCP_in']['PSCP_temperature'],
                                           bonds=inputs['PSCP_in']['run_bonded_interactions'],
                                           primary_directory=directory_name)
-        previous_directory = directory_name
 
-    print(dA, ddA)
-
-    sys.exit()
-
-    inputs['PSCP_out']['dA'] = dA.tolist()
-    inputs['PSCP_out']['ddA'] = ddA.tolist()
-    inputs['PSCP_out']['dA_connect'] = dA_connect.tolist()
-    inputs['PSCP_out']['ddA_connect'] = ddA_connect.tolist()
-    sys.exit()
-
-    with open(args.input_file, 'w') as yaml_file:
-       yaml.dump(inputs, yaml_file, default_flow_style=False)
+    if save_dA:
+        inputs['PSCP_out']['dA'] = dA.tolist()
+        inputs['PSCP_out']['ddA'] = ddA.tolist()
+    
+        with open(args.input_file, 'w') as yaml_file:
+           yaml.dump(inputs, yaml_file, default_flow_style=False)
 
 #    # Computing the free energy from PSCP
 #    if inputs['PSCP_in']['run_restraints']:
@@ -137,9 +131,6 @@ if __name__ == '__main__':
     else:
         print("Using user specified values of dG!")
         print("   If this is wrong, please remove dG and ddG from the input file")
-
-    print(inputs['PSCP_out']['dG'], inputs['PSCP_out']['ddG'])
-
 
     # Determing the free energy across the entire temperature range
     if inputs['temp_in']['run_temperature'] == True:
