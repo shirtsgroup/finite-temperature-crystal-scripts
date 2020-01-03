@@ -58,15 +58,22 @@ if __name__ == '__main__':
 
         # Running the analysis for this PSCP step
         if run:
-            dA[:, i], ddA[:,i] = dA_MBAR(spacing=inputs['PSCP_in']['spacing'], exponent=inputs['PSCP_in']['exponent'],
+            dA[:, i], ddA[:,i] = dA_MBAR(spacing=inputs['PSCP_in']['spacing'][i], exponent=inputs['PSCP_in']['exponent'][i],
                                          polymorphs=inputs['gen_in']['polymorph_num'],
                                          Molecules=inputs['gen_in']['number_of_molecules'], Independent=independent,
                                          Temp=inputs['PSCP_in']['PSCP_temperature'],
                                          bonds=inputs['PSCP_in']['run_bonded_interactions'],
                                          primary_directory=directory_name)
 
+    print(dA)
+
     inputs['PSCP_out']['dA'] = dA.tolist()
     inputs['PSCP_out']['ddA'] = ddA.tolist()
+
+    with open(args.input_file, 'w') as yaml_file:
+       yaml.dump(inputs, yaml_file, default_flow_style=False)
+
+    sys.exit()
 
 
 #    # Computing the free energy from PSCP

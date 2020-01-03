@@ -20,13 +20,14 @@ def dA_MBAR(minimum=0, maximum=100, spacing=10, exponent=2, polymorphs='p1 p2', 
     raw_value = minimum
     values = []
     directory_names = np.arange(minimum, maximum + spacing, spacing)
-    while raw_value < maximum:
+
+    while raw_value <= maximum:
         if exponent >= 0:
             value = int(100 * (float(raw_value) / float(maximum)) ** abs(exponent))
         else:
             value = int(100 * (1 - (float(maximum - raw_value) / float(maximum)) ** abs(exponent)))
         values.append(value)
-        RawGamma = RawGamma + spacing
+        raw_value = raw_value + spacing
     
     # POLYMORPH
     polymorphs = polymorphs.split()
@@ -45,12 +46,13 @@ def dA_MBAR(minimum=0, maximum=100, spacing=10, exponent=2, polymorphs='p1 p2', 
     K = len(values)  # How many states?
      
     # total number of states examined; 0 are unsampled if bonds are left on, 1 is unsampled if the bonds are removed
-    if bonds == True:
-        Kbig = K
-        dhdl_placement = 6
-    else:
-        Kbig = K
-        dhdl_placement = 5
+    Kbig = K
+#    if bonds == True:
+#        Kbig = K
+#        dhdl_placement = 6
+#    else:
+#        Kbig = K
+#        dhdl_placement = 5
     
     # maximum number of snapshots/simulation (could make this automated) - doesn't matter, as long as it's long enough.
     N_max = 200000
@@ -97,6 +99,7 @@ def dA_MBAR(minimum=0, maximum=100, spacing=10, exponent=2, polymorphs='p1 p2', 
 
             # the energy of every configuration from each state evaluated at its sampled state
             n = len(potential_energy)
+            dhdl_placement = len(dhdl_energy[0, :]) - K
             u_kln[k, :K, :n] = (potential_energy.reshape((n, 1)) + dhdl_energy[:, dhdl_placement:]).T * convert_units[k]
             dhdl_kn[k, :n] = (float(Independent) / Molecules) * \
                              np.sum(dhdl_energy[:, 2:dhdl_placement], axis=1) * convert_units[k]
@@ -107,7 +110,8 @@ def dA_MBAR(minimum=0, maximum=100, spacing=10, exponent=2, polymorphs='p1 p2', 
         # convert to nondimensional units from kcal/mol
         u_kln *= beta_k[0]
     
-        u_kln_save = u_kln.copy()
+        #u_kln_save = u_kln.copy()
+        u_kln_save = u_kln[:]
         g_k = np.zeros([K])
 
         print("Number of retained samples")
@@ -191,6 +195,11 @@ def dA_MBAR(minimum=0, maximum=100, spacing=10, exponent=2, polymorphs='p1 p2', 
         print("  dA(Gamma) = A(Gamma) - A(Interactions Off)")
         for k in range(Kbig):
             print("%8.3f %8.3f" % (df_i[k, -1], ddf_u[k, -1]))
+
+        del N_k
+        del N_k_s
+        del u_kln
+        del dhdl_kn
 
     out_dA = np.zeros(len(polymorphs))
     out_ddA = np.zeros(len(polymorphs))
