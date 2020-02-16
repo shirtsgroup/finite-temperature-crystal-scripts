@@ -105,6 +105,14 @@ def dGvsT_QHA(Temperatures=np.array([100,200,300]), Temperatures_unsampled=[], M
             refk = k + refPot * len(Temperatures)
 
     # =============================================================================================
+    # Load reference free energy differences
+    # =============================================================================================
+    refT = np.load(refT_files[0])
+    refdG = np.zeros((len(refT), len(Polymorphs)))
+    for i in range(len(Polymorphs)):
+        refdG[:, i] = np.load(refG_files[i]) - np.load(refG_files[0])
+
+    # =============================================================================================
     # READ IN RAW DATA
     # =============================================================================================
     # Constants.
@@ -137,13 +145,13 @@ def dGvsT_QHA(Temperatures=np.array([100,200,300]), Temperatures_unsampled=[], M
     ddA = np.zeros([len(Polymorphs), spacing + 1, K], float)
     
     # dG[p,i,t] is the free energy between polymorph 1 and polymorph p for spacing i and temperature t
-    dG = np.zeros([len(Polymorphs), spacing + 1, len(Temperatures)])
+    dG = np.zeros([len(refT), len(Polymorphs), spacing + 1, len(Temperatures)])
     
     # ddG[p,i,t] is the uncertanity in the free energy between polymorph 1 and polymorph p for spacing i and temperature t
     ddG = np.zeros([len(Polymorphs), spacing + 1, len(Temperatures)])
     
     # dS[p,i,t] is the relative entropy between polymorph 1 and polymorph p for spacing i and temperature t
-    dS = np.zeros([len(Polymorphs), spacing + 1, len(Temperatures)])
+    dS = np.zeros([len(refT), len(Polymorphs), spacing + 1, len(Temperatures)])
     
     # ddS[p,i,t] is the uncertanity in the relative entropy between polymorph 1 and polymorph p for spacing i and temperature t
     ddS = np.zeros([len(Polymorphs), spacing + 1, len(Temperatures)])
@@ -380,21 +388,24 @@ def dGvsT_QHA(Temperatures=np.array([100,200,300]), Temperatures_unsampled=[], M
             # Store the dimensionless results in the ddA container
             ddA[p, i, :] = ddf_u[refk]
 
-    refT, refdG = QHA_optimized_ref(Temperatures, dA[1], refT_files, refG_files)
+#    refT, refdG = QHA_optimized_ref(Temperatures, dA[1], refT_files, refG_files)
 
     # =============================================================================================
     # FINALIZE THE RELATIVE FREE ENERGY AND ENTROPY
     # =============================================================================================
-    for i in range(spacing + 1):
-        for t, T in enumerate(Temperatures):
-            for p in range(len(Polymorphs)):
-                dG[p, i, t] = (dA[p, i, t] - dA[0, i, t]) / (beta_k[t] * float(Independent)) + float(T) / float(refT[p]) * \
-                                                                                               refdG[p]
-                ddG[p, i, t] = ((ddA[p, i, t] ** 2 + ddA[0, i, t] ** 2) / (beta_k[t] * float(Independent)) ** 2) ** 0.5
-                if p == 0:
-                    continue
-                dS[p, i, t] = (dU[p, t] - dU[0, t] - dG[p, i, t]) / float(T)
-                ddS[p, i, t] = (ddU[p, t] ** 2 + ddU[p, t] ** 2 + ddG[p, i, t] ** 2) ** 0.5 / float(T)
+    for k in range(len(refT)):
+        for i in range(spacing + 1):
+            for t, T in enumerate(Temperatures):
+                for p in range(len(Polymorphs)):
+                    dG[k, p, i, t] = (dA[p, i, t] - dA[0, i, t]) / (beta_k[t] * float(Independent)) + float(T) / float(
+                        refT[k]) * refdG[k, p]
+                    if p == 0:
+                        continue
+                    dS[k, p, i, t] = (dU[p, t] - dU[0, t] - dG[k, p, i, t]) / float(T)
+                    if k == 0:
+                        ddG[p, i, t] = ((ddA[p, i, t] ** 2 + ddA[0, i, t] ** 2) / (
+                                    beta_k[t] * float(Independent)) ** 2) ** 0.5
+                        ddS[p, i, t] = (ddU[p, t] ** 2 + ddU[p, t] ** 2 + ddG[p, i, t] ** 2) ** 0.5 / float(T)
     
     print("Polymorph Free Energy:")
     for p in range(len(Polymorphs)):
@@ -412,15 +423,15 @@ def dGvsT_QHA(Temperatures=np.array([100,200,300]), Temperatures_unsampled=[], M
 
     np.save('output/T_' + molecule + '_' + potential, Temperatures_P)
     for p, Poly in enumerate(Polymorphs):
-        np.save('output/dGvT_' + molecule + '_' + Poly + '_' + potential, dG[p, spacing, Pressures == PlotPress])
+        np.save('output/dGvT_' + molecule + '_' + Poly + '_' + potential, dG[:, p, spacing, Pressures == PlotPress])
         np.save('output/ddGvT_' + molecule + '_' + Poly + '_' + potential, ddG[p, spacing, Pressures == PlotPress])
         if len(Potentials) > 1:
-            np.save('output/dGvT_' + molecule + '_' + Poly + '_' + potential + '_indirect', dG[p, 0, :])
+            np.save('output/dGvT_' + molecule + '_' + Poly + '_' + potential + '_indirect', dG[:, p, 0, :])
             np.save('output/ddGvT_' + molecule + '_' + Poly + '_' + potential + '_indirect', ddG[p, 0, :])
             if spacing > 1:
-                np.save('output/dGvT_' + molecule + '_' + Poly + '_' + potential + '_convergence', dG[p, :, :])
+                np.save('output/dGvT_' + molecule + '_' + Poly + '_' + potential + '_convergence', dG[:, p, :, :])
                 np.save('output/ddGvT_' + molecule + '_' + Poly + '_' + potential + '_convergence', ddG[p, :, :])
-        np.save('output/dS_' + molecule + '_' + Poly + '_' + potential, dS[p, spacing, :])
+        np.save('output/dS_' + molecule + '_' + Poly + '_' + potential, dS[:, p, spacing, :])
         np.save('output/ddS_' + molecule + '_' + Poly + '_' + potential, ddS[p, spacing, :])
 
     for p, Poly in enumerate(Polymorphs):
