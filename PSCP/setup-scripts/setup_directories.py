@@ -95,7 +95,7 @@ def setup_interactions(inputs):
                             anneal_steps=0, run_production=True, charge=inputs['temp_in']['charge'],
                             hinge=inputs['gen_in']['hinge'], submission_script=inputs['gen_in']['submission_script'], 
                             remove_bonded_interactions=inputs['PSCP_in']['run_bonded_interactions'], 
-                            endpoint_itp=inputs['PSCP_in']['endpoint_itp'])
+                            endpoint_itp=None)
              gamma += inputs['PSCP_in']['gamma_spacing']
 
 
@@ -189,7 +189,7 @@ def setup_PSCP(inputs):
                                    hinge=inputs['gen_in']['hinge'],
                                    submission_script=inputs['gen_in']['submission_script'],
                                    remove_bonded_interactions=inputs['PSCP_in']['run_bonded_interactions'],
-                                   endpoint_itp=inputs['PSCP_in']['endpoint_itp'])
+                                   endpoint_itp=None)
 
                     current_PSCP_point += inputs['PSCP_in']['spacing'][i]
         if running_gamma == True:

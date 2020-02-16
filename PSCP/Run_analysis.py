@@ -64,7 +64,6 @@ if __name__ == '__main__':
 
         # Running the analysis for this PSCP step
         if run and np.any(np.isnan(dA[:, i])):
-            save_dA = True
             dA[:, i], ddA[:, i] = dA_MBAR(spacing=inputs['PSCP_in']['spacing'][i], exponent=inputs['PSCP_in']['exponent'][i],
                                           polymorphs=inputs['gen_in']['polymorph_num'],
                                           Molecules=inputs['gen_in']['number_of_molecules'], Independent=independent,
@@ -72,12 +71,11 @@ if __name__ == '__main__':
                                           bonds=inputs['PSCP_in']['run_bonded_interactions'],
                                           primary_directory=directory_name)
 
-    if save_dA:
-        inputs['PSCP_out']['dA'] = dA.tolist()
-        inputs['PSCP_out']['ddA'] = ddA.tolist()
-    
-        with open(args.input_file, 'w') as yaml_file:
-           yaml.dump(inputs, yaml_file, default_flow_style=False)
+            inputs['PSCP_out']['dA'] = dA.tolist()
+            inputs['PSCP_out']['ddA'] = ddA.tolist()
+        
+            with open(args.input_file, 'w') as yaml_file:
+               yaml.dump(inputs, yaml_file, default_flow_style=False)
 
 #    # Computing the free energy from PSCP
 #    if inputs['PSCP_in']['run_restraints']:
@@ -115,7 +113,8 @@ if __name__ == '__main__':
 #        inputs['PSCP_out']['dEnd'] = dA_end.tolist()
 #        inputs['PSCP_out']['ddEnd'] = ddA_end.tolist()
 
-    if inputs['PSCP_out']['dG'] == None:
+    if (inputs['PSCP_out']['dG'] == None) or (np.any(np.isnan(inputs['PSCP_out']['dG']))):
+
         # Adding the free energy differences to the inputs to be saved
         dG = np.zeros(len(inputs['gen_in']['polymorph_num'].split()))
         ddG = np.zeros(len(inputs['gen_in']['polymorph_num'].split()))
@@ -134,12 +133,16 @@ if __name__ == '__main__':
 
     # Determing the free energy across the entire temperature range
     if inputs['temp_in']['run_temperature'] == True:
+        if inputs['temp_in']['temperatures_unsampled'] == None:
+            inputs['temp_in']['temperatures_unsampled'] = []
+        else:
+            inputs['temp_in']['temperatures_unsampled'] = np.array(inputs['temp_in']['temperatures_unsampled'].split()).astype(float)
         dGvsT(Temperatures=np.array(inputs['temp_in']['temperatures'].split()).astype(float),
-              Temperatures_unsampled=np.array(inputs['temp_in']['temperatures_unsampled'].split()).astype(float),
+              Temperatures_unsampled=inputs['temp_in']['temperatures_unsampled'],
               Pressure=inputs['gen_in']['pressure'],
               Molecules=inputs['gen_in']['number_of_molecules'], molecule=inputs['gen_in']['molecule'],
               Independent=independent, potential=inputs['gen_in']['potential'],
               simulation=inputs['temp_in']['simulation_package'], hinge=inputs['gen_in']['hinge'],
               Polymorphs=inputs['gen_in']['polymorph_num'].split(), refT=inputs['PSCP_in']['PSCP_temperature'],
-              refdG=inputs['PSCP_out']['dG'], refddG=inputs['PSCP_out']['ddG'])
+              refdG=inputs['PSCP_out']['dG'], refddG=inputs['PSCP_out']['ddG'], output_directory=inputs['gen_in']['output_directory'])
 
