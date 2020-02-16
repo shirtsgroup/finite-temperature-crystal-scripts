@@ -47,15 +47,9 @@ def dA_MBAR(minimum=0, maximum=100, spacing=10, exponent=2, polymorphs='p1 p2', 
      
     # total number of states examined; 0 are unsampled if bonds are left on, 1 is unsampled if the bonds are removed
     Kbig = K
-#    if bonds == True:
-#        Kbig = K
-#        dhdl_placement = 6
-#    else:
-#        Kbig = K
-#        dhdl_placement = 5
     
     # maximum number of snapshots/simulation (could make this automated) - doesn't matter, as long as it's long enough.
-    N_max = 200000
+    N_max = 5000
     
     # beta factor for the different temperatures
     beta_k = 1.0 / (kB * T_k)
@@ -95,7 +89,12 @@ def dA_MBAR(minimum=0, maximum=100, spacing=10, exponent=2, polymorphs='p1 p2', 
             # Removing any non-equilibrated points of the simulation
             [start_production, _, _] = timeseries.detectEquilibration(potential_energy)
             potential_energy = potential_energy[start_production:]
-            dhdl_energy = dhdl_energy[start_production:]
+            dhdl_energy = dhdl_energy[start_production:,:]
+
+            # Cutting points if they exceed N_max
+            if len(potential_energy) > N_max:
+                potential_energy = potential_energy[len(potential_energy) - N_max:]
+                dhdl_energy = dhdl_energy[len(dhdl_energy) - N_max:,:]
 
             # the energy of every configuration from each state evaluated at its sampled state
             n = len(potential_energy)

@@ -53,23 +53,35 @@ def compute_error_gradient(Tr, T, dA, T1, T2, G1, G2):
 
 
 def QHA_optimized_ref(T, dA, refT_files, refG_files):
-    refT = np.zeros(len(refT_files))
+    refT = np.ones(len(refT_files))
     refdG = np.zeros(len(refT_files))
     for i in range(1, len(refT)):
         T1 = np.load(refT_files[0])
         T2 = np.load(refT_files[i])
         G1 = np.load(refG_files[0])
         G2 = np.load(refG_files[i])
-        x = sp.optimize.minimize(compute_error_gradient, 100.0, args=(T, dA, T1, T2, G1, G2))
+        x = sp.optimize.minimize(compute_error_gradient, 50.0, args=(T, dA[i], T1, T2, G1, G2),  tol=1e-8)
+        print(x)
         refT[i] = x.x
         refdG[i] = np.interp(x.x, T2, G2) - np.interp(x.x, T1, G1)
-    print(refT, refdG)
-    exit()
+
+    x = np.arange(10,300,1)
+    y = np.zeros((len(refT) - 1, len(x)))
+    for i in range(1, len(refT)):
+        T1 = np.load(refT_files[0])
+        T2 = np.load(refT_files[i])
+        G1 = np.load(refG_files[0])
+        G2 = np.load(refG_files[i])
+        for j in range(len(x)):
+            y[0, j] = compute_error_gradient(x[j], T,dA[i], T1, T2, G1, G2)
+    np.save('x', x)
+    np.save('y', y) 
+
     return refT, refdG
 
 def dGvsT_QHA(Temperatures=np.array([100,200,300]), Temperatures_unsampled=[], Molecules=72, molecule='benzene',
           Independent=0, potential='oplsaa', spacing=1, phase='solid',
-          Polymorphs=['p1', 'p2', 'p3'], refT_files=['', '', ''], refG_files=['', '', '']):
+          Polymorphs=['p1', 'p2', 'p3'], refT_files=['', '', ''], refG_files=['', '', ''], output_directory='output_QHA'):
 
     if Independent == 0:
         Independent = Molecules
@@ -86,6 +98,7 @@ def dGvsT_QHA(Temperatures=np.array([100,200,300]), Temperatures_unsampled=[], M
     # FORMAT INPUTS
     # =============================================================================================
     # TEMPERATURE
+    refT = 200
     refk = -1
     for k, temp in enumerate(Temperatures):
         if temp == refT and refk == -1:
@@ -367,7 +380,7 @@ def dGvsT_QHA(Temperatures=np.array([100,200,300]), Temperatures_unsampled=[], M
             # Store the dimensionless results in the ddA container
             ddA[p, i, :] = ddf_u[refk]
 
-    refT, refdG = QHA_optimized_ref(Temperatures, dA, refT_files, refG_files)
+    refT, refdG = QHA_optimized_ref(Temperatures, dA[1], refT_files, refG_files)
 
     # =============================================================================================
     # FINALIZE THE RELATIVE FREE ENERGY AND ENTROPY
@@ -375,7 +388,7 @@ def dGvsT_QHA(Temperatures=np.array([100,200,300]), Temperatures_unsampled=[], M
     for i in range(spacing + 1):
         for t, T in enumerate(Temperatures):
             for p in range(len(Polymorphs)):
-                dG[p, i, t] = (dA[p, i, t] - dA[0, i, t]) / (beta_k[t] * float(Independent)) + float(T) / float(refT) * \
+                dG[p, i, t] = (dA[p, i, t] - dA[0, i, t]) / (beta_k[t] * float(Independent)) + float(T) / float(refT[p]) * \
                                                                                                refdG[p]
                 ddG[p, i, t] = ((ddA[p, i, t] ** 2 + ddA[0, i, t] ** 2) / (beta_k[t] * float(Independent)) ** 2) ** 0.5
                 if p == 0:

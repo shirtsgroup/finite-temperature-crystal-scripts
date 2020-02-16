@@ -382,6 +382,7 @@ def get_potential_info(potential):
         PotNAMES = ['GROM']
     return SimNAMES, Chargenames, PotNAMES
 
+
 def crystal_matrix_to_lattice_parameters(crystal_matrix):
     """
     This function takes any strained crystal lattice matrix and return the lattice parameters
@@ -407,11 +408,12 @@ def crystal_matrix_to_lattice_parameters(crystal_matrix):
     lattice_parameters = np.array([a, b, c, alpha, beta, gamma])
     return lattice_parameters
 
+
 def dGvsT(plot_out=False, Temperatures=np.array([100,200,300]), Temperatures_unsampled=[], Pressure=1, Molecules=72, molecule='benzene', 
           Independent=0, potential='oplsaa', ignoreframes=200, includeframes=100000,
           simulation='gromacs', directory='', ensemble='NVT', spacing=1, hinge='DefaultHinge', phase='solid',
           Polymorphs=['p1', 'p2', 'p3'], refT=200, refdG=[0.000, 0.185, 0.306], refddG=[0.000, 0.019, 0.019],
-          refdU=[0.000, 0.267, 0.240], absolutedU=[-5.624, -5.362, -5.380]):
+          refdU=[0.000, 0.267, 0.240], absolutedU=[-5.624, -5.362, -5.380], output_directory='output'):
 #NSA: Is this needed?
     Colors = ['b', 'g', 'r', 'm', 'c', 'y', 'k', 'g', 'g', 'g', 'g', 'g', 'g', 'g', 'g', 'g', 'g', 'g', 'g']
 
@@ -421,6 +423,13 @@ def dGvsT(plot_out=False, Temperatures=np.array([100,200,300]), Temperatures_uns
     # Hard set from old dictionary funciton
     refPot = 0
     ExtraPressures = []
+
+    if np.all(Temperatures_unsampled == None):
+        Temperatures_unsampled = np.array([])
+
+    if (not np.any(Temperatures == refT)) and (not np.any(Temperatures_unsampled == refT)):
+        Temperatures_unsampled = np.append(Temperatures_unsampled, refT)
+
     Temperatures = np.sort(np.append(Temperatures, Temperatures_unsampled))
     Pressures = np.ones(len(Temperatures), int)
     Pressures[len(Pressures) - len(ExtraPressures): len(Pressures)] = ExtraPressures
@@ -469,7 +478,7 @@ def dGvsT(plot_out=False, Temperatures=np.array([100,200,300]), Temperatures_uns
     K = len(Potentials) * len(Temperatures)
     
     #  maximum number of snapshots/simulation (could make this automated) - doesn't matter, as long as it's long enough.
-    N_max = 30000
+    N_max = 5000
     
     # beta factor for the different temperatures
     beta_k = 1.0 / (kB * Temperatures)
@@ -552,20 +561,16 @@ def dGvsT(plot_out=False, Temperatures=np.array([100,200,300]), Temperatures_uns
                 for j, potential_l in enumerate(Potentials):
                     l = len(Temperatures) * j
     
-#                    # set up the state l hinges for molecules, charges, and alchemical transformations
-#                    if SimNAMES[j] == "GRO":
-#                        if Chargenames[i] == "":
-#                            charge_hinge_l = ""
-#                        else:
-#                            charge_hinge_l = "_" + Chargenames[j]
-#                    elif SimNAMES[j] == "TIN":
-#                        charge_hinge_l = ""
                     dirpath = polymorph + '/temperature/' + str(count) + '/'
-#                    fname_energy = dirpath + potential_l + charge_hinge_l + '_energy.xvg'
                     if os.path.isfile(dirpath + 'PROD.edr') and (Temperatures[t] not in Temperatures_unsampled):
                         count += 1
+                        print("loading " + dirpath + 'PROD.edr')
                         all_energy = panedr.edr_to_df(dirpath + 'PROD.edr')
-                        [start_production, _, _] = timeseries.detectEquilibration(np.array(all_energy['Potential']))
+                        if len(all_energy['Potential'].values) > N_max:
+                            [start_production, _, _] = timeseries.detectEquilibration(all_energy['Potential'].values[::10])
+                            start_production *= 10
+                        else:
+                            [start_production, _, _] = timeseries.detectEquilibration(all_energy['Potential'].values)
 
                         # Now read in the lattice tensor and average them
                         if 'Box-XX' in list(all_energy):
@@ -574,22 +579,30 @@ def dGvsT(plot_out=False, Temperatures=np.array([100,200,300]), Temperatures_uns
                             box_letters = ['X', 'Y', 'Z']
     
                         for b in range(len(box_letters)):
-                            [hold,_,_] = timeseries.detectEquilibration(np.array(all_energy['Box-' + box_letters[b]]))
+                            if len(all_energy['Potential'].values) > N_max:
+                                [hold,_,_] = timeseries.detectEquilibration(all_energy['Box-' + box_letters[b]].values[::10])
+                                hold *= 10
+                            else:
+                                [hold,_,_] = timeseries.detectEquilibration(all_energy['Box-' + box_letters[b]].values)
+
                             if hold > start_production:
                                 start_production = hold
 
+                        if len(all_energy['Total Energy'].values[start_production:]) > N_max:
+                            start_production = len(all_energy['Total Energy'].values) - N_max
+
                         # Setting the end point of the simulation
-                        N = len(np.array(all_energy['Total Energy'])[start_production:])
+                        N = len(all_energy['Total Energy'].values[start_production:])
                         N_k[k] = N
     
-                        u_kln[k, l, :N] = np.array(all_energy['Potential'])[start_production:]
+                        u_kln[k, l, :N] = all_energy['Potential'].values[start_production:]
     
                         # Now set these energies over all temperatures
                         #u_pklnT[p, k, l: (l + len(Temperatures)), :N, :len(Terms_l[j])] = u_pklnT[p, k, l, :N, :len(Terms_l[j])]
                         u_kln[k, l:(l + len(Temperatures)), :N] = u_kln[k, l, :N]
     
                         # Now read in the volumes and average them
-                        V_pkn[p, t, :N] = np.array(all_energy['Volume'])[start_production:]
+                        V_pkn[p, t, :N] = all_energy['Volume'].values[start_production:]
                         V_avg[p, t] = np.average(V_pkn[p, t, :N]) / float(Independent)
                         ddV_avg[p, t] = np.std(V_pkn[p, t, :N]) / float(Independent)
     
@@ -603,7 +616,7 @@ def dGvsT(plot_out=False, Temperatures=np.array([100,200,300]), Temperatures_uns
                                         sign[s, j] = 1.
 
                         for b in range(len(box_letters)):
-                            C_pkn[p, t, :N, box_place[b, 0], box_place[b, 1]] = np.absolute(np.array(all_energy['Box-' + box_letters[b]])[start_production:]) * \
+                            C_pkn[p, t, :N, box_place[b, 0], box_place[b, 1]] = np.absolute(all_energy['Box-' + box_letters[b]].values[start_production:]) * \
                                     sign[box_place[b, 0], box_place[b, 1]] * 10
                         C_avg = np.average(C_pkn[p, t, :N], axis=0)
                         dC = np.std(C_pkn[p, t, :N], axis=0)
@@ -811,21 +824,21 @@ def dGvsT(plot_out=False, Temperatures=np.array([100,200,300]), Temperatures_uns
         a.set_xlabel(xlabel)
         a.set_ylabel(ylabel)
 
-    if not os.path.isdir('output'):
-        subprocess.call(['mkdir', 'output'])
+    if not os.path.isdir(output_directory):
+        subprocess.call(['mkdir', output_directory])
 
-    np.save('output/T_' + molecule + '_' + potential, Temperatures_P)
+    np.save(output_directory + '/T_' + molecule + '_' + potential, Temperatures_P)
     for p, Poly in enumerate(Polymorphs):
-        np.save('output/dGvT_' + molecule + '_' + Poly + '_' + potential, dG[p, spacing, Pressures == PlotPress])
-        np.save('output/ddGvT_' + molecule + '_' + Poly + '_' + potential, ddG[p, spacing, Pressures == PlotPress])
+        np.save(output_directory + '/dGvT_' + molecule + '_' + Poly + '_' + potential, dG[p, spacing, Pressures == PlotPress])
+        np.save(output_directory + '/ddGvT_' + molecule + '_' + Poly + '_' + potential, ddG[p, spacing, Pressures == PlotPress])
         if len(Potentials) > 1:
-            np.save('output/dGvT_' + molecule + '_' + Poly + '_' + potential + '_indirect', dG[p, 0, :])
-            np.save('output/ddGvT_' + molecule + '_' + Poly + '_' + potential + '_indirect', ddG[p, 0, :])
+            np.save(output_directory + '/dGvT_' + molecule + '_' + Poly + '_' + potential + '_indirect', dG[p, 0, :])
+            np.save(output_directory + '/ddGvT_' + molecule + '_' + Poly + '_' + potential + '_indirect', ddG[p, 0, :])
             if spacing > 1:
-                np.save('output/dGvT_' + molecule + '_' + Poly + '_' + potential + '_convergence', dG[p, :, :])
-                np.save('output/ddGvT_' + molecule + '_' + Poly + '_' + potential + '_convergence', ddG[p, :, :])
-        np.save('output/dS_' + molecule + '_' + Poly + '_' + potential, dS[p, spacing, :])
-        np.save('output/ddS_' + molecule + '_' + Poly + '_' + potential, ddS[p, spacing, :])
+                np.save(output_directory + '/dGvT_' + molecule + '_' + Poly + '_' + potential + '_convergence', dG[p, :, :])
+                np.save(output_directory + '/ddGvT_' + molecule + '_' + Poly + '_' + potential + '_convergence', ddG[p, :, :])
+        np.save(output_directory + '/dS_' + molecule + '_' + Poly + '_' + potential, dS[p, spacing, :])
+        np.save(output_directory + '/ddS_' + molecule + '_' + Poly + '_' + potential, ddS[p, spacing, :])
     
     # =============================================================================================
     # PLOT THE RELATIVE ENTROPY VS TEMPERATURE
@@ -856,7 +869,7 @@ def dGvsT(plot_out=False, Temperatures=np.array([100,200,300]), Temperatures_uns
         plt.legend(loc='upper left')
 
     for p, Poly in enumerate(Polymorphs):
-        np.save('output/UvT_' + molecule + '_' + Poly + '_' + potential, dU[p, :])
+        np.save(output_directory + '/UvT_' + molecule + '_' + Poly + '_' + potential, dU[p, :])
     
     # =============================================================================================
     # PLOT THE AVERAGE BOX VOLUME VS TEMPERATURE
@@ -870,16 +883,16 @@ def dGvsT(plot_out=False, Temperatures=np.array([100,200,300]), Temperatures_uns
                        alpha=0.6, color=Colors[p], label=Polymorphs[p])
 
     for p, Poly in enumerate(Polymorphs):
-        np.save('output/VvT_' + molecule + '_' + Poly + '_' + potential, V_avg[p, :])
-        np.save('output/dVvT_' + molecule + '_' + Poly + '_' + potential, ddV_avg[p, :])
+        np.save(output_directory + '/VvT_' + molecule + '_' + Poly + '_' + potential, V_avg[p, :])
+        np.save(output_directory + '/dVvT_' + molecule + '_' + Poly + '_' + potential, ddV_avg[p, :])
 
     # =============================================================================================
     # SAVE THE AVERAGE BOX VECTORS AND ANGLES VS TEMPERATURE
     # =============================================================================================
 
     for p, Poly in enumerate(Polymorphs):
-        np.save('output/hvT_' + molecule + '_' + Poly + '_' + potential, h_avg[p, :])
-        np.save('output/dhvT_' + molecule + '_' + Poly + '_' + potential, dh[p, :])
+        np.save(output_directory + '/hvT_' + molecule + '_' + Poly + '_' + potential, h_avg[p, :])
+        np.save(output_directory + '/dhvT_' + molecule + '_' + Poly + '_' + potential, dh[p, :])
 
     # =============================================================================================
     # PLOT THE DIFFERENCE IN AVERAGE ENERGY VS TEMPERATURE
@@ -901,8 +914,8 @@ def dGvsT(plot_out=False, Temperatures=np.array([100,200,300]), Temperatures_uns
     
     # Save the data for future use.
     for p, Poly in enumerate(Polymorphs):
-        np.save('output/dUvT_' + molecule + '_' + Poly + '_' + potential, dU[p, :] - dU[0, :])
-        np.save('output/ddUvT_' + molecule + '_' + Poly + '_' + potential, (ddU[p, :] ** 2 + ddU[0, :] ** 2) ** 0.5)
+        np.save(output_directory + '/dUvT_' + molecule + '_' + Poly + '_' + potential, dU[p, :] - dU[0, :])
+        np.save(output_directory + '/ddUvT_' + molecule + '_' + Poly + '_' + potential, (ddU[p, :] ** 2 + ddU[0, :] ** 2) ** 0.5)
 
     if plot_out == True:
         plt.tight_layout()
