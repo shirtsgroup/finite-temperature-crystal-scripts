@@ -107,13 +107,33 @@ def dGvsT_QHA(Temperatures=np.array([100,200,300]), Temperatures_unsampled=[], M
     # =============================================================================================
     # Load reference free energy differences
     # =============================================================================================
-    refT = np.load(refT_files[0])
-    refdG = np.zeros((len(refT), len(Polymorphs)))
-    for i in range(len(Polymorphs)):
-        refdG[:, i] = np.load(refG_files[i]) - np.load(refG_files[0])
+    # Loading in the longest string of temperatures for refT
+    refT = []
+    for i in refT_files:
+        temp_T = np.load(i)
+        if len(temp_T) > len(refT):
+            refT = np.load(i)
+
+    # Cutting off any zero values form refT
     if refT[0] == 0.:
         refT = refT[1:]
-        refdG = refdG[1:, :]
+
+    # Adding in the reference free energy differences for each temperature
+    refdG = np.zeros((len(refT), len(Polymorphs)))
+    for i in range(len(Polymorphs)):
+        G0 = np.load(refG_files[0])
+        G1 = np.load(refG_files[i])
+
+        T0 = np.load(refT_files[0])
+        T1 = np.load(refT_files[i])
+        for j, t in enumerate(refT):
+            placement_0 = np.where(T0 == t)
+            placement_1 = np.where(T1 == t)
+            if (len(placement_0) == 1) and (len(placement_1) == 1):
+                refdG[j, i] = G1[placement_1] - G0[placement_0]
+            else:
+                refdG[j, i] = np.nan
+
     # =============================================================================================
     # READ IN RAW DATA
     # =============================================================================================
