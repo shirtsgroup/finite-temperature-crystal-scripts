@@ -45,6 +45,13 @@ if __name__ == '__main__':
     interactions_count = 0
     restraints_count = 0
 
+
+    inputs['PSCP_out']['dA'] = dA.tolist()
+    inputs['PSCP_out']['ddA'] = ddA.tolist()
+    with open(args.input_file, 'w') as yaml_file:
+        yaml.dump(inputs, yaml_file, default_flow_style=False)
+
+
     for i, run in enumerate(inputs['PSCP_in']['run_PSCP']):
         # Getting the correct directory name
         if inputs['PSCP_in']['k'][i] == inputs['PSCP_in']['k'][i + 1]:
@@ -75,7 +82,7 @@ if __name__ == '__main__':
             inputs['PSCP_out']['ddA'] = ddA.tolist()
         
             with open(args.input_file, 'w') as yaml_file:
-               yaml.dump(inputs, yaml_file, default_flow_style=False)
+                yaml.dump(inputs, yaml_file, default_flow_style=False)
 
 #    # Computing the free energy from PSCP
 #    if inputs['PSCP_in']['run_restraints']:

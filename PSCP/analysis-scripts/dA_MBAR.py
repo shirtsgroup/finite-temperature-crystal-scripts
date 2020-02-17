@@ -173,27 +173,31 @@ def dA_MBAR(minimum=0, maximum=100, spacing=10, exponent=2, polymorphs='p1 p2', 
         print("Number of retained samples from each seed")
         print(N_k_s)
     
-        # generate the weights of each of the umbrella set
-        mbar = pymbar.MBAR(u_kln, N_k, verbose=True, subsampling_protocol=[{'method': 'L-BFGS-B'}])
-    
-        print("MBAR Converged...")
-    
-        # extract self-consistent weights and uncertainties
-        (df_u, ddf_u, theta_i) = mbar.getFreeEnergyDifferences()
-    
-        print("Free Energies Optained...")
-    
-        # convert PMF to kcal/mol and normalize by the number of molecules
-        df_u /= (beta_k[0] * float(Independent))
-        ddf_u /= (beta_k[0] * float(Independent))
-    
-        ddA[i, :] = ddf_u[-1]
+#        # generate the weights of each of the umbrella set
+#        mbar = pymbar.MBAR(u_kln, N_k, verbose=True, subsampling_protocol=[{'method': 'L-BFGS-B'}])
+#    
+#        print("MBAR Converged...")
+#    
+#        # extract self-consistent weights and uncertainties
+#        try:
+#            (df_u, ddf_u, theta_i) = mbar.getFreeEnergyDifferences()
+#        except ValueError:
+#            pass
+#    
+#        print("Free Energies Optained...")
+#    
+#        # convert PMF to kcal/mol and normalize by the number of molecules
+#        df_u /= (beta_k[0] * float(Independent))
+#        ddf_u /= (beta_k[0] * float(Independent))
+#    
+#        ddA[i, :] = ddf_u[-1]
+        ddA[i, :] = ddf_i[-1]
         
-        # Write out free energy differences
-        print("Free Energy Difference (in units of kcal/mol)")
-        print("  dA(Gamma) = A(Gamma) - A(Interactions Off)")
-        for k in range(Kbig):
-            print("%8.3f %8.3f" % (df_i[k, -1], ddf_u[k, -1]))
+#        # Write out free energy differences
+#        print("Free Energy Difference (in units of kcal/mol)")
+#        print("  dA(Gamma) = A(Gamma) - A(Interactions Off)")
+#        for k in range(Kbig):
+#            print("%8.3f %8.3f" % (df_i[k, -1], ddf_u[k, -1]))
 
         del N_k
         del N_k_s

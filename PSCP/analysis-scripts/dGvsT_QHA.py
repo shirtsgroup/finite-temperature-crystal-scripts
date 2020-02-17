@@ -111,7 +111,9 @@ def dGvsT_QHA(Temperatures=np.array([100,200,300]), Temperatures_unsampled=[], M
     refdG = np.zeros((len(refT), len(Polymorphs)))
     for i in range(len(Polymorphs)):
         refdG[:, i] = np.load(refG_files[i]) - np.load(refG_files[0])
-
+    if refT[0] == 0.:
+        refT = refT[1:]
+        refdG = refdG[1:, :]
     # =============================================================================================
     # READ IN RAW DATA
     # =============================================================================================
@@ -407,9 +409,9 @@ def dGvsT_QHA(Temperatures=np.array([100,200,300]), Temperatures_unsampled=[], M
                                     beta_k[t] * float(Independent)) ** 2) ** 0.5
                         ddS[p, i, t] = (ddU[p, t] ** 2 + ddU[p, t] ** 2 + ddG[p, i, t] ** 2) ** 0.5 / float(T)
     
-    print("Polymorph Free Energy:")
-    for p in range(len(Polymorphs)):
-        print("%8.3f %8.3f" % (dG[p, spacing, len(Temperatures) - 1], ddG[p, spacing, len(Temperatures) - 1]))
+#    print("Polymorph Free Energy:")
+#    for p in range(len(Polymorphs)):
+#        print("%8.3f %8.3f" % (dG[p, spacing, len(Temperatures) - 1], ddG[p, spacing, len(Temperatures) - 1]))
     
     # =============================================================================================
     # PLOT THE RELATIVE FREE ENERGY VS TEMPERATURE
@@ -418,40 +420,40 @@ def dGvsT_QHA(Temperatures=np.array([100,200,300]), Temperatures_unsampled=[], M
     PlotPress = 1  # Pressure to plot the dGvT curve at
     Temperatures_P = Temperatures[Pressures == PlotPress]
 
-    if not os.path.isdir('output'):
-        subprocess.call(['mkdir', 'output'])
+    if not os.path.isdir(output_directory):
+        subprocess.call(['mkdir', output_directory])
 
-    np.save('output/T_' + molecule + '_' + potential, Temperatures_P)
+    np.save(output_directory + '/T_' + molecule + '_' + potential, Temperatures_P)
     for p, Poly in enumerate(Polymorphs):
-        np.save('output/dGvT_' + molecule + '_' + Poly + '_' + potential, dG[:, p, spacing, Pressures == PlotPress])
-        np.save('output/ddGvT_' + molecule + '_' + Poly + '_' + potential, ddG[p, spacing, Pressures == PlotPress])
+        np.save(output_directory + '/dGvT_' + molecule + '_' + Poly + '_' + potential, dG[:, p, spacing, Pressures == PlotPress])
+        np.save(output_directory + '/ddGvT_' + molecule + '_' + Poly + '_' + potential, ddG[p, spacing, Pressures == PlotPress])
         if len(Potentials) > 1:
-            np.save('output/dGvT_' + molecule + '_' + Poly + '_' + potential + '_indirect', dG[:, p, 0, :])
-            np.save('output/ddGvT_' + molecule + '_' + Poly + '_' + potential + '_indirect', ddG[p, 0, :])
+            np.save(output_directory + '/dGvT_' + molecule + '_' + Poly + '_' + potential + '_indirect', dG[:, p, 0, :])
+            np.save(output_directory + '/ddGvT_' + molecule + '_' + Poly + '_' + potential + '_indirect', ddG[p, 0, :])
             if spacing > 1:
-                np.save('output/dGvT_' + molecule + '_' + Poly + '_' + potential + '_convergence', dG[:, p, :, :])
-                np.save('output/ddGvT_' + molecule + '_' + Poly + '_' + potential + '_convergence', ddG[p, :, :])
-        np.save('output/dS_' + molecule + '_' + Poly + '_' + potential, dS[:, p, spacing, :])
-        np.save('output/ddS_' + molecule + '_' + Poly + '_' + potential, ddS[p, spacing, :])
+                np.save(output_directory + '/dGvT_' + molecule + '_' + Poly + '_' + potential + '_convergence', dG[:, p, :, :])
+                np.save(output_directory + '/ddGvT_' + molecule + '_' + Poly + '_' + potential + '_convergence', ddG[p, :, :])
+        np.save(output_directory + '/dS_' + molecule + '_' + Poly + '_' + potential, dS[:, p, spacing, :])
+        np.save(output_directory + '/ddS_' + molecule + '_' + Poly + '_' + potential, ddS[p, spacing, :])
 
     for p, Poly in enumerate(Polymorphs):
-        np.save('output/UvT_' + molecule + '_' + Poly + '_' + potential, dU[p, :])
+        np.save(output_directory + '/UvT_' + molecule + '_' + Poly + '_' + potential, dU[p, :])
 
     for p, Poly in enumerate(Polymorphs):
-        np.save('output/VvT_' + molecule + '_' + Poly + '_' + potential, V_avg[p, :])
-        np.save('output/dVvT_' + molecule + '_' + Poly + '_' + potential, ddV_avg[p, :])
+        np.save(output_directory + '/VvT_' + molecule + '_' + Poly + '_' + potential, V_avg[p, :])
+        np.save(output_directory + '/dVvT_' + molecule + '_' + Poly + '_' + potential, ddV_avg[p, :])
 
     # =============================================================================================
     # SAVE THE AVERAGE BOX VECTORS AND ANGLES VS TEMPERATURE
     # =============================================================================================
 
     for p, Poly in enumerate(Polymorphs):
-        np.save('output/hvT_' + molecule + '_' + Poly + '_' + potential, h_avg[p, :])
-        np.save('output/dhvT_' + molecule + '_' + Poly + '_' + potential, dh[p, :])
+        np.save(output_directory + '/hvT_' + molecule + '_' + Poly + '_' + potential, h_avg[p, :])
+        np.save(output_directory + '/dhvT_' + molecule + '_' + Poly + '_' + potential, dh[p, :])
     
     # Save the data for future use.
     for p, Poly in enumerate(Polymorphs):
-        np.save('output/dUvT_' + molecule + '_' + Poly + '_' + potential, dU[p, :] - dU[0, :])
-        np.save('output/ddUvT_' + molecule + '_' + Poly + '_' + potential, (ddU[p, :] ** 2 + ddU[0, :] ** 2) ** 0.5)
+        np.save(output_directory + '/dUvT_' + molecule + '_' + Poly + '_' + potential, dU[p, :] - dU[0, :])
+        np.save(output_directory + '/ddUvT_' + molecule + '_' + Poly + '_' + potential, (ddU[p, :] ** 2 + ddU[0, :] ** 2) ** 0.5)
 
 
