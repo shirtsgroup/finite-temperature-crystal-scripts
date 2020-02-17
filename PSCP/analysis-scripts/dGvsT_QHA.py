@@ -79,31 +79,12 @@ def QHA_optimized_ref(T, dA, refT_files, refG_files):
 
     return refT, refdG
 
-def dGvsT_QHA(Temperatures=np.array([100,200,300]), Temperatures_unsampled=[], Molecules=72, molecule='benzene',
+def dGvsT_QHA(Temperatures_MD=np.array([100,200,300]), Temperatures_unsampled=[], Molecules=72, molecule='benzene',
           Independent=0, potential='oplsaa', spacing=1, phase='solid',
           Polymorphs=['p1', 'p2', 'p3'], refT_files=['', '', ''], refG_files=['', '', ''], output_directory='output_QHA'):
 
     if Independent == 0:
         Independent = Molecules
-
-    # Hard set from old dictionary funciton
-    refPot = 0
-    ExtraPressures = []
-    Temperatures = np.sort(np.append(Temperatures, Temperatures_unsampled))
-    Pressures = np.ones(len(Temperatures), int)
-    Pressures[len(Pressures) - len(ExtraPressures): len(Pressures)] = ExtraPressures
-    Potentials = [potential]
-    
-    # =============================================================================================
-    # FORMAT INPUTS
-    # =============================================================================================
-    # TEMPERATURE
-    refT = 200
-    refk = -1
-    for k, temp in enumerate(Temperatures):
-        if temp == refT and refk == -1:
-            refk = k + refPot * len(Temperatures)
-
     # =============================================================================================
     # Load reference free energy differences
     # =============================================================================================
@@ -129,10 +110,29 @@ def dGvsT_QHA(Temperatures=np.array([100,200,300]), Temperatures_unsampled=[], M
         for j, t in enumerate(refT):
             placement_0 = np.where(T0 == t)
             placement_1 = np.where(T1 == t)
-            if (len(placement_0) == 1) and (len(placement_1) == 1):
-                refdG[j, i] = G1[placement_1] - G0[placement_0]
+            if (len(placement_0[0]) == 1) and (len(placement_1[0]) == 1):
+                refdG[j, i] = G1[placement_1[0]] - G0[placement_0[0]]
             else:
                 refdG[j, i] = np.nan
+
+    # Hard set from old dictionary funciton
+    refPot = 0
+    ExtraPressures = []
+    Temperatures = np.sort(np.append(Temperatures_MD, Temperatures_unsampled))
+    Temperatures = np.sort(np.unique(np.append(Temperatures, refT)))
+    Pressures = np.ones(len(Temperatures), int)
+    Pressures[len(Pressures) - len(ExtraPressures): len(Pressures)] = ExtraPressures
+    Potentials = [potential]
+    
+    # =============================================================================================
+    # FORMAT INPUTS
+    # =============================================================================================
+    # TEMPERATURE
+    refk = -1
+    for k, temp in enumerate(Temperatures):
+        if temp == refT and refk == -1:
+            refk = k + refPot * len(Temperatures)
+
 
     # =============================================================================================
     # READ IN RAW DATA
@@ -220,7 +220,7 @@ def dGvsT_QHA(Temperatures=np.array([100,200,300]), Temperatures_unsampled=[], M
                 for j, potential_l in enumerate(Potentials):
                     l = len(Temperatures) * j
                     dirpath = polymorph + '/temperature/' + str(count) + '/'
-                    if os.path.isfile(dirpath + 'PROD.edr') and (Temperatures[t] not in Temperatures_unsampled):
+                    if os.path.isfile(dirpath + 'PROD.edr') and (Temperatures[t] in Temperatures_MD):
                         count += 1
                         all_energy = panedr.edr_to_df(dirpath + 'PROD.edr')
                         [start_production, _, _] = timeseries.detectEquilibration(np.array(all_energy['Potential']))
