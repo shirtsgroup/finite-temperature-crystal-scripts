@@ -129,9 +129,9 @@ def dGvsT_QHA(Temperatures_MD=np.array([100,200,300]), Temperatures_unsampled=[]
     # =============================================================================================
     # TEMPERATURE
     refk = -1
-    for k, temp in enumerate(Temperatures):
-        if temp == refT and refk == -1:
-            refk = k + refPot * len(Temperatures)
+#    for k, temp in enumerate(Temperatures):
+#        if temp == refT and refk == -1:
+#            refk = k + refPot * len(Temperatures)
 
 
     # =============================================================================================
