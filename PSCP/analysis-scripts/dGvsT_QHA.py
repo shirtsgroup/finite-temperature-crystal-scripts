@@ -219,11 +219,17 @@ def dGvsT_QHA(Temperatures_MD=np.array([100,200,300]), Temperatures_unsampled=[]
                 # Cycle through all evaluated potentials
                 for j, potential_l in enumerate(Potentials):
                     l = len(Temperatures) * j
+    
                     dirpath = polymorph + '/temperature/' + str(count) + '/'
                     if os.path.isfile(dirpath + 'PROD.edr') and (Temperatures[t] in Temperatures_MD):
                         count += 1
+                        print("loading " + dirpath + 'PROD.edr')
                         all_energy = panedr.edr_to_df(dirpath + 'PROD.edr')
-                        [start_production, _, _] = timeseries.detectEquilibration(np.array(all_energy['Potential']))
+                        if len(all_energy['Potential'].values) > N_max:
+                            [start_production, _, _] = timeseries.detectEquilibration(all_energy['Potential'].values[::10])
+                            start_production *= 10
+                        else:
+                            [start_production, _, _] = timeseries.detectEquilibration(all_energy['Potential'].values)
 
                         # Now read in the lattice tensor and average them
                         if 'Box-XX' in list(all_energy):
@@ -232,21 +238,29 @@ def dGvsT_QHA(Temperatures_MD=np.array([100,200,300]), Temperatures_unsampled=[]
                             box_letters = ['X', 'Y', 'Z']
     
                         for b in range(len(box_letters)):
-                            [hold,_,_] = timeseries.detectEquilibration(np.array(all_energy['Box-' + box_letters[b]]))
+                            if len(all_energy['Potential'].values) > N_max:
+                                [hold,_,_] = timeseries.detectEquilibration(all_energy['Box-' + box_letters[b]].values[::10])
+                                hold *= 10
+                            else:
+                                [hold,_,_] = timeseries.detectEquilibration(all_energy['Box-' + box_letters[b]].values)
+
                             if hold > start_production:
                                 start_production = hold
 
+                        if len(all_energy['Total Energy'].values[start_production:]) > N_max:
+                            start_production = len(all_energy['Total Energy'].values) - N_max
+
                         # Setting the end point of the simulation
-                        N = len(np.array(all_energy['Total Energy'])[start_production:])
+                        N = len(all_energy['Total Energy'].values[start_production:])
                         N_k[k] = N
     
-                        u_kln[k, l, :N] = np.array(all_energy['Potential'])[start_production:]
+                        u_kln[k, l, :N] = all_energy['Potential'].values[start_production:]
     
                         # Now set these energies over all temperatures
                         u_kln[k, l:(l + len(Temperatures)), :N] = u_kln[k, l, :N]
     
                         # Now read in the volumes and average them
-                        V_pkn[p, t, :N] = np.array(all_energy['Volume'])[start_production:]
+                        V_pkn[p, t, :N] = all_energy['Volume'].values[start_production:]
                         V_avg[p, t] = np.average(V_pkn[p, t, :N]) / float(Independent)
                         ddV_avg[p, t] = np.std(V_pkn[p, t, :N]) / float(Independent)
     
@@ -260,7 +274,7 @@ def dGvsT_QHA(Temperatures_MD=np.array([100,200,300]), Temperatures_unsampled=[]
                                         sign[s, j] = 1.
 
                         for b in range(len(box_letters)):
-                            C_pkn[p, t, :N, box_place[b, 0], box_place[b, 1]] = np.absolute(np.array(all_energy['Box-' + box_letters[b]])[start_production:]) * \
+                            C_pkn[p, t, :N, box_place[b, 0], box_place[b, 1]] = np.absolute(all_energy['Box-' + box_letters[b]].values[start_production:]) * \
                                     sign[box_place[b, 0], box_place[b, 1]] * 10
                         C_avg = np.average(C_pkn[p, t, :N], axis=0)
                         dC = np.std(C_pkn[p, t, :N], axis=0)

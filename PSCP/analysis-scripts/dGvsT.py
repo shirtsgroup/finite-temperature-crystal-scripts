@@ -597,7 +597,6 @@ def dGvsT(plot_out=False, Temperatures=np.array([100,200,300]), Temperatures_uns
                         u_kln[k, l, :N] = all_energy['Potential'].values[start_production:]
     
                         # Now set these energies over all temperatures
-                        #u_pklnT[p, k, l: (l + len(Temperatures)), :N, :len(Terms_l[j])] = u_pklnT[p, k, l, :N, :len(Terms_l[j])]
                         u_kln[k, l:(l + len(Temperatures)), :N] = u_kln[k, l, :N]
     
                         # Now read in the volumes and average them
@@ -721,7 +720,6 @@ def dGvsT(plot_out=False, Temperatures=np.array([100,200,300]), Temperatures_uns
                     indices = np.array(timeseries.subsampleCorrelatedData(u_kln_save[k, k, 0:N_k_matrix[i, k]],
                                                                           g=g_k[k]))
                     N_k_matrix[i, k] = len(indices)
-#NSA: see next comment
                     u_kln[k, :, 0:N_k_matrix[i, k]] = u_kln_save[k, :, indices].transpose()  # not sure why we have to transpose
     
             print("Number of retained samples")
