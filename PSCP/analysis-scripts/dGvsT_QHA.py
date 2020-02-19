@@ -366,7 +366,6 @@ def dGvsT_QHA(Temperatures_MD=np.array([100,200,300]), Temperatures_unsampled=[]
                     indices = np.array(timeseries.subsampleCorrelatedData(u_kln_save[k, k, 0:N_k_matrix[i, k]],
                                                                           g=g_k[k]))
                     N_k_matrix[i, k] = len(indices)
-#NSA: see next comment
                     u_kln[k, :, 0:N_k_matrix[i, k]] = u_kln_save[k, :, indices].transpose()  # not sure why we have to transpose
     
             print("Number of retained samples")
@@ -409,7 +408,8 @@ def dGvsT_QHA(Temperatures_MD=np.array([100,200,300]), Temperatures_unsampled=[]
     
             # Store the dimensionless results in the ddA container
             ddA[p, i, :] = ddf_u[refk]
-
+#            ddA[p, i, :] = ddf_i[refk]
+    print(refdG, refT)
 #    refT, refdG = QHA_optimized_ref(Temperatures, dA[1], refT_files, refG_files)
 
     # =============================================================================================

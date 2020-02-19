@@ -434,7 +434,6 @@ def dGvsT(plot_out=False, Temperatures=np.array([100,200,300]), Temperatures_uns
     Pressures = np.ones(len(Temperatures), int)
     Pressures[len(Pressures) - len(ExtraPressures): len(Pressures)] = ExtraPressures
     Potentials = [potential]
-    SimNAMES, Chargenames, PotNAMES = get_potential_info(potential)
 
     if (plot_out):
 #        import matplotlib.cm as cm
