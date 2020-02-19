@@ -128,11 +128,9 @@ def dGvsT_QHA(Temperatures_MD=np.array([100,200,300]), Temperatures_unsampled=[]
     # FORMAT INPUTS
     # =============================================================================================
     # TEMPERATURE
-    refk = -1
-#    for k, temp in enumerate(Temperatures):
-#        if temp == refT and refk == -1:
-#            refk = k + refPot * len(Temperatures)
-
+    refk = []
+    for k, temp in enumerate(refT):
+        refk.append(np.where(temp == Temperatures)[0][0])
 
     # =============================================================================================
     # READ IN RAW DATA
@@ -161,10 +159,10 @@ def dGvsT_QHA(Temperatures_MD=np.array([100,200,300]), Temperatures_unsampled=[]
     N_k = np.zeros(K, np.int32)
     
     # dA[p,i,k] is the p.interp(Tr, T1, G1)free energy between potential 0 and state k for spacing i in polymorph p
-    dA = np.zeros([len(Polymorphs), spacing + 1, K], float)
+    dA = np.zeros([len(refT), len(Polymorphs), spacing + 1, K], float)
     
     # ddA[p,i,k] is the uncertainty in the free energy between potential 0 and state k for spacing i in polymorph p
-    ddA = np.zeros([len(Polymorphs), spacing + 1, K], float)
+    ddA = np.zeros([len(refT), len(Polymorphs), spacing + 1, K], float)
     
     # dG[p,i,t] is the free energy between polymorph 1 and polymorph p for spacing i and temperature t
     dG = np.zeros([len(refT), len(Polymorphs), spacing + 1, len(Temperatures)])
@@ -355,7 +353,7 @@ def dGvsT_QHA(Temperatures_MD=np.array([100,200,300]), Temperatures_unsampled=[]
             print("Free Energies Optained...")
         
             # Store the dimensionless results in the dA container
-            dA[p, i, :] = df_i[refk]
+            dA[:, p, i, :] = df_i[refk]
             dH_mbar[p, i, :] = Delta_u_ij[0]
             dS_mbar[p, i, :] = Delta_s_ij[0]
             ddS_mbar[p, i, :] = dDelta_s_ij[0]
@@ -421,10 +419,15 @@ def dGvsT_QHA(Temperatures_MD=np.array([100,200,300]), Temperatures_unsampled=[]
                 print("%8.3f %8.3f" % (-df_i[k, 0], ddf_u[k, 0]))
     
             # Store the dimensionless results in the ddA container
-            ddA[p, i, :] = ddf_u[refk]
-#            ddA[p, i, :] = ddf_i[refk]
-    print(refdG, refT)
+            ddA[:, p, i, :] = ddf_u[refk]
+#            ddA[:, p, i, :] = ddf_i[refk]
+
+    np.save('dA', dA)
+    np.save('ddA', ddA)
 #    refT, refdG = QHA_optimized_ref(Temperatures, dA[1], refT_files, refG_files)
+
+#    dA = np.load('dA.npy')
+#    ddA = np.load('ddA.npy')
 
     # =============================================================================================
     # FINALIZE THE RELATIVE FREE ENERGY AND ENTROPY
@@ -433,19 +436,16 @@ def dGvsT_QHA(Temperatures_MD=np.array([100,200,300]), Temperatures_unsampled=[]
         for i in range(spacing + 1):
             for t, T in enumerate(Temperatures):
                 for p in range(len(Polymorphs)):
-                    dG[k, p, i, t] = (dA[p, i, t] - dA[0, i, t]) / (beta_k[t] * float(Independent)) + float(T) / float(
+                    dG[k, p, i, t] = (dA[k, p, i, t] - dA[k, 0, i, t]) / (beta_k[t] * float(Independent)) + float(T) / float(
                         refT[k]) * refdG[k, p]
                     if p == 0:
                         continue
                     dS[k, p, i, t] = (dU[p, t] - dU[0, t] - dG[k, p, i, t]) / float(T)
                     if k == 0:
-                        ddG[p, i, t] = ((ddA[p, i, t] ** 2 + ddA[0, i, t] ** 2) / (
+                        ddG[p, i, t] = ((ddA[k, p, i, t] ** 2 + ddA[k, 0, i, t] ** 2) / (
                                     beta_k[t] * float(Independent)) ** 2) ** 0.5
                         ddS[p, i, t] = (ddU[p, t] ** 2 + ddU[p, t] ** 2 + ddG[p, i, t] ** 2) ** 0.5 / float(T)
-    
-#    print("Polymorph Free Energy:")
-#    for p in range(len(Polymorphs)):
-#        print("%8.3f %8.3f" % (dG[p, spacing, len(Temperatures) - 1], ddG[p, spacing, len(Temperatures) - 1]))
+
     
     # =============================================================================================
     # PLOT THE RELATIVE FREE ENERGY VS TEMPERATURE
