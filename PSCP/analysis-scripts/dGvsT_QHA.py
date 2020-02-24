@@ -84,14 +84,14 @@ def compute_COV_dGref(refT_cov, Temperatures_MD, Molecules, Polymorphs):
     refdG = np.zeros((len(refT_cov), len(Polymorphs)))
 
     # setting key variables for QHA
-    natoms = len(md.load(Polymorphs[0] + '/temperatures/0/pre_EQ.gro').xyz[0,:,0])
+    natoms = len(md.load(Polymorphs[0] + '/temperature/0/pre_EQ.gro').xyz[0,:,0])
     nmodes = natoms * 3
 
     # boltzmann constant in kcal/(mol * K)
     kB = 0.0019872041
 
     # converting kcal to g*nm**2 / (ps**2)
-    ekcal = 4.184
+    ekcal = 418.4
 
     # speed of light in cm / ps
     speed_of_light = 0.0299792458
@@ -104,7 +104,7 @@ def compute_COV_dGref(refT_cov, Temperatures_MD, Molecules, Polymorphs):
 
     for i, t in enumerate(refT_cov):
         # determining what directory to look into for this temperature
-        directory = '/temperatures/' + str(np.where(t == Temperatures_MD))
+        directory = '/temperature/' + str(np.where(t == Temperatures_MD)[0][0])
         for j, p in enumerate(Polymorphs):
             path = p + directory
             edr = panedr.edr_to_df(path + '/PROD.edr')
@@ -114,26 +114,30 @@ def compute_COV_dGref(refT_cov, Temperatures_MD, Molecules, Polymorphs):
                 c = subprocess.Popen(['echo', '0', ';', 'echo', '0'], stdout=subprocess.PIPE)
                 output = subprocess.check_output(
                     ['gmx', 'covar', '-f', path + '/PROD.trr', '-s', path + '/PROD_0.tpr', '-o',
-                     path + '/eigenvalues.xvg', '-mwa', 'yes', '-pbc', 'yes', '-last', nmodes], stdin=c.stdout)
+                     path + '/eigenvalues.xvg', '-mwa', 'yes', '-pbc', 'yes', '-last', str(nmodes)], stdin=c.stdout)
                 c.wait()
 
-            # Removing excess files that take up too much space
-            subprocess.call(['rm', path + '/eigenvec.trr', path + '/covar.log', path + '/average.pdb'])
+                # Removing excess files that take up too much space
+                subprocess.call(['rm', 'eigenvec.trr', 'covar.log', 'average.pdb'])
 
             # Loading in eigenvalues and converting them to wavenumbers
-            wavenumbers = kB * t / np.absolute(np.loadtxt(path + '/eigenvalues.xvg', comments=['#', '@'])[:, 1])
-            wavenumbers = np.sort(np.sqrt(wavenumbers * ekcal) / (2 * np.pi * speed_of_light))
-
+            wavenumbers = np.loadtxt(path + '/eigenvalues.xvg', comments=['#', '@'])[:, 1]
+            #wavenumbers = kB * t / (np.absolute(wavenumbers[np.where(wavenumbers > 0.)])*100)
+            wavenumbers = kB * t / (np.absolute(wavenumbers)*100)
+            wavenumbers = np.sort(np.sqrt(wavenumbers[3:] * ekcal) / (2 * np.pi * speed_of_light))
+            print(len(wavenumbers))
             # Getting the potential energy
-            U = np.average(edr['Potential'].values) / ekcal
+            U = np.average(edr['Potential'].values) / 4.184
 
             # Computing the vbirational energy
-            Av = kB * t * np.sum(np.log(Na * h_bar * wavenumbers * c * 10 ** 12 / (kB * t)))
-
+            Av = kB * t * np.sum(np.log(Na * h_bar * wavenumbers * speed_of_light * 10 ** 12 / (kB * t)))
+            print(U/Molecules, Av/Molecules, np.average(edr['Volume'].values) * Na * 0.024201 * 10 ** (-24) / Molecules)
             # Computing the free energy
             refdG[i, j] = (U + Av + np.average(edr['Volume'].values) * Na * 0.024201 * 10 ** (-24) ) / Molecules
 
     refdG -= refdG[:, 0]
+    print(refdG, refT_cov)
+    exit()
     return np.array(refT_cov), refdG
 
 def dGvsT_QHA(Temperatures_MD=np.array([100,200,300]), Temperatures_unsampled=[], Molecules=72, molecule='benzene',
