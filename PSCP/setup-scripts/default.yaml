@@ -2,56 +2,43 @@
 
 # General input parameters
 gen_in:
-    template_path: none
-    submission_script: submit_cluster.slurm
-    polymorph_num: none
-    molecule: none
-    number_of_molecules: none
-    independent: same
-    pressure: 1
+    anneal_temp: 400
     cores: 7
     cutoff: 8
-    potential: oplsaa
     hinge: DefaultHinge
+    independent: same
     integrator: sd
+    molecule: none
+    number_of_molecules: none
+    output_directory: output
+    polymorph_num: none
+    potential: oplsaa
+    pressure: 1
+    submission_script: submit_cluster.slurm
+    template_path: none
     thermostat: nose-hoover
-    anneal_temp: 400
 
 PSCP_in:
     PSCP_temperature: 200
-    endpoint_itp:
+    run_PSCP: [False,False,False,False]
+    equil_steps: [0,0,0,0]
+    exponent: [-2.,-2.,4.,1.]
+    itp_file: []
+    k: [0,1000,1000,1000000,1000000]
+    prod_setps: [10000000,10000000,10000000,10000000]
+    run_bonded_interactions: True
+    spacing: [5,5,1,2]
 
-    # Input parameters for setup_Interactions
-    run_interactions: False
-    max_gamma: 100
-    min_gamma: 0
-    gamma_spacing: 10
-    gamma_exponent: 2
-    lambda: 100
-    gamma_equil_steps: 100000
-    gamma_prod_steps: 1000000
-    
-    # Input parameters for setop_Restraints
-    run_restraints: False
-    min_lambda: 0
-    max_lambda: 100
-    lambda_spacing: 5
-    lambda_exponent: 4
-    gamma: 100
-    lambda_equil_steps: 1000000
-    lambda_prod_steps: 10000000
-    k_min: 0
-    k_max: 1000
+QHA_in:
+    boltz_QHA: False
+    Tinker_template: re_setup/molecule.xyz
+    boltz_temperatures: none
+    max_frames: 10
+    runfiles: []
 
 PSCP_out:
-    dEnd:
-    ddEnd:
-    dGamma:
-    ddGamma:
-    dLambda:
-    ddLambda:
-    dG:
-    ddG:
+    dG: []
+    ddG: []
 
 temp_in:
     # Input parameters for setup_Temperature

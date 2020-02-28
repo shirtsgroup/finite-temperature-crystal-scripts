@@ -16,6 +16,7 @@ from scipy.special import erf
 path = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, path + '/setup-scripts')
 import setup_directories as setup
+from setup_boltz_QHA import setup_boltz_QHA
 
 def setdefault(input_data, default_values):
     # Function to fill in the input_data if the default values are not set
@@ -34,7 +35,7 @@ def yaml_loader(file_path):
     with open(path + '/setup-scripts/default.yaml', "r") as default_file:
         default_input = yaml.load(default_file)
 
-    # Setting the default values if not specified
+    # Setting the default v   alues if not specified
     setdefault(data, default_input)
     return data
 
@@ -209,14 +210,7 @@ if __name__ == '__main__':
         if not os.path.isdir(i):
             subprocess.call(['mkdir', i])
 
-#    if inputs['PSCP_in']['run_restraints'] == True:
-#        setup.setup_restraints(inputs)
-
-#    if inputs['PSCP_in']['run_interactions'] == True:
-#        setup.setup_interactions(inputs)
-
-    setup.setup_PSCP(inputs)
-
+    # Running setup for the temperature scan
     if inputs['temp_in']['run_temperature'] == True:
         run_production = False
 
@@ -245,6 +239,13 @@ if __name__ == '__main__':
             for i in inputs['gen_in']['polymorph_num'].split():
                 setup.setup_replica_exchange(int(RE_nodes), DIRS, int(process_num), int(exchange_num),
                                              str(i) + '/temperature')
+
+    # Running setups for the pseudosupercritical path
+    setup.setup_PSCP(inputs)
+
+    # Running setup for boltzmann weighting of QHA
+    ## This is currently only setup for Gromacs MD and Tinker QHA compatability
+    setup_boltz_QHA(inputs)
 
 
 
