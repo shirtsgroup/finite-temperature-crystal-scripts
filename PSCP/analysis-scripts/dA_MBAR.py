@@ -11,24 +11,29 @@ from pymbar import timeseries  # timeseries analysis
 from optparse import OptionParser # for parsing command-line options
 import sys
 import panedr
+import os
 
 def dA_MBAR(minimum=0, maximum=100, spacing=10, exponent=2, polymorphs='p1 p2', Molecules=72, Independent=4, Temp=200,
-            bonds=False, primary_directory='.'):
+            bonds=False, primary_directory='.', added_directories=[]):
     # =============================================================================================
     # Setting up the values for gamma or lambda states
     # =============================================================================================
-    raw_value = minimum
-    values = []
+#    raw_value = minimum
+#    values = []
     directory_names = np.arange(minimum, maximum + spacing, spacing)
+    directory_names = np.sort(np.append(directory_names, added_directories)) 
 
-    while raw_value <= maximum:
-        if exponent >= 0:
-            value = int(100 * (float(raw_value) / float(maximum)) ** abs(exponent))
-        else:
-            value = int(100 * (1 - (float(maximum - raw_value) / float(maximum)) ** abs(exponent)))
-        values.append(value)
-        raw_value = raw_value + spacing
-    
+#    while raw_value <= maximum:
+#        if exponent >= 0:
+#            value = int(100 * (float(raw_value) / float(maximum)) ** abs(exponent))
+#        else:
+#            value = int(100 * (1 - (float(maximum - raw_value) / float(maximum)) ** abs(exponent)))
+#        values.append(value)
+#        raw_value = raw_value + spacing
+#    print(values)
+#    print(directory_names)
+#    exit()   
+ 
     # POLYMORPH
     polymorphs = polymorphs.split()
 
@@ -39,11 +44,11 @@ def dA_MBAR(minimum=0, maximum=100, spacing=10, exponent=2, polymorphs='p1 p2', 
     kB = 1.3806488e-23 * 6.0221413e23 / (1000.0 * 4.184)  # Boltzmann constant in kcal/mol
     
     # Parameters
-    T_k = Temp * np.ones(len(values), float)  # Convert temperatures to floats
+    T_k = Temp * np.ones(len(directory_names), float)  # Convert temperatures to floats
     print(T_k)
-    print(values)
+  #  print(values)
 
-    K = len(values)  # How many states?
+    K = len(directory_names)  # How many states?
      
     # total number of states examined; 0 are unsampled if bonds are left on, 1 is unsampled if the bonds are removed
     Kbig = K
@@ -76,35 +81,39 @@ def dA_MBAR(minimum=0, maximum=100, spacing=10, exponent=2, polymorphs='p1 p2', 
             n = 0
 
             # cycle through all the input total energy data
-            dirpath = polymorphs[i] + '/' + primary_directory + '/' + str(directory_names[k])
-            fname = dirpath + '/PROD.edr'
-            dhdlname = dirpath + '/dhdl_PROD.xvg'
+            if directory_names[k] == int(directory_names[k]):
+                dirpath = polymorphs[i] + '/' + primary_directory + '/' + str(int(directory_names[k]))
+            else:
+                dirpath = polymorphs[i] + '/' + primary_directory + '/' + str(directory_names[k])
+            if os.path.isdir(dirpath):
+                fname = dirpath + '/PROD.edr'
+                dhdlname = dirpath + '/dhdl_PROD.xvg'
 
-            potential_energy = panedr.edr_to_df(fname)['Potential'].values
-            print("loading " + fname)
+                potential_energy = panedr.edr_to_df(fname)['Potential'].values
+                print("loading " + fname)
 
-            dhdl_energy = np.loadtxt(dhdlname, comments=['#', '$', '@', '!'])
-            print("loading " + dhdlname)
+                dhdl_energy = np.loadtxt(dhdlname, comments=['#', '$', '@', '!'])
+                print("loading " + dhdlname)
 
-            # Removing any non-equilibrated points of the simulation
-            [start_production, _, _] = timeseries.detectEquilibration(potential_energy)
-            potential_energy = potential_energy[start_production:]
-            dhdl_energy = dhdl_energy[start_production:,:]
+                # Removing any non-equilibrated points of the simulation
+                [start_production, _, _] = timeseries.detectEquilibration(potential_energy)
+                potential_energy = potential_energy[start_production:]
+                dhdl_energy = dhdl_energy[start_production:,:]
 
-            # Cutting points if they exceed N_max
-            if len(potential_energy) > N_max:
-                potential_energy = potential_energy[len(potential_energy) - N_max:]
-                dhdl_energy = dhdl_energy[len(dhdl_energy) - N_max:,:]
+                # Cutting points if they exceed N_max
+                if len(potential_energy) > N_max:
+                    potential_energy = potential_energy[len(potential_energy) - N_max:]
+                    dhdl_energy = dhdl_energy[len(dhdl_energy) - N_max:,:]
 
-            # the energy of every configuration from each state evaluated at its sampled state
-            n = len(potential_energy)
-            dhdl_placement = len(dhdl_energy[0, :]) - K
-            u_kln[k, :K, :n] = (potential_energy.reshape((n, 1)) + dhdl_energy[:, dhdl_placement:]).T * convert_units[k]
-            dhdl_kn[k, :n] = (float(Independent) / Molecules) * \
-                             np.sum(dhdl_energy[:, 2:dhdl_placement], axis=1) * convert_units[k]
+                # the energy of every configuration from each state evaluated at its sampled state
+                n = len(potential_energy)
+                dhdl_placement = len(dhdl_energy[0, :]) - K
+                u_kln[k, :K, :n] = (potential_energy.reshape((n, 1)) + dhdl_energy[:, dhdl_placement:]).T * convert_units[k]
+                dhdl_kn[k, :n] = (float(Independent) / Molecules) * \
+                                 np.sum(dhdl_energy[:, 2:dhdl_placement], axis=1) * convert_units[k]
 
-            N_k_s[k] = n
-            N_k[k] = n
+                N_k_s[k] = n
+                N_k[k] = n
 
         # convert to nondimensional units from kcal/mol
         u_kln *= beta_k[0]
@@ -164,9 +173,10 @@ def dA_MBAR(minimum=0, maximum=100, spacing=10, exponent=2, polymorphs='p1 p2', 
                                                                           g=g_k[k]))  # subsample
     
             # not sure why we have to transpose
-            u_kln[k, :, N_k[k]: (N_k[k] + len(indices))] = u_kln_save[k, :, (indices + n_old)].transpose()
-            N_k[k] = N_k[k] + len(indices)
-            n_old += N_k_s[k]
+            if indices != []:
+                u_kln[k, :, N_k[k]: (N_k[k] + len(indices))] = u_kln_save[k, :, (indices + n_old)].transpose()
+                N_k[k] = N_k[k] + len(indices)
+                n_old += N_k_s[k]
 
         print("Number of retained samples")
         print(N_k)

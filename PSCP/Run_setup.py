@@ -29,11 +29,10 @@ def setdefault(input_data, default_values):
 def yaml_loader(file_path):
     # Loads in a ymal file
     with open(file_path, "r") as input_file:
-        data = yaml.load(input_file)
-
+        data = yaml.load(input_file, Loader=yaml.FullLoader)
     # Load in the default values
     with open(path + '/setup-scripts/default.yaml', "r") as default_file:
-        default_input = yaml.load(default_file)
+        default_input = yaml.load(default_file, Loader=yaml.FullLoader)
 
     # Setting the default v   alues if not specified
     setdefault(data, default_input)
@@ -239,7 +238,6 @@ if __name__ == '__main__':
             for i in inputs['gen_in']['polymorph_num'].split():
                 setup.setup_replica_exchange(int(RE_nodes), DIRS, int(process_num), int(exchange_num),
                                              str(i) + '/temperature')
-
     # Running setups for the pseudosupercritical path
     setup.setup_PSCP(inputs)
 

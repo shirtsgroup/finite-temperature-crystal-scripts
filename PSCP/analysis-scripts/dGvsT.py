@@ -607,6 +607,7 @@ def dGvsT(plot_out=False, Temperatures=np.array([100,200,300]), Temperatures_uns
                         # Making the lattice tensor all the correct sign with time    
                         if count == 1:
                             sign = np.sign(md.load(dirpath + 'pre_EQ.gro').unitcell_vectors[0].T)
+                            #sign = np.sign(md.load(polymorph + '/temperature/0/ANNEAL.gro').unitcell_vectors[0].T)
                             for s in range(3):
                                 for j in range(3):
                                     if sign[s, j] == 0.:

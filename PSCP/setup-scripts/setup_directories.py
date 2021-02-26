@@ -157,7 +157,6 @@ def setup_PSCP(inputs):
                         lambda_spacing = 0
 
                     setup_molecule(run_PSCP=True, polymorph_num=k,
-
                                    temperature=inputs['PSCP_in']['PSCP_temperature'],
                                    pressure=inputs['gen_in']['pressure'], molecule=inputs['gen_in']['molecule'],
                                    number_of_molecules=inputs['gen_in']['number_of_molecules'],
@@ -167,18 +166,15 @@ def setup_PSCP(inputs):
                                    barostat=inputs['temp_in']['barostat'], cores=inputs['gen_in']['cores'],
                                    cutoff=inputs['gen_in']['cutoff'], potential=inputs['gen_in']['potential'],
                                    simulation=inputs['temp_in']['simulation_package'],
-
                                    equil_steps=inputs['PSCP_in']['equil_steps'][i],
                                    prod_steps=inputs['PSCP_in']['prod_steps'][i], k_min=inputs['PSCP_in']['k'][i],
                                    k_max=inputs['PSCP_in']['k'][i + 1],
                                    PSCP_itp_file=inputs['PSCP_in']['itp_file'][itp_count],
-
                                    lambd=lambd, gamma=gamma,
                                    gamma_exponent=gamma_expoenent,
                                    lambda_exponent=lambda_exponent,
                                    gamma_spacing=gamma_spacing,
                                    lambda_spacing=lambda_spacing,
-
                                    ensemble='NVT',
                                    jobpath=k + '/' + directory_name + '/' + str(current_PSCP_point),
                                    templatepath=inputs['gen_in']['template_path'],

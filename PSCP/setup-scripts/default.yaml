@@ -28,17 +28,23 @@ PSCP_in:
     prod_setps: [10000000,10000000,10000000,10000000]
     run_bonded_interactions: True
     spacing: [5,5,1,2]
+    added_directories: []
 
 QHA_in:
+    QHA_analysis: False
     boltz_QHA: False
     Tinker_template: re_setup/molecule.xyz
     boltz_temperatures: none
     max_frames: 10
     runfiles: []
+    refT_files: []
+    refG_files: []
 
 PSCP_out:
-    dG: []
-    ddG: []
+    dG: 
+    ddG: 
+    dA:  
+    ddA: 
 
 temp_in:
     # Input parameters for setup_Temperature

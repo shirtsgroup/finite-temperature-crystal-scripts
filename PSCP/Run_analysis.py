@@ -14,6 +14,7 @@ from dA_Gamma_MBAR import dA_Gamma_MBAR
 from dA_endpoint_MBAR import dA_endpoint_MBAR
 from dA_MBAR import dA_MBAR
 from dGvsT import dGvsT
+from dGvsT_QHA import dGvsT_QHA
 
 if __name__ == '__main__':
     # Importing user specified input .yaml file
@@ -70,19 +71,21 @@ if __name__ == '__main__':
             restraints_count += 1
 
         # Running the analysis for this PSCP step
-        if run and np.any(np.isnan(dA[:, i])):
-            dA[:, i], ddA[:, i] = dA_MBAR(spacing=inputs['PSCP_in']['spacing'][i], exponent=inputs['PSCP_in']['exponent'][i],
-                                          polymorphs=inputs['gen_in']['polymorph_num'],
-                                          Molecules=inputs['gen_in']['number_of_molecules'], Independent=independent,
-                                          Temp=inputs['PSCP_in']['PSCP_temperature'],
-                                          bonds=inputs['PSCP_in']['run_bonded_interactions'],
-                                          primary_directory=directory_name)
+        for j, ply in enumerate(inputs['gen_in']['polymorph_num'].split()):
+            if run and np.isnan(dA[j, i]):
+                dA[j, i], ddA[j, i] = dA_MBAR(spacing=inputs['PSCP_in']['spacing'][i], exponent=inputs['PSCP_in']['exponent'][i],
+                                              #polymorphs=inputs['gen_in']['polymorph_num'],
+                                              polymorphs=ply,
+                                              Molecules=inputs['gen_in']['number_of_molecules'], Independent=independent,
+                                              Temp=inputs['PSCP_in']['PSCP_temperature'],
+                                              bonds=inputs['PSCP_in']['run_bonded_interactions'],
+                                              primary_directory=directory_name, added_directories=inputs['PSCP_in']['added_directories'])
 
-            inputs['PSCP_out']['dA'] = dA.tolist()
-            inputs['PSCP_out']['ddA'] = ddA.tolist()
+                inputs['PSCP_out']['dA'] = dA.tolist()
+                inputs['PSCP_out']['ddA'] = ddA.tolist()
         
-            with open(args.input_file, 'w') as yaml_file:
-                yaml.dump(inputs, yaml_file, default_flow_style=False)
+                with open(args.input_file, 'w') as yaml_file:
+                    yaml.dump(inputs, yaml_file, default_flow_style=False)
 
 #    # Computing the free energy from PSCP
 #    if inputs['PSCP_in']['run_restraints']:
@@ -139,7 +142,7 @@ if __name__ == '__main__':
         print("   If this is wrong, please remove dG and ddG from the input file")
 
     # Determing the free energy across the entire temperature range
-    if inputs['temp_in']['run_temperature'] == True:
+    if inputs['temp_in']['run_temperature']:
         if inputs['temp_in']['temperatures_unsampled'] == None:
             inputs['temp_in']['temperatures_unsampled'] = []
         else:
@@ -152,4 +155,19 @@ if __name__ == '__main__':
               simulation=inputs['temp_in']['simulation_package'], hinge=inputs['gen_in']['hinge'],
               Polymorphs=inputs['gen_in']['polymorph_num'].split(), refT=inputs['PSCP_in']['PSCP_temperature'],
               refdG=inputs['PSCP_out']['dG'], refddG=inputs['PSCP_out']['ddG'], output_directory=inputs['gen_in']['output_directory'])
+
+    # Running analysis from QHA data
+    if inputs['QHA_in']['QHA_analysis']:
+        QHA_output = inputs['gen_in']['output_directory'] + '_QHA'
+        if inputs['QHA_in']['boltz_QHA']:
+            QHA_output = inputs['gen_in']['output_directory'] + '_boltz_HA'
+        dGvsT_QHA(Temperatures_MD=np.array(inputs['temp_in']['temperatures'].split()).astype(float), 
+                  output_directory=QHA_output,
+                  Molecules=inputs['gen_in']['number_of_molecules'], 
+                  molecule=inputs['gen_in']['molecule'],
+                  potential=inputs['gen_in']['potential'],
+                  Polymorphs=inputs['gen_in']['polymorph_num'].split(),
+                  refT_files=inputs['QHA_in']['refT_files'],
+                  refG_files=inputs['QHA_in']['refG_files'])
+
 

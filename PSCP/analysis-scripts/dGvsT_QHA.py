@@ -144,6 +144,10 @@ def dGvsT_QHA(Temperatures_MD=np.array([100,200,300]), Temperatures_unsampled=[]
               Independent=0, potential='oplsaa', spacing=1, phase='solid', Polymorphs=['p1', 'p2', 'p3'],
               refdG_type='QHA',output_directory='output_QHA',
               refT_files=['', '', ''], refG_files=['', '', ''], refT_cov=[]):
+
+    if not os.path.isdir(output_directory):
+        subprocess.call(['mkdir', output_directory])
+
     # Setting-up if the simulation is suppose to use QHA or covarience for dG ref
     if refdG_type == 'QHA':
         # Loading in the longest string of temperatures for refT
@@ -535,9 +539,6 @@ def dGvsT_QHA(Temperatures_MD=np.array([100,200,300]), Temperatures_unsampled=[]
 
     PlotPress = 1  # Pressure to plot the dGvT curve at
     Temperatures_P = Temperatures[Pressures == PlotPress]
-
-    if not os.path.isdir(output_directory):
-        subprocess.call(['mkdir', output_directory])
 
     np.save(output_directory + '/T_' + molecule + '_' + potential, Temperatures_P)
     for p, Poly in enumerate(Polymorphs):

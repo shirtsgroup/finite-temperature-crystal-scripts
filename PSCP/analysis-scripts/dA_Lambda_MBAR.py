@@ -286,7 +286,7 @@ def dA_Lambda_MBAR(plot_out=True, MinL=0, MaxL=100, dL=5, GAMMA=100, exponent=4,
                         # subsample the data to get statistically uncorrelated data
                         # subsample indices within the segment
                         indices = np.array(timeseries.subsampleCorrelatedData(u_kln[k, k, n_old:(n_old + N_ksj[k, s, j])],
-                                                                              g=g_k[k]))
+                                                                              g=g_k[k])).astype(int)
 
                         # Apphend the uncorrelated configurations in the segment to the u_kln matrix
                         u_kln[k, :, N_k[k]: (N_k[k] + len(indices))] = u_kln_save[k, :, (indices+n_old)].transpose()
