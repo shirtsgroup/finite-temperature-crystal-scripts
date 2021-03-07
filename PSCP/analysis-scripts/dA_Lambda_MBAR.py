@@ -5,30 +5,25 @@ from __future__ import print_function
 # Copyright Eric Dybeck and Michael R. Shirts, University of Virginia, 2014
 #
 import numpy as np
-import pymbar # multistate Bennett acceptance ratio
-import MBARBootstrap # Bootstrapping algorithm
-from pymbar import timeseries # timeseries analysis
-from optparse import OptionParser # for parsing command-line options
+import pymbar  # multistate Bennett acceptance ratio
+from pymbar import timeseries  # timeseries analysis
+from optparse import OptionParser  # for parsing command-line options
 import MBARBootstrap
 import os.path
 import sys
-import pdb
-import tossconfigurationsFunc
+import panedr
 
-def dA_Lambda_MBAR(plot_out=True, MinL=0, MaxL=100, dL=5, GAMMA=100, exponent=4, Molecule='benzene', polymorphs='p1 p2', 
-                   Molecules=72, Independent=4, Temp=200, Pressure=1, k=1000, ignoreframes=500, includeframes=100000,
+def dA_Lambda_MBAR(plot_out=True, MinL=0, MaxL=100, dL=5, GAMMA=100, exponent=4, polymorphs='p1 p2',
+                   Molecules=72, Independent=4, Temp=200, Pressure=1,
                    potential='oplsaa', hinge='DefaultHinge'):
     if (plot_out):
-        import matplotlib # for making plots, version 'matplotlib-1.1.0-1'; errors may pop up when using earlier versions
+        import matplotlib  # for making plots, version 'matplotlib-1.1.0-1'; errors may pop up when using earlier versions
         import matplotlib.pyplot as plt
-        import matplotlib.cm as cm
-        from matplotlib.font_manager import FontProperties as FP
         font = {'family': 'normal',
                 'weight': 'normal',
                 'size': 16}
         matplotlib.rc('font', **font)
-    
-    
+
     # =============================================================================================
     # ENSURE THAT USER INPUTS ARE SENSIBLE
     # =============================================================================================
@@ -41,7 +36,7 @@ def dA_Lambda_MBAR(plot_out=True, MinL=0, MaxL=100, dL=5, GAMMA=100, exponent=4,
         print("Invalid Pressure: " + str(Pressure))
         sys.exit()
     
-    #LAMBDA
+    # LAMBDA
     if (MinL == -1) and (MaxL == -1) and (dL == -1) and (exponent == 1):
         print("Using default values!")
     
@@ -54,7 +49,6 @@ def dA_Lambda_MBAR(plot_out=True, MinL=0, MaxL=100, dL=5, GAMMA=100, exponent=4,
         RawLambda = 0
         Lambdas = []
         lambda_names = np.arange(MinL, MaxL + dL, dL)
-
         Lambda_names = []
         Lambda_indicies=[]
         index = 0
@@ -66,7 +60,10 @@ def dA_Lambda_MBAR(plot_out=True, MinL=0, MaxL=100, dL=5, GAMMA=100, exponent=4,
                 index += 1
                 RawLambda = RawLambda + dL
                 continue
-            Lambda = int(100 * float(RawLambda ** exponent) / float(MaxL ** exponent))
+            if exponent >= 0:
+                Lambda = int(100 * (float(RawLambda) / float(MaxL)) ** abs(exponent))
+            else:
+                Lambda = int(100 * (1 - (float(MaxL - RawLambda) / float(MaxL)) ** abs(exponent)))
             Lambdas.append(Lambda)
             # Format the lambda point name
             if RawLambda < 10:
@@ -75,7 +72,8 @@ def dA_Lambda_MBAR(plot_out=True, MinL=0, MaxL=100, dL=5, GAMMA=100, exponent=4,
                 Lambda_names.append('0' + str(int(RawLambda)) + 'L')
             else:
                 Lambda_names.append('100L')
-            RawLambda=RawLambda+dL
+            RawLambda = RawLambda + dL
+
         # Catch the final lambda point
         Lambdas.append(MaxL)
         Lambda_indicies.append(index)
@@ -109,41 +107,6 @@ def dA_Lambda_MBAR(plot_out=True, MinL=0, MaxL=100, dL=5, GAMMA=100, exponent=4,
     # =============================================================================================
     # FORMAT INPUTS
     # =============================================================================================
-    # TEMPERATURE
-    Tname = ""
-    if Temp < 10:
-        Tname = "00" + str(int(Temp)) + "K"
-    elif Temp < 100:
-        Tname = "0" + str(int(Temp)) + "K"
-    else:
-        Tname = str(int(Temp)) + "K"
-    
-    # PRESSURE
-    Pname = ""
-    if Pressure < 10:
-        Pname = "00" + str(int(Pressure)) + "P"
-    elif Pressure < 100:
-        Pname = "0" + str(int(Pressure)) + "P"
-    else:
-        Pname = str(int(Pressure)) + "P"
-    
-    # GAMMA POINT
-    Gname = ""
-    if GAMMA < 10:
-        Gname = "00" + str(int(GAMMA)) + "G"
-    elif GAMMA < 100:
-        Gname = "0" + str(int(GAMMA)) + "G"
-    else:
-        Gname = str(int(GAMMA)) + "G"
-    
-    # NUMBER OF MOLECULES
-    Molname = ""
-    if Molecules == Independent:
-        Molname = str(Molecules) + '_'
-    else:
-        Molname = str(Molecules) + '_' + str(Independent) + 'ind_'
-    
-    
     # POTENTIAL
     PotNAME = ""
     if potential == "oplsaa":
@@ -156,18 +119,6 @@ def dA_Lambda_MBAR(plot_out=True, MinL=0, MaxL=100, dL=5, GAMMA=100, exponent=4,
         PotNAME = "FAKEG"
     elif potential == "oplsaafakea":
         PotNAME = "FAKEA"
-    
-    # CHARGE AND SIGMA HINGE
-    if potential == "oplsaa":
-        ChargeHinge = ""
-    elif potential == "gromos":
-        ChargeHinge = ""
-    elif potential == "designeda":
-        ChargeHinge = ""
-    elif potential == "oplsaafakeg":
-        ChargeHinge = "_C01150"
-    elif potential == "oplsaafakea":
-        ChargeHinge = "_C01150"
     
     # OPTIONAL HINGE
     if str(GAMMA) == "100":
@@ -190,12 +141,10 @@ def dA_Lambda_MBAR(plot_out=True, MinL=0, MaxL=100, dL=5, GAMMA=100, exponent=4,
     # =============================================================================================
     # Constants.
     kB = 1.3806488e-23 * 6.0221413e23 / (1000.0 * 4.184)  # Boltzmann constant in kcal/mol
-    
     omitK = []
     
     # Parameters
     T_k = Temp*np.ones(len(Lambdas), float)  # Convert temperatures to floats
-    
     g_k = np.zeros([len(Lambdas)], float)
     K = len(Lambdas)  # How many states?
     
@@ -212,8 +161,6 @@ def dA_Lambda_MBAR(plot_out=True, MinL=0, MaxL=100, dL=5, GAMMA=100, exponent=4,
     convert_units = (0.2390057) * np.ones(len(Lambdas), float)  # Convert all energies to kcal/mol
 
     # Lines to ignore when reading in energies
-    ignore_symbols = ['#', '@', '@TYPE', 'STEP', '=====================']
-    
     for i, poly in enumerate(polymorph):
         # Allocate storage for simulation data
         # N_k[k] is the total number of snapshots from alchemical state k
@@ -235,87 +182,40 @@ def dA_Lambda_MBAR(plot_out=True, MinL=0, MaxL=100, dL=5, GAMMA=100, exponent=4,
         for k in range(K):
             n = 0
             for s, hinge in enumerate(hinges):
-                tossconfigs = []  # The index of each configuration to toss from the MBAR analysis
                 keepconfigs = np.arange(N_max)  # The index of each configuration to keep in the MBAR analysis
-                linenum_energy = 0
-                linenum_dhdl = 0
+
                 # cycle through all the input total energy data
-                # dirpath='../finishedJobs/' + poly + '/benzene_GRO_' + PotNAME + '_' + polymorph_short[i] + '_' + Molname + Tname + ChargeHinge + '_' + Lambda_names[k] + '_' + Gname + '_' + Pname + hinge
-                #dirpath = Molecule + '_GRO_' + PotNAME + '_' + polymorph_short[i] + '_' + Molname + Tname + ChargeHinge + \
-                #          '_' + Lambda_names[k] + '_' + Gname + '_' + Pname + hinge
                 dirpath = polymorph_short[i] + '/restraints/' + str(lambda_names[k])
-                fname = dirpath + '/potenergy.xvg'
+                fname = dirpath + '/PROD.edr'
                 dhdlname = dirpath + '/dhdl_PROD.xvg'
-                groname = dirpath + '/Traj.gro'
-                outname = dirpath + '/Flipless.gro'
-                restname = dirpath + '/restraint.gro'
+
                 if k not in omitK:
-                    infile = open(fname, 'r')
-                    lines = infile.readlines()
-                    infile.close()
+                    potential_energy = panedr.edr_to_df(fname)['Potential'].values
                     print("loading " + fname)
-                    infile = open(dhdlname, 'r')
-                    lines_dhdl = infile.readlines()
-                    infile.close()
+
+                    dhdl_energy = np.loadtxt(dhdlname, comments=['#', '$', '@', '!'])
                     print("loading " + dhdlname)
 
-                    ignorecounter=0
+                    # Removing any non-equilibrated points of the simulation
+                    [start_production, _, _] = timeseries.detectEquilibration(potential_energy)
+                    potential_energy = potential_energy[start_production:]
+                    dhdl_energy = dhdl_energy[start_production:]
+
+                    # the energy of every configuration from each state evaluated at its sampled state
+                    n = len(potential_energy)
+                    u_kln[k, :, :n] = (float(Independent) / Molecules) * (potential_energy.reshape((n, 1)) +
+                                                                          dhdl_energy[:, 5:]).T * convert_units[k]
+                    dhdl_kln[k, :, :n] = dhdl_energy[:, 5:].T * convert_units[k]
+                    dhdl_kn[k, :n] = (float(Independent) / Molecules) * dhdl_energy[:, 4].T * convert_units[k]
+
+# NSA: Can this go?
                     symbolcounter=0
 
-                    u_kln_hold = np.zeros([Kbig, N_max], np.float64)
-                    dhdl_kln_hold = np.zeros([Kbig, N_max], np.float64)
-                    dhdl_kn_hold = np.zeros([N_max], np.float64)
-
-                    for counter, line in enumerate(lines):
-                        tokens_energy = line.split()
-                        if tokens_energy[0] in ignore_symbols:
-                            symbolcounter += 1
-                            continue
-    
-                        # ignore the first set of frames
-                        if ignorecounter <= ignoreframes:
-                            ignorecounter += 1
-                            continue
-    
-                        # ignore the frames after the include frames
-                        if counter > includeframes:
-                            continue
-    
-                        ## ignore frames that are flipped and we are tossing
-                        #if counter in tossconfigs:
-                        #    continue
-
-                        # Grab the dhdl information (if possible)
-                        tokens_dhdl = lines_dhdl[linenum_dhdl].split()
-                        while tokens_dhdl[0] in ignore_symbols:
-                            linenum_dhdl += 1
-                            tokens_dhdl = lines_dhdl[linenum_dhdl].split()
-
-                        while float(tokens_energy[0]) != float(tokens_dhdl[0]) and (linenum_dhdl+1) < len(lines_dhdl) \
-                                and linenum_dhdl < 1000000:
-                            linenum_dhdl += 1
-                            tokens_dhdl = lines_dhdl[linenum_dhdl].split()
-
-                        if float(tokens_energy[0]) != float(tokens_dhdl[0]):
-                            continue
-
-                        # the energy of every configuration from each state evaluated at its sampled state
-                        u_kln[k, :, n] = (float(Independent) / Molecules) * \
-                                         (float(tokens_energy[1]) +
-                                          np.asarray(np.array(tokens_dhdl)[5 + np.array(Lambda_indicies)], float)) \
-                                          * convert_units[k]
-                        dhdl_kln[k, :, n] = np.asarray(np.array(tokens_dhdl)[5 + np.array(Lambda_indicies)], float) \
-                                            * convert_units[k]
-                        dhdl_kn[k, n] = (float(Independent) / Molecules) * float(tokens_dhdl[4]) * convert_units[k]
-                        n += 1
-                    
-
                     # Truncate the kept configuration list to be less than n
-                    keepconfigs = [j for j in keepconfigs if j < (counter-symbolcounter) and j >= ignoreframes]
+                    keepconfigs = [j for j in keepconfigs if j < (len(potential_energy)-symbolcounter) and j >= 0]
     
                     # Split up the retained configurations into connected segments
                     j = 0
-                    a = 0
                     for a in range(len(keepconfigs)):
                         if a == 0:
                             continue
@@ -330,6 +230,7 @@ def dA_Lambda_MBAR(plot_out=True, MinL=0, MaxL=100, dL=5, GAMMA=100, exponent=4,
     
         # convert to nondimensional units from kcal/mol
         u_kln *= beta_k[0]
+
         # all data loaded from the three sets
         u_kln_save = u_kln.copy()
         g_k = np.zeros([K])
@@ -347,10 +248,8 @@ def dA_Lambda_MBAR(plot_out=True, MinL=0, MaxL=100, dL=5, GAMMA=100, exponent=4,
     
         # generate the weights of each of the umbrella set
         mbar = pymbar.MBAR(u_kln, N_k, verbose=True, subsampling_protocol=[{'method': 'L-BFGS-B'}])
-    
         print("MBAR Converged...")
-        # testing
-    
+
         for k in range(Kbig):
             w = np.exp(mbar.Log_W_nk[:, k])
             print("max weight in state %d is %12.7f" % (k, np.max(w)))
@@ -360,20 +259,18 @@ def dA_Lambda_MBAR(plot_out=True, MinL=0, MaxL=100, dL=5, GAMMA=100, exponent=4,
     
         # extract self-consistent weights and uncertainties
         (df_i, ddf_i, theta_i) = mbar.getFreeEnergyDifferences()
-    
+ 
         print("Free Energies Optained...")
     
-        #convert PMF to kcal/mol and normalize by the number of molecules
+        # convert PMF to kcal/mol and normalize by the number of molecules
         df_i /= (beta_k[0] * float(Independent))
         ddf_i /= (beta_k[0] * float(Independent))
     
-        dA[i, :] = df_i[0]
-
+        dA[i, :] = df_i[-1]
 
         # =============================================================================================
         # COMPUTE UNCERTAINTY USING THE UNCORRELATED DATA
         # =============================================================================================
-    
         for k in range(K):  # For each restraint state
             N_k[k] = 0
             n_old = 0
@@ -382,14 +279,15 @@ def dA_Lambda_MBAR(plot_out=True, MinL=0, MaxL=100, dL=5, GAMMA=100, exponent=4,
                     for j in range(100):  # For each untossed segment of each independent trajectory of this restraint state
                         if N_ksj[k, s, j] == 0:
                             continue
-                        #g_k[k] = timeseries.statisticalInefficiency(u_kln[k,k,0:N_k[k]])
                         # Feed in the segment and calculate correlation time
                         g_k[k] = timeseries.statisticalInefficiency(dhdl_kn[k, n_old:(n_old + N_ksj[k, s, j])])
                         print("Correlation time for sampled state %d is %10.3f" % (k, g_k[k]))
+
                         # subsample the data to get statistically uncorrelated data
                         # subsample indices within the segment
                         indices = np.array(timeseries.subsampleCorrelatedData(u_kln[k, k, n_old:(n_old + N_ksj[k, s, j])],
-                                                                              g=g_k[k]))
+                                                                              g=g_k[k])).astype(int)
+
                         # Apphend the uncorrelated configurations in the segment to the u_kln matrix
                         u_kln[k, :, N_k[k]: (N_k[k] + len(indices))] = u_kln_save[k, :, (indices+n_old)].transpose()
                         N_k[k] = N_k[k] + len(indices)
@@ -415,29 +313,26 @@ def dA_Lambda_MBAR(plot_out=True, MinL=0, MaxL=100, dL=5, GAMMA=100, exponent=4,
         df_u /= (beta_k[0] * float(Independent))
         ddf_u /= (beta_k[0] * float(Independent))
     
-        ddA[i, :] = ddf_u[0]
+        ddA[i, :] = ddf_u[-1]
     
         # Write out free energy differences
         print("Free Energy Difference (in units of kcal/mol)")
+        print("  dA(Lambda) = A(Lambda) - A(Fully Restrained)")
         for k in range(Kbig):
-            print("%8.3f %8.3f" % (-df_i[k, 0], ddf_u[k, 0]))
+            print("%8.3f %8.3f" % (df_i[k, -1], ddf_u[k, -1]))
 
-    
     # =============================================================================================
     # PRINT THE FINAL DATA
     # =============================================================================================
-
     out_dA = np.zeros(len(polymorph))
     out_ddA = np.zeros(len(polymorph))
     for i, poly in enumerate(polymorph):
-         out_dA[i] = -dA[i, Kbig-1]
-         out_ddA[i] = ddA[i, Kbig - 1]
+         out_dA[i] = dA[i, 0] #Kbig - 1]
+         out_ddA[i] = ddA[i, 0] #Kbig - 1]
 
-    
     # =============================================================================================
     # PLOT THE FINAL DATA
     # =============================================================================================
-
     if (plot_out) and polymorphs == 'all':
         # now plot the free energy change as a function of temperature
         fig = plt.figure(4)
@@ -472,6 +367,7 @@ def dA_Lambda_MBAR(plot_out=True, MinL=0, MaxL=100, dL=5, GAMMA=100, exponent=4,
             filename = PotNAME + '_' + str(Molecules) + '_' + Tname + hinge + '_dAvsL.pdf'
         plt.show()
     return out_dA, out_ddA
+
 
 if __name__ == '__main__':
     #=============================================================================================

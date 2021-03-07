@@ -6,9 +6,6 @@
 #SBATCH --output=logfile
 #SBATCH --partition=RM
 
-module load mpi/intel_mpi
-module load gromacs/2018_cpu
-
-Run_REMD.py -n NNPP -r restraint.gro 
-
+Run_REMD.py -n NNPP -r restraint.gro
+find . -iname \#* -type f -delete
 

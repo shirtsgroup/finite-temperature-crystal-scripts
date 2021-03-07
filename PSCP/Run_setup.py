@@ -16,6 +16,7 @@ from scipy.special import erf
 path = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, path + '/setup-scripts')
 import setup_directories as setup
+from setup_boltz_QHA import setup_boltz_QHA
 
 def setdefault(input_data, default_values):
     # Function to fill in the input_data if the default values are not set
@@ -28,13 +29,12 @@ def setdefault(input_data, default_values):
 def yaml_loader(file_path):
     # Loads in a ymal file
     with open(file_path, "r") as input_file:
-        data = yaml.load(input_file)
-
+        data = yaml.load(input_file, Loader=yaml.FullLoader)
     # Load in the default values
     with open(path + '/setup-scripts/default.yaml', "r") as default_file:
-        default_input = yaml.load(default_file)
+        default_input = yaml.load(default_file, Loader=yaml.FullLoader)
 
-    # Setting the default values if not specified
+    # Setting the default v   alues if not specified
     setdefault(data, default_input)
     return data
 
@@ -122,7 +122,6 @@ def setup_ReplicaExchange_temperatures(inputs, check):
     while temp < float(inputs['rep_exch_in']['T_max']):
         dt = np.around(return_dT(dmu, b_mu, dsig, b_sig, inputs['rep_exch_in']['prob_overlap'], temp), 4)
         temp += np.absolute(dt[0])
-        print(temp)
         if temp < float(inputs['rep_exch_in']['T_max']):
             T_out.append(temp)
         else:
@@ -206,64 +205,18 @@ if __name__ == '__main__':
     for i in inputs['gen_in']['polymorph_num'].split():
         if args.REP:
             subprocess.call(['mv', i, i + '_prep'])
-        subprocess.call(['mkdir', i])
 
-    if inputs['PSCP_in']['run_restraints'] == True:
-        setup.setup_restraints(inputs)
+        if not os.path.isdir(i):
+            subprocess.call(['mkdir', i])
 
-#        subprocess.call([path + '/setup-scripts/setup_Restraints -n "' + (inputs['gen_in']['polymorph_num']) + '"'
-#                                            + ' -M ' + str(inputs['gen_in']['molecule'])
-#                                            + ' -U ' + str(inputs['PSCP_in']['min_lambda'])
-#                                            + ' -R ' + str(inputs['PSCP_in']['max_lambda'])
-#                                            + ' -L ' + str(inputs['PSCP_in']['lambda_spacing'])
-#                                            + ' -f ' + str(inputs['PSCP_in']['lambda_exponent'])
-#                                            + ' -G ' + str(inputs['PSCP_in']['gamma'])
-#                                            + ' -T ' + str(inputs['PSCP_in']['PSCP_temperature'])
-#                                            + ' -P ' + str(inputs['gen_in']['pressure'])
-#                                            + ' -N ' + str(inputs['gen_in']['number_of_molecules'])
-#                                            + ' -I ' + str(inputs['gen_in']['independent'])
-#                                            + ' -e ' + str(inputs['PSCP_in']['lambda_equil_steps'])
-#                                            + ' -p ' + str(inputs['PSCP_in']['lambda_prod_steps'])
-#                                            + ' -i ' + str(inputs['gen_in']['integrator'])
-#                                            + ' -t ' + str(inputs['gen_in']['thermostat'])
-#                                            + ' -a ' + str(inputs['gen_in']['cores'])
-#                                            + ' -k ' + str(inputs['PSCP_in']['k_min'])
-#                                            + ' -K ' + str(inputs['PSCP_in']['k_max'])
-#                                            + ' -r ' + str(inputs['gen_in']['cutoff'])
-#                                            + ' -u ' + str(inputs['gen_in']['potential'])
-#                                            + ' -h ' + str(inputs['gen_in']['hinge'])], shell=True)
-#
-
-    if inputs['PSCP_in']['run_interactions'] == True:
-        setup.setup_interactions(inputs)
-#        subprocess.call([path + '/setup-scripts/setup_Interactions -n "' + str(inputs['gen_in']['polymorph_num']) + '"'
-#                                              + ' -M ' + str(inputs['gen_in']['molecule'])
-#                                              + ' -A ' + str(inputs['PSCP_in']['max_gamma'])
-#                                              + ' -B ' + str(inputs['PSCP_in']['min_gamma'])
-#                                              + ' -g ' + str(inputs['PSCP_in']['gamma_spacing'])
-#                                              + ' -f ' + str(inputs['PSCP_in']['gamma_exponent'])
-#                                              + ' -L ' + str(inputs['PSCP_in']['lambda'])
-#                                              + ' -T ' + str(inputs['PSCP_in']['PSCP_temperature'])
-#                                              + ' -P ' + str(inputs['gen_in']['pressure'])
-#                                              + ' -N ' + str(inputs['gen_in']['number_of_molecules'])
-#                                              + ' -I ' + str(inputs['gen_in']['independent'])
-#                                              + ' -e ' + str(inputs['PSCP_in']['gamma_equil_steps'])
-#                                              + ' -p ' + str(inputs['PSCP_in']['gamma_prod_steps'])
-#                                              + ' -i ' + str(inputs['gen_in']['integrator'])
-#                                              + ' -t ' + str(inputs['gen_in']['thermostat'])
-#                                              + ' -a ' + str(inputs['gen_in']['cores'])
-#                                              + ' -K ' + str(inputs['PSCP_in']['k_max'])
-#                                              + ' -r ' + str(inputs['gen_in']['cutoff'])
-#                                              + ' -u ' + str(inputs['gen_in']['potential'])
-#                                              + ' -h ' + str(inputs['gen_in']['hinge'])], shell=True)
-#
+    # Running setup for the temperature scan
     if inputs['temp_in']['run_temperature'] == True:
-        run_production = "false"
+        run_production = False
 
         # Determining if there needs to be a production for individual temperatures
         # If replica exchange is occuring, the production run for the submit_cluster.slurm scripts is turned off
         if (inputs['temp_in']['temp_prod_steps'] > 0) and not args.REP:
-            run_production = "true"
+            run_production = True
 
         # Setting up the directories for the temperature run
         setup.setup_temperature(inputs, run_production)
@@ -285,6 +238,12 @@ if __name__ == '__main__':
             for i in inputs['gen_in']['polymorph_num'].split():
                 setup.setup_replica_exchange(int(RE_nodes), DIRS, int(process_num), int(exchange_num),
                                              str(i) + '/temperature')
+    # Running setups for the pseudosupercritical path
+    setup.setup_PSCP(inputs)
+
+    # Running setup for boltzmann weighting of QHA
+    ## This is currently only setup for Gromacs MD and Tinker QHA compatability
+    setup_boltz_QHA(inputs)
 
 
 

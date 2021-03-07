@@ -117,9 +117,10 @@ dhdl-print-energy        = yes  ;Print absolute energies as well as differences 
 coul-lambdas		 =
 vdw-lambdas		 =
 restraint_lambdas	 =
-couple-lambda0           =
-couple-lambda1           =
-couple-intramol          = 
-couple-moltype           = MOLMOLMOLMOL
+;bonded-lambdas           =
+;couple-lambda0           =
+;couple-lambda1           =
+;couple-intramol          = 
+;couple-moltype           = MOLMOLMOLMOL
 
 
